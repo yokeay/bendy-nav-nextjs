@@ -48,6 +48,37 @@ CREATE TABLE IF NOT EXISTS history (
 
 CREATE INDEX IF NOT EXISTS history_user_id_index ON history (user_id);
 
+CREATE TABLE IF NOT EXISTS browser_bookmark_relation (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  source VARCHAR(50) NOT NULL DEFAULT 'google_chrome',
+  create_time TIMESTAMP NOT NULL,
+  update_time TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS browser_bookmark_relation_user_id_index
+  ON browser_bookmark_relation (user_id);
+
+CREATE TABLE IF NOT EXISTS browser_bookmark_data (
+  id BIGSERIAL PRIMARY KEY,
+  relation_id BIGINT NOT NULL,
+  bookmark_id VARCHAR(100) NOT NULL,
+  url TEXT NOT NULL,
+  bookmark_title TEXT NOT NULL,
+  folder_path TEXT NOT NULL DEFAULT '',
+  date_added VARCHAR(64) NOT NULL DEFAULT '',
+  page_title TEXT NOT NULL DEFAULT '',
+  page_description TEXT NOT NULL DEFAULT '',
+  page_text TEXT NOT NULL DEFAULT '',
+  generated_title TEXT NOT NULL DEFAULT '',
+  generated_description TEXT NOT NULL DEFAULT '',
+  crawl_error TEXT NOT NULL DEFAULT '',
+  create_time TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS browser_bookmark_data_relation_id_index
+  ON browser_bookmark_data (relation_id);
+
 CREATE TABLE IF NOT EXISTS link (
   user_id INTEGER PRIMARY KEY,
   update_time TIMESTAMP,

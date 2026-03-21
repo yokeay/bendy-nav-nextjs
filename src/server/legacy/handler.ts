@@ -4644,6 +4644,174 @@ async function handleTabbarController(ctx: LegacyContext, action: string): Promi
 
 }
 
+type BrowserBookmarkNode = {
+  id?: unknown;
+  title?: unknown;
+  name?: unknown;
+  url?: unknown;
+  dateAdded?: unknown;
+  children?: unknown;
+};
+
+type BrowserBookmarkRecord = {
+  bookmark_id: string;
+  url: string;
+  bookmark_title: string;
+  folder_path: string;
+  date_added: string;
+  page_title: string;
+  page_description: string;
+  page_text: string;
+  generated_title: string;
+  generated_description: string;
+  crawl_error: string;
+};
+
+let browserBookmarkTablesReady = false;
+
+async function ensureBrowserBookmarkTables(): Promise<void> {
+  if (browserBookmarkTablesReady) {
+    return;
+  }
+  await sql`
+    CREATE TABLE IF NOT EXISTS browser_bookmark_relation (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      source VARCHAR(50) NOT NULL DEFAULT 'google_chrome',
+      create_time TIMESTAMP NOT NULL,
+      update_time TIMESTAMP NOT NULL
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS browser_bookmark_relation_user_id_index
+    ON browser_bookmark_relation (user_id)
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS browser_bookmark_data (
+      id BIGSERIAL PRIMARY KEY,
+      relation_id BIGINT NOT NULL,
+      bookmark_id VARCHAR(100) NOT NULL,
+      url TEXT NOT NULL,
+      bookmark_title TEXT NOT NULL,
+      folder_path TEXT NOT NULL DEFAULT '',
+      date_added VARCHAR(64) NOT NULL DEFAULT '',
+      page_title TEXT NOT NULL DEFAULT '',
+      page_description TEXT NOT NULL DEFAULT '',
+      page_text TEXT NOT NULL DEFAULT '',
+      generated_title TEXT NOT NULL DEFAULT '',
+      generated_description TEXT NOT NULL DEFAULT '',
+      crawl_error TEXT NOT NULL DEFAULT '',
+      create_time TIMESTAMP NOT NULL
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS browser_bookmark_data_relation_id_index
+    ON browser_bookmark_data (relation_id)
+  `;
+  browserBookmarkTablesReady = true;
+}
+
+function normalizeBookmarkUrl(value: unknown): string {
+  const raw = toStringValue(value, "").trim();
+  if (!raw) {
+    return "";
+  }
+  try {
+    const parsed = new URL(raw);
+    return parsed.toString();
+  } catch (_error) {
+    return raw;
+  }
+}
+
+function normalizeBookmarkId(rawId: unknown, fallbackIndex: number): string {
+  const id = toStringValue(rawId, "").trim();
+  if (id) {
+    const digits = id.replace(/\D/g, "");
+    if (digits) {
+      return `bm-${digits.padStart(7, "0")}`;
+    }
+    return `bm-${id}`;
+  }
+  return `bm-${String(fallbackIndex).padStart(7, "0")}`;
+}
+
+function inferBookmarkTitle(rawTitle: string, url: string): string {
+  if (rawTitle) {
+    return rawTitle;
+  }
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname || url;
+  } catch (_error) {
+    return url;
+  }
+}
+
+function buildBrowserBookmarkRecords(sourceTree: unknown): BrowserBookmarkRecord[] {
+  const roots = toArray<BrowserBookmarkNode>(sourceTree);
+  const records: BrowserBookmarkRecord[] = [];
+  let fallbackIndex = 1;
+
+  const visit = (node: BrowserBookmarkNode, folderPath: string[]): void => {
+    const nodeObj = (node ?? {}) as AnyObject;
+    const rawTitle = toStringValue(nodeObj.title ?? nodeObj.name, "").trim();
+    const nodeUrl = normalizeBookmarkUrl(nodeObj.url);
+    const folderToken = rawTitle || toStringValue(nodeObj.id, "").trim();
+    const nextPath = folderToken ? [...folderPath, folderToken] : folderPath;
+
+    if (nodeUrl) {
+      const bookmarkTitle = inferBookmarkTitle(rawTitle, nodeUrl);
+      const pageTitle = "";
+      const pageDescription = "";
+      const pageText = "";
+      const generatedTitle = bookmarkTitle || pageTitle;
+      const generatedDescription = [pageDescription, pageText].filter(Boolean).join(" ").trim();
+
+      records.push({
+        bookmark_id: normalizeBookmarkId(nodeObj.id, fallbackIndex),
+        url: nodeUrl,
+        bookmark_title: bookmarkTitle,
+        folder_path: folderPath.join("/"),
+        date_added: toStringValue(nodeObj.dateAdded, "").trim(),
+        page_title: pageTitle,
+        page_description: pageDescription,
+        page_text: pageText,
+        generated_title: generatedTitle,
+        generated_description: generatedDescription,
+        crawl_error: ""
+      });
+      fallbackIndex += 1;
+    }
+
+    const children = toArray<BrowserBookmarkNode>(nodeObj.children);
+    for (const child of children) {
+      visit(child, nextPath);
+    }
+  };
+
+  for (const root of roots) {
+    const rootObj = (root ?? {}) as AnyObject;
+    const rootTitle = toStringValue(rootObj.title ?? rootObj.name, "").trim();
+    const rootUrl = normalizeBookmarkUrl(rootObj.url);
+    const rootChildren = toArray<BrowserBookmarkNode>(rootObj.children);
+
+    // Chrome root node is usually a virtual folder; skip path pollution.
+    if (!rootTitle && !rootUrl && rootChildren.length > 0) {
+      for (const child of rootChildren) {
+        visit(child, []);
+      }
+      continue;
+    }
+
+    visit(root, []);
+  }
+
+  return records.filter(
+    (item) => item.url.trim().length > 0 && item.bookmark_title.trim().length > 0
+  );
+}
+
 
 
 async function handleLinkController(ctx: LegacyContext, action: string): Promise<NextResponse> {
@@ -4906,6 +5074,138 @@ async function handleLinkController(ctx: LegacyContext, action: string): Promise
 
       return jsonSuccess("ok");
 
+    }
+
+    case "importbrowserbookmarks": {
+      const user = await getUser(ctx, true);
+      if (!user) {
+        return jsonError("请登录后操作");
+      }
+
+      await ensureBrowserBookmarkTables();
+
+      const source = toStringValue(
+        deepGet(ctx.requestData.body, "source", "google_chrome"),
+        "google_chrome"
+      ).trim() || "google_chrome";
+
+      const bookmarkTree = deepGet(ctx.requestData.body, "bookmarkTree", []);
+      const records = buildBrowserBookmarkRecords(bookmarkTree);
+      if (records.length === 0) {
+        return jsonError("未采集到有效书签数据");
+      }
+
+      const now = nowDateTimeString();
+      const relationRows = await sql<{ id: number }[]>`
+        INSERT INTO browser_bookmark_relation(user_id, source, create_time, update_time)
+        VALUES (${user.user_id}, ${source}, ${now}, ${now})
+        RETURNING id
+      `;
+      const relationId = relationRows[0]?.id;
+      if (!relationId) {
+        return jsonError("书签关联关系创建失败");
+      }
+
+      for (const row of records) {
+        await sql`
+          INSERT INTO browser_bookmark_data(
+            relation_id,
+            bookmark_id,
+            url,
+            bookmark_title,
+            folder_path,
+            date_added,
+            page_title,
+            page_description,
+            page_text,
+            generated_title,
+            generated_description,
+            crawl_error,
+            create_time
+          )
+          VALUES (
+            ${relationId},
+            ${row.bookmark_id},
+            ${row.url},
+            ${row.bookmark_title},
+            ${row.folder_path},
+            ${row.date_added},
+            ${row.page_title},
+            ${row.page_description},
+            ${row.page_text},
+            ${row.generated_title},
+            ${row.generated_description},
+            ${row.crawl_error},
+            ${now}
+          )
+        `;
+      }
+
+      return jsonSuccess("ok", {
+        relation_id: relationId,
+        count: records.length
+      });
+    }
+
+    case "getbrowserbookmarks": {
+      const user = await getUser(ctx, true);
+      if (!user) {
+        return jsonError("请登录后操作");
+      }
+
+      await ensureBrowserBookmarkTables();
+
+      const requestedRelationId = parseNumber(
+        deepGet(ctx.requestData.body, "relation_id", 0),
+        0
+      );
+
+      let relationId = requestedRelationId;
+      if (relationId <= 0) {
+        const latest = await sql<{ id: number }[]>`
+          SELECT id
+          FROM browser_bookmark_relation
+          WHERE user_id = ${user.user_id}
+          ORDER BY id DESC
+          LIMIT 1
+        `;
+        relationId = latest[0]?.id ?? 0;
+      } else {
+        const belongs = await sql<{ id: number }[]>`
+          SELECT id
+          FROM browser_bookmark_relation
+          WHERE id = ${relationId}
+            AND user_id = ${user.user_id}
+          LIMIT 1
+        `;
+        if (belongs.length === 0) {
+          relationId = 0;
+        }
+      }
+
+      if (relationId <= 0) {
+        return jsonSuccess("ok", []);
+      }
+
+      const rows = await sql<BrowserBookmarkRecord[]>`
+        SELECT
+          bookmark_id,
+          url,
+          bookmark_title,
+          folder_path,
+          date_added,
+          page_title,
+          page_description,
+          page_text,
+          generated_title,
+          generated_description,
+          crawl_error
+        FROM browser_bookmark_data
+        WHERE relation_id = ${relationId}
+        ORDER BY id ASC
+      `;
+
+      return jsonSuccess("ok", rows);
     }
 
     default:
