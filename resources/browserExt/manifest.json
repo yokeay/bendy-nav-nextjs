@@ -1,0 +1,36 @@
+{
+  "name": "浏览器扩展",
+  "description": "这是一段简介",
+  "version": "1.0",
+  "manifest_version": 3,
+  "icons": {
+    "64": "icon/64.png",
+    "128": "icon/128.png",
+    "192": "icon/192.png"
+  },
+  "externally_connectable": {
+    "matches": [
+      "*://go.mtab.cc/*"
+    ]
+  },
+  "background": {
+    "service_worker":"src/background.js"
+  },
+  "permissions": [
+    "bookmarks",
+    "background",
+    "activeTab",
+    "cookies"
+  ],
+  "action": {
+    "default_icon": "icon/64.png",
+    "default_title": "浏览器扩展样板"
+  },
+  "host_permissions": [
+    "*://go.mtab.cc/*",
+    "*://*.baidu.com/*"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "dist/index.html"
+  }
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QQ登录</title>
+</head>
+<body>
+<script>
+    const user_id = '{$info.user_id}';
+    const token = '{$info.token}';
+    localStorage.setItem("user_id", user_id);
+    localStorage.setItem("token", token);
+    const expiresDate = new Date();
+    expiresDate.setDate(expiresDate.getDate() + 7);
+    const userIdCookie = "user_id=" + user_id + ";expires=" + expiresDate.toUTCString() + ";path=/";
+    const tokenCookie = "token=" + token + ";expires=" + expiresDate.toUTCString() + ";path=/";
+    document.cookie = userIdCookie;
+    document.cookie = tokenCookie;
+    function isMobileDevice() {
+        return (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    }
+    let dt = {
+        type: 'emitter',
+        message: {user_id: user_id, token: token},
+        subject: 'loginRefresh',
+    }
+    if (window.opener) {
+        window.opener.postMessage(JSON.stringify(dt), '*')
+    }
+    setTimeout(() => {
+        if (isMobileDevice() || window.innerWidth < 500) {
+            location.href = "/"
+        } else {
+            window.close()
+        }
+    }, 300)
+
+</script>
+</body>
+</html>

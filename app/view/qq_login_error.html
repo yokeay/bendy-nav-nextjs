@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    // 检测是否为移动设备（包括手机和平板）
+    function isMobileDevice() {
+        return (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    }
+    if (isMobileDevice()) {
+        location.href = "/"
+    } else {
+        window.close();
+    }
+
+</script>
+</body>
+</html>
