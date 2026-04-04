@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
+import { AddLinkDialog, BackgroundDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
 import { requestLegacy } from "./home-client";
 import { HomeSettingsDialog } from "./home-settings";
@@ -12,6 +13,7 @@ import styles from "./home-page.module.css";
 
 const LOCAL_HOME_CONFIG_STORAGE_KEY = "config";
 const SEARCH_ENGINE_STORAGE_KEY = "SearchEngineLocal";
+const LOCAL_HOME_LINK_STORAGE_KEY = "link";
 const PAGE_GROUP_STORAGE_KEY = "bendy.home.page-group";
 
 type HomePageProps = {
@@ -187,10 +189,34 @@ function buildRootTiles(data: HomeData, activeGroupId: string) {
   });
 }
 
-function buildFolderChildren(data: HomeData, folderId: string) {
-  return data.links.filter(
-    (item) => item.pid === folderId && item.type === "icon" && !isSpecialLegacyLink(item)
-  );
+function isActionTile(link: HomeLink): boolean {
+  return ["tab://addicon", "tab://background", "tab://setting"].includes(link.url);
+}
+
+function buildVisibleTiles(links: HomeLink[], activeGroupId: string) {
+  return links.filter((item) => {
+    if (item.type === "pageGroup") {
+      return false;
+    }
+
+    if (item.pid) {
+      return false;
+    }
+
+    if (!isRenderableTile(item) && !isActionTile(item)) {
+      return false;
+    }
+
+    if (activeGroupId) {
+      return item.pageGroup === activeGroupId;
+    }
+
+    return !item.pageGroup;
+  });
+}
+
+function buildFolderChildren(links: HomeLink[], folderId: string) {
+  return links.filter((item) => item.pid === folderId && item.type === "icon" && !isSpecialLegacyLink(item));
 }
 
 function buildDockLinks(data: HomeData) {
@@ -450,6 +476,35 @@ function IconTile({
   );
 }
 
+function ActionTile({
+  link,
+  onClick
+}: {
+  link: HomeLink;
+  onClick: () => void;
+}) {
+  const label = resolveTileLabel(link);
+
+  return (
+    <div className={styles.tile} style={getTileStyle(link)}>
+      <button
+        className={styles.tileAction}
+        type="button"
+        title={link.tips || label}
+        onClick={onClick}
+        style={getLinkSurfaceStyle(link)}
+      >
+        {isTextIcon(link) ? (
+          <span className={styles.tileIconText}>{link.src.replace(/^txt:/, "")}</span>
+        ) : (
+          <img className={styles.tileIconBox} src={link.src} alt={label} />
+        )}
+      </button>
+      <span className={styles.tileLabel}>{label}</span>
+    </div>
+  );
+}
+
 function FolderTile({
   link,
   children,
@@ -627,10 +682,13 @@ function NoticeBanner({
 export function HomePage({ data }: HomePageProps) {
   const [activeGroupId, setActiveGroupId] = useState("");
   const [currentConfig, setCurrentConfig] = useState<HomeConfig>(data.config);
+  const [currentLinks, setCurrentLinks] = useState<HomeLink[]>(data.links);
   const [openFolderId, setOpenFolderId] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [addLinkOpen, setAddLinkOpen] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(Boolean(data.notice));
   const [toasts, setToasts] = useState<HomeToastItem[]>([]);
 
@@ -660,6 +718,18 @@ export function HomePage({ data }: HomePageProps) {
           // ignore invalid local config
         }
       }
+
+      const localLinksRaw = window.localStorage.getItem(LOCAL_HOME_LINK_STORAGE_KEY);
+      if (localLinksRaw) {
+        try {
+          const parsed = JSON.parse(localLinksRaw) as HomeLink[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCurrentLinks(parsed);
+          }
+        } catch {
+          // ignore invalid local links
+        }
+      }
     }
 
     const storedGroupId = window.localStorage.getItem(PAGE_GROUP_STORAGE_KEY);
@@ -667,10 +737,13 @@ export function HomePage({ data }: HomePageProps) {
       return;
     }
 
-    if (storedGroupId === "" || data.pageGroups.some((group) => group.id === storedGroupId)) {
+    if (
+      storedGroupId === "" ||
+      currentLinks.some((group) => group.type === "pageGroup" && group.id === storedGroupId)
+    ) {
       setActiveGroupId(storedGroupId);
     }
-  }, [data.pageGroups, data.user]);
+  }, [currentLinks, data.user]);
 
   useEffect(() => {
     window.localStorage.setItem(PAGE_GROUP_STORAGE_KEY, activeGroupId);
@@ -701,11 +774,82 @@ export function HomePage({ data }: HomePageProps) {
     }
   }
 
-  const tiles = buildRootTiles(data, activeGroupId);
-  const folder = openFolderId ? data.links.find((item) => item.id === openFolderId) ?? null : null;
-  const folderChildren = folder ? buildFolderChildren(data, folder.id) : [];
+  async function persistLinks(nextLinks: HomeLink[]) {
+    if (data.user) {
+      await requestLegacy<unknown>("/link/update", {
+        method: "POST",
+        data: { link: nextLinks }
+      });
+    } else {
+      window.localStorage.setItem(LOCAL_HOME_LINK_STORAGE_KEY, JSON.stringify(nextLinks));
+    }
+    setCurrentLinks(nextLinks);
+  }
+
+  async function handleAddLink(payload: {
+    name: string;
+    url: string;
+    src: string;
+    bgColor: string;
+    pageGroup: string;
+  }) {
+    const nextLink = buildActionLink({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: payload.name,
+      src: payload.src,
+      url: payload.url,
+      bgColor: payload.bgColor,
+      pageGroup: payload.pageGroup,
+      sort: currentLinks.length + 1
+    });
+
+    await persistLinks([...currentLinks, nextLink]);
+    notify("标签已添加。", "success");
+  }
+
+  async function handleApplyBackground(backgroundUrl: string) {
+    const nextConfig = mergeHomeConfig(currentConfig, {
+      theme: {
+        backgroundImage: backgroundUrl
+      }
+    });
+
+    setCurrentConfig(nextConfig);
+
+    if (data.user) {
+      await requestLegacy<unknown>("/config/update", {
+        method: "POST",
+        data: { config: nextConfig }
+      });
+    } else {
+      window.localStorage.setItem(LOCAL_HOME_CONFIG_STORAGE_KEY, JSON.stringify(nextConfig));
+    }
+
+    notify("壁纸已更新。", "success");
+  }
+
+  function handleActionTileClick(link: HomeLink) {
+    if (link.url === "tab://addicon") {
+      setAddLinkOpen(true);
+      return;
+    }
+
+    if (link.url === "tab://background") {
+      setBackgroundOpen(true);
+      return;
+    }
+
+    if (link.url === "tab://setting") {
+      setSettingsOpen(true);
+    }
+  }
+
+  const tiles = buildVisibleTiles(currentLinks, activeGroupId);
+  const folder = openFolderId ? currentLinks.find((item) => item.id === openFolderId) ?? null : null;
+  const folderChildren = folder ? buildFolderChildren(currentLinks, folder.id) : [];
   const dockLinks = buildDockLinks(data);
   const compactMode = currentConfig.theme.CompactMode;
+  const currentPageGroups = currentLinks.filter((item) => item.type === "pageGroup");
 
   const cssVariables = {
     "--icon-size": `${currentConfig.theme.iconWidth}px`,
@@ -727,7 +871,11 @@ export function HomePage({ data }: HomePageProps) {
       <div className={styles.shell}>
         <HomeToastViewport items={toasts} onDismiss={dismissToast} />
         {!compactMode ? (
-          <Sidebar data={data} activeGroupId={activeGroupId} onSelectGroup={setActiveGroupId} />
+          <Sidebar
+            data={{ ...data, pageGroups: currentPageGroups }}
+            activeGroupId={activeGroupId}
+            onSelectGroup={setActiveGroupId}
+          />
         ) : null}
 
         <Toolbar
@@ -776,10 +924,14 @@ export function HomePage({ data }: HomePageProps) {
                         <FolderTile
                           key={item.id}
                           link={item}
-                          children={buildFolderChildren(data, item.id)}
+                          children={buildFolderChildren(currentLinks, item.id)}
                           onOpen={() => setOpenFolderId(item.id)}
                         />
                       );
+                    }
+
+                    if (isActionTile(item)) {
+                      return <ActionTile key={item.id} link={item} onClick={() => handleActionTileClick(item)} />;
                     }
 
                     return (
@@ -826,6 +978,18 @@ export function HomePage({ data }: HomePageProps) {
           onClose={() => setSettingsOpen(false)}
           onSave={handleSaveSettings}
           onConfigChange={setCurrentConfig}
+        />
+        <AddLinkDialog
+          open={addLinkOpen}
+          activeGroupId={activeGroupId}
+          onClose={() => setAddLinkOpen(false)}
+          onSave={handleAddLink}
+        />
+        <BackgroundDialog
+          open={backgroundOpen}
+          currentBackground={currentConfig.theme.backgroundImage}
+          onClose={() => setBackgroundOpen(false)}
+          onApply={handleApplyBackground}
         />
       </div>
     </div>
