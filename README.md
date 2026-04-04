@@ -35,7 +35,7 @@
 | --- | --- | --- |
 | 核心运行时 | PHP 单体应用 | Node.js + Next.js Route Handlers |
 | Web 框架组织 | 传统服务端目录、静态资源目录、PHP 配置文件 | `app/` 路由入口 + `src/` 业务分层 + TypeScript 类型约束 |
-| 路由接入 | 原项目路由体系 | `app/route.ts` 与 `app/[...path]/route.ts` 统一转发到 legacy dispatcher |
+| 路由接入 | 原项目路由体系 | `app/page.tsx` 接管新版首页，`app/[...path]/route.ts` 继续转发 legacy dispatcher |
 | 前端工程 | 原项目历史前端资源与页面模板 | Next.js 工程承接，同时兼容 `public/dist`、`app/view` 等旧资源 |
 | 配置方式 | 仓库内配置文件思路 | 以 `.env` / `.env.local` 为标准，旧 `app.config.json` 仅保留兼容兜底 |
 | 数据访问 | 原项目服务端数据访问方式 | `postgres` Node 客户端 + TypeScript 配置读取 |
@@ -44,7 +44,8 @@
 
 ### 目录总览
 
-- `app/`: Next.js 路由入口与元数据文件。
+- `app/`: Next.js 路由入口、首页页面与元数据文件。
+- `src/features/home`: 新首页的 TypeScript 组件与样式实现。
 - `src/server/legacy`: legacy 行为兼容层，承接原项目的接口与页面逻辑。
 - `src/server/infrastructure`: 配置、数据库、缓存等基础设施。
 - `src/lib`: 兼容导出层。
