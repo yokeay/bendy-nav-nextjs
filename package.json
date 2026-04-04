@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "tsx scripts/start.ts",
     "db:init": "tsx scripts/db-init.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:encoding": "node --experimental-vm-modules scripts/check-encoding.mjs"
   },
   "dependencies": {
     "@types/adm-zip": "^0.5.7",

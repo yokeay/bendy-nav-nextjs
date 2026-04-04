@@ -1,42 +1,224 @@
-<h1>笨迪导航（bendy-nav）服务条款</h1>
-<p>更新日期：2026-03-09</p>
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bendy-nav Terms</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f1eb;
+      --panel: #ffffff;
+      --text: #171717;
+      --muted: #6d665d;
+      --line: rgba(23, 23, 23, 0.08);
+      --accent: #111111;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #faf9f6 0%, #f0ede5 100%);
+    }
+    main {
+      width: min(1100px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 56px;
+    }
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 20px 48px rgba(17, 17, 17, 0.06);
+    }
+    h1, h2, h3 { line-height: 1.25; }
+    p, li { line-height: 1.75; color: #2d2925; }
+    .muted { color: var(--muted); }
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0 0;
+    }
+    .nav a {
+      text-decoration: none;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: #f6f3ec;
+      font-size: 0.94rem;
+    }
+    .section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 22px;
+    }
+    code {
+      background: #f5f1e8;
+      border-radius: 6px;
+      padding: 0.12em 0.38em;
+      font-family: Consolas, Monaco, monospace;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>服务条款 / Terms of Service</h1>
+      <p class="muted">Updated on April 3, 2026</p>
+      <p>
+        This repository is a derivative Next.js rewrite of the original
+        <a href="https://github.com/tsxcw/mtab">mtab</a> project. The terms below explain how to use,
+        deploy, modify, and redistribute this repository and its related resources.
+      </p>
+      <div class="nav">
+        <a href="#zh">中文</a>
+        <a href="#en">English</a>
+        <a href="#es">Español</a>
+        <a href="#mn">Монгол</a>
+        <a href="#ug">ئۇيغۇرچە</a>
+        <a href="#bo">བོད་ཡིག</a>
+        <a href="#ar">العربية</a>
+        <a href="#fr">Français</a>
+      </div>
+    </section>
 
-<h2>1. 适用范围</h2>
-<p>本条款适用于你访问、部署、使用或分发“笨迪导航（bendy-nav）”及其相关功能、接口与文档。</p>
+    <section class="grid">
+      <article class="card section" id="zh" lang="zh-CN">
+        <h2>中文</h2>
+        <p>本项目适用于你访问、部署、使用、修改或分发 <strong>bendy-nav-nextjs</strong> 及其相关资源的场景。</p>
+        <ol>
+          <li>你应仅在合法、合规、可自担风险的前提下使用本项目。</li>
+          <li>你需要自行保护数据库、SMTP、管理员账户、部署环境和访问控制。</li>
+          <li>本项目是基于 <strong>mtab</strong> 的衍生重写，二次分发时应保留原项目要求的版权与许可证信息。</li>
+          <li>项目默认支持自部署，数据控制权原则上归部署者所有，但接入第三方服务时仍需遵守第三方规则。</li>
+          <li>项目按“现状”提供，不对可用性、连续性、适销性或特定用途适配性作明示或默示担保。</li>
+          <li>因配置错误、升级失败、第三方异常、非法使用或安全问题造成的损失，由使用者自行承担。</li>
+          <li>若你部署在 Vercel 等无状态平台，应自行评估本地文件写入能力的限制。</li>
+          <li>继续使用本项目即表示你接受后续版本可能带来的条款更新。</li>
+        </ol>
+      </article>
 
-<h2>2. 使用方式</h2>
-<ul>
-  <li>你应仅在合法、合规的范围内使用本项目。</li>
-  <li>你应自行对账号、密钥、数据库连接串及服务器安全负责。</li>
-  <li>你不得利用本项目从事侵权、攻击、滥发、诈骗或其他违法行为。</li>
-</ul>
+      <article class="card section" id="en" lang="en">
+        <h2>English</h2>
+        <p>These terms apply when you access, deploy, use, modify, or redistribute <strong>bendy-nav-nextjs</strong>.</p>
+        <ol>
+          <li>Use the project only in lawful and compliant scenarios.</li>
+          <li>You are responsible for protecting the database, SMTP account, admin credentials, and deployment environment.</li>
+          <li>This repository is a derivative rewrite of <strong>mtab</strong>; redistribution must preserve required upstream notices and license text.</li>
+          <li>The project is designed for self-hosting, but third-party services remain governed by their own policies.</li>
+          <li>The software is provided "as is" without warranties of availability, continuity, merchantability, or fitness for a particular purpose.</li>
+          <li>You assume the risk of losses caused by misconfiguration, failed upgrades, third-party outages, abuse, or security incidents.</li>
+          <li>If you deploy to stateless platforms such as Vercel, you must evaluate the limitations of local file writes yourself.</li>
+          <li>Continued use after updates means you accept future revisions of these terms.</li>
+        </ol>
+      </article>
 
-<h2>3. 数据与隐私</h2>
-<ul>
-  <li>本项目支持自部署，默认情况下数据由部署者自行控制。</li>
-  <li>部署者应自行履行必要的数据保护义务（如备份、访问控制、审计与告知）。</li>
-  <li>如接入第三方服务（天气、热搜、OAuth、邮件等），相应数据处理受第三方规则约束。</li>
-</ul>
+      <article class="card section" id="es" lang="es">
+        <h2>Español</h2>
+        <p>Estos términos se aplican cuando accedes, despliegas, usas, modificas o redistribuyes <strong>bendy-nav-nextjs</strong>.</p>
+        <ol>
+          <li>Utiliza el proyecto solo en contextos legales y conformes.</li>
+          <li>Eres responsable de proteger la base de datos, SMTP, credenciales de administrador y el entorno de despliegue.</li>
+          <li>Este repositorio es una reescritura derivada de <strong>mtab</strong>; al redistribuirlo debes conservar los avisos y la licencia exigidos por el proyecto original.</li>
+          <li>El proyecto está pensado para autoalojamiento, pero los servicios de terceros siguen sus propias políticas.</li>
+          <li>El software se ofrece "tal cual", sin garantías de disponibilidad, continuidad o idoneidad para un propósito específico.</li>
+          <li>Las pérdidas causadas por errores de configuración, fallos de actualización, servicios de terceros o incidentes de seguridad corren por cuenta del usuario.</li>
+          <li>Si despliegas en plataformas sin estado como Vercel, debes evaluar por tu cuenta las limitaciones de escritura local.</li>
+          <li>Seguir usando el proyecto después de una actualización implica aceptar futuras revisiones de estos términos.</li>
+        </ol>
+      </article>
 
-<h2>4. 开源许可与来源说明（重要）</h2>
-<p>“笨迪导航（bendy-nav）”包含基于 <strong>mtab</strong> 开源项目的二次开发内容。相关代码与衍生部分遵循原有开源许可要求。</p>
-<ul>
-  <li><strong>mtab</strong> 原项目采用 <strong>MIT License</strong>。</li>
-  <li>你在再分发本项目或其修改版时，应保留原有版权声明与许可文本。</li>
-  <li>本项目与 mtab 官方团队不存在隶属、背书或商业担保关系。</li>
-</ul>
+      <article class="card section" id="mn" lang="mn">
+        <h2>Монгол</h2>
+        <p><strong>bendy-nav-nextjs</strong>-ийг үзэх, байрлуулах, ашиглах, өөрчлөх, түгээх үед эдгээр нөхцөл үйлчилнэ.</p>
+        <ol>
+          <li>Төслийг зөвхөн хууль ёсны, нийцтэй нөхцөлд ашиглана.</li>
+          <li>Өгөгдлийн сан, SMTP, админ нэвтрэх мэдээлэл, байршуулалтын орчноо хамгаалах үүрэг хэрэглэгчид ногдоно.</li>
+          <li>Энэ repo нь <strong>mtab</strong>-ийн уламжлалтай дахин бичилт тул дахин түгээхдээ анхны лиценз, мэдэгдлийг хадгална.</li>
+          <li>Төсөл нь self-hosting-д зориулагдсан боловч гуравдагч талын үйлчилгээ өөрийн дүрмээр зохицуулагдана.</li>
+          <li>Программ нь ямар ч баталгаагүйгээр "байгаа хэлбэрээрээ" олгогдоно.</li>
+          <li>Буруу тохиргоо, шинэчлэлтийн алдаа, аюулгүй байдлын асуудал, гуравдагч талын доголдлоос үүсэх эрсдэлийг хэрэглэгч өөрөө хариуцна.</li>
+          <li>Vercel зэрэг stateless орчинд байрлуулах бол локал файл бичилтийн хязгаарлалтыг өөрөө үнэлэх хэрэгтэй.</li>
+          <li>Шинэчлэлтийн дараа ашигласаар байх нь дараагийн өөрчлөлтийг зөвшөөрсөнд тооцогдоно.</li>
+        </ol>
+      </article>
 
-<h2>5. 免责声明</h2>
-<ul>
-  <li>本项目按“现状”提供，不对可用性、连续性、准确性、适销性或特定用途适用性作明示或默示担保。</li>
-  <li>因部署、配置、升级、网络波动、第三方服务异常或误操作导致的损失，由使用者自行承担。</li>
-</ul>
+      <article class="card section" id="ug" lang="ug">
+        <h2>ئۇيغۇرچە</h2>
+        <p>بۇ شەرتلەر <strong>bendy-nav-nextjs</strong> نى زىيارەت قىلغاندا، ئورۇنلاشتۇرغاندا، ئىشلاتقاندا، ئۆزگەرتكەندە ياكى تارقاتقاندا قوللىنىلىدۇ.</p>
+        <ol>
+          <li>بۇ لايىھەنى پەقەت قانۇنلۇق ۋە ماس كېلىدىغان شارائىتتا ئىشلىتىڭ.</li>
+          <li>ساندان، SMTP، باشقۇرغۇچى ھېساباتى ۋە ئورۇنلاشتۇرۇش مۇھىتىنى قوغداش مەسئۇلىيىتى سىزگە تەۋە.</li>
+          <li>بۇ repo بولسا <strong>mtab</strong> نىڭ قايتا يېزىلغان تۇغۇندى نۇسخىسى، شۇڭا قايتا تارقاتقاندا ئەسلى لىسەنزىيە ۋە ھوقۇق باياناتىنى ساقلاش لازىم.</li>
+          <li>بۇ لايىھە self-hosting ئۈچۈن لايىھەلەنگەن، بىراق ئۈچىنچى تەرەپ مۇلازىمىتى ئۆز قائىدىسىگە بوي سۇنىدۇ.</li>
+          <li>يۇمشاق دېتال «ھازىرقى ھالىتى» بويىچە تەمىنلىنىدۇ، ھەر قانداق كاپالەت يوق.</li>
+          <li>سەپلىمە خاتالىقى، يېڭىلاش مەسىلىسى، بىخەتەرلىك ھادىسىسى ياكى ئۈچىنچى تەرەپ مەسىلىسىدىن كېلىدىغان زىيانغا ئىشلەتكۈچى ئۆزى مەسئۇل.</li>
+          <li>ئەگەر Vercel غا ئوخشاش stateless سۇپىغا ئورۇنلاشتۇرسىڭىز، يەرلىك ھۆججەت يېزىش چەكلىمىسىنى ئۆزىڭىز باھالاشىڭىز كېرەك.</li>
+          <li>كېيىنكى نەشرىدىن كېيىنمۇ ئىشلىتىشنى داۋاملاشتۇرۇش بۇ شەرت ئۆزگەرتىلىشىنى قوبۇل قىلغانلىق ھېسابلىنىدۇ.</li>
+        </ol>
+      </article>
 
-<h2>6. 责任限制</h2>
-<p>在适用法律允许的最大范围内，项目贡献者不对任何间接、附带、特殊或后果性损害承担责任。</p>
+      <article class="card section" id="bo" lang="bo">
+        <h2>བོད་ཡིག</h2>
+        <p><strong>bendy-nav-nextjs</strong> ལ་ལྟ་ཞིབ་ སྒྲིག་འཇུག་ བེད་སྤྱོད་ བསྒྱུར་བཅོས་ ཡང་ན་བགོ་འགྲེམས་བྱེད་དུས་གཤམ་གྱི་ཆ་རྐྱེན་དེ་ཚོ་ལས་འགུལ་བྱེད།</p>
+        <ol>
+          <li>ལས་གཞི་འདི་ཁྲིམས་མཐུན་དང་སྒྲིག་མཐུན་ས་ཁུལ་ནས་མ་གཏོགས་མི་བེད།</li>
+          <li>གནས་ཚད་གཞི་གྲངས་ SMTP དང་དོ་དམ་ཐོ་གཞུང་སོགས་ཀྱི་བདེ་འཇགས་དེ་སྤྱོད་མཁན་གྱིས་འགན་འཁུར་དགོས།</li>
+          <li>repo འདི་ནི <strong>mtab</strong> ལས་བྱུང་བའི་སྒྱུར་བཅོས་ཡིན་པས་བགོ་འགྲེམས་བྱེད་དུས་སྔོན་གྱི་ལག་ཁྱེར་དང་དབང་ཚད་བརྡ་ཁྱབ་ཉར་དགོས།</li>
+          <li>ལས་གཞི་འདི self-hosting ལ་འཚམས་ཀྱང་ཕྱི་རོལ་ཞབས་ཞུ་རྣམས་རང་གི་སྲིད་བྱུས་ལ་བསྟུན་དགོས།</li>
+          <li>མཉེན་ཆས་འདི་ “གནས་བབ་ད་ལྟའི་རང་བཞིན” གྱིས་བཀོད་པ་ཡིན་པས་ཁས་ལེན་གང་ཡང་མེད།</li>
+          <li>སྒྲིག་འགོད་ནོར་འཁྲུལ་ གསར་སྒྱུར་ལོག་པ་ བདེ་འཇགས་གནད་དོན་ ཕྱི་རོལ་ཞབས་ཞུའི་དཀའ་ངལ་ལས་བྱུང་བའི་གྱོང་གུན་ལ་སྤྱོད་མཁན་གྱིས་འགན་འཁུར་དགོས།</li>
+          <li>Vercel ལྟ་བུའི stateless platform ལ་སྒྲིག་འཇུག་བྱེད་ན་ཡུལ་གྱི་ཡིག་ཆ་འབྲི་བའི་ཚད་བཀག་རང་ཉིད་ཀྱིས་དཔྱད་དགོས།</li>
+          <li>གསར་སྒྱུར་རྗེས་མུ་མཐུད་སྤྱོད་པ་ནི་ཆ་རྐྱེན་གསར་པ་བ स्वीकार བྱས་པར་བརྩི།</li>
+        </ol>
+      </article>
 
-<h2>7. 条款变更</h2>
-<p>条款可能随版本更新而调整。你继续使用本项目即视为接受更新后的条款。</p>
+      <article class="card section" id="ar" lang="ar">
+        <h2>العربية</h2>
+        <p>تسري هذه الشروط عند الوصول إلى <strong>bendy-nav-nextjs</strong> أو نشره أو استخدامه أو تعديله أو إعادة توزيعه.</p>
+        <ol>
+          <li>يجب استخدام المشروع فقط في حالات قانونية ومتوافقة.</li>
+          <li>تقع على عاتقك مسؤولية حماية قاعدة البيانات وSMTP وبيئة النشر وحسابات الإدارة.</li>
+          <li>هذا المستودع إعادة كتابة مشتقة من <strong>mtab</strong>؛ وأي إعادة توزيع يجب أن تُبقي الإشعارات والرخصة المطلوبة من المشروع الأصلي.</li>
+          <li>المشروع مهيأ للاستضافة الذاتية، لكن خدمات الجهات الخارجية تخضع لسياساتها الخاصة.</li>
+          <li>يُقدَّم البرنامج "كما هو" من دون أي ضمانات صريحة أو ضمنية.</li>
+          <li>يتحمل المستخدم مخاطر الخسائر الناتجة عن سوء الإعداد أو فشل التحديث أو الحوادث الأمنية أو أعطال الجهات الخارجية.</li>
+          <li>إذا نُشر المشروع على منصات عديمة الحالة مثل Vercel، فعليك تقييم قيود الكتابة إلى الملفات المحلية بنفسك.</li>
+          <li>الاستمرار في استخدام المشروع بعد التحديث يعني قبول أي تعديل لاحق لهذه الشروط.</li>
+        </ol>
+      </article>
 
-<h2>8. 联系与反馈</h2>
-<p>如你对条款、许可或合规有疑问，请通过项目仓库 issue 或维护者指定渠道联系。</p>
+      <article class="card section" id="fr" lang="fr">
+        <h2>Français</h2>
+        <p>Ces conditions s'appliquent lorsque vous accédez à <strong>bendy-nav-nextjs</strong>, le déployez, l'utilisez, le modifiez ou le redistribuez.</p>
+        <ol>
+          <li>Le projet doit être utilisé uniquement dans des contextes légaux et conformes.</li>
+          <li>Vous êtes responsable de la protection de la base de données, du SMTP, des comptes administrateurs et de l'environnement de déploiement.</li>
+          <li>Ce dépôt est une réécriture dérivée de <strong>mtab</strong> ; toute redistribution doit conserver les mentions et la licence exigées par le projet d'origine.</li>
+          <li>Le projet est conçu pour l'auto-hébergement, mais les services tiers restent soumis à leurs propres règles.</li>
+          <li>Le logiciel est fourni "en l'état" sans garantie de disponibilité, de continuité ou d'adéquation à un usage particulier.</li>
+          <li>L'utilisateur assume les pertes dues à une mauvaise configuration, à une mise à jour ratée, à un incident de sécurité ou à une panne de service tiers.</li>
+          <li>En cas de déploiement sur une plateforme sans état comme Vercel, vous devez évaluer vous-même les limites des écritures locales.</li>
+          <li>L'usage continu après mise à jour vaut acceptation des futures révisions de ces conditions.</li>
+        </ol>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

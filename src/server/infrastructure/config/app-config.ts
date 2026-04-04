@@ -1,5 +1,10 @@
 ﻿import fs from "node:fs";
 import path from "node:path";
+import {
+  getLoadedDotenvFiles,
+  loadDotenvFiles,
+  resolveProjectRoot
+} from "./load-dotenv";
 
 export type AppConfig = {
   server: {
@@ -22,17 +27,28 @@ export type AppConfig = {
   };
 };
 
-const CONFIG_BASENAME = "app.config.json";
-const CONFIG_ENV_PATH = process.env.APP_CONFIG_PATH?.trim();
+export type AppConfigSource = {
+  envFiles: string[];
+  legacyConfigPath: string | null;
+  primarySource: string;
+  projectRoot: string;
+};
 
-function resolveConfigPath(): string {
-  if (CONFIG_ENV_PATH) {
-    return CONFIG_ENV_PATH;
+const LEGACY_CONFIG_BASENAME = "app.config.json";
+const LEGACY_CONFIG_ENV_PATH = process.env.APP_CONFIG_PATH?.trim();
+const DEFAULT_SERVER_PORT = 3000;
+
+let cachedConfig: AppConfig | null = null;
+let cachedSource: AppConfigSource | null = null;
+
+function resolveLegacyConfigPath(projectRoot: string): string | null {
+  if (LEGACY_CONFIG_ENV_PATH) {
+    return LEGACY_CONFIG_ENV_PATH;
   }
 
-  let current = process.cwd();
+  let current = projectRoot;
   for (let i = 0; i < 4; i += 1) {
-    const candidate = path.join(current, CONFIG_BASENAME);
+    const candidate = path.join(current, LEGACY_CONFIG_BASENAME);
     if (fs.existsSync(candidate)) {
       return candidate;
     }
@@ -43,18 +59,94 @@ function resolveConfigPath(): string {
     current = parent;
   }
 
-  return path.join(process.cwd(), CONFIG_BASENAME);
+  return null;
 }
 
-const CONFIG_PATH = resolveConfigPath();
-const DEFAULT_DATABASE_URL =
-  "postgresql://neondb_owner:npg_LvTB3UknZyC0@ep-old-haze-a1b9r6vf-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+function readStringEnv(names: string[], fallback = "", trim = true): string {
+  for (const name of names) {
+    const rawValue = process.env[name];
+    if (rawValue === undefined) {
+      continue;
+    }
 
-let cachedConfig: AppConfig | null = null;
+    const value = trim ? rawValue.trim() : rawValue;
+    if (trim ? value !== "" : rawValue !== "") {
+      return value;
+    }
+  }
+
+  return fallback;
+}
+
+function readNumberEnv(names: string[], fallback: number): number {
+  for (const name of names) {
+    const rawValue = process.env[name];
+    if (rawValue === undefined || rawValue.trim() === "") {
+      continue;
+    }
+
+    const value = Number(rawValue);
+    if (Number.isFinite(value) && value > 0) {
+      return value;
+    }
+  }
+
+  return fallback;
+}
+
+function readFlagEnv(names: string[], fallback: number): number {
+  for (const name of names) {
+    const rawValue = process.env[name];
+    if (rawValue === undefined || rawValue.trim() === "") {
+      continue;
+    }
+
+    const normalized = rawValue.trim().toLowerCase();
+    if (["1", "true", "yes", "on"].includes(normalized)) {
+      return 1;
+    }
+    if (["0", "false", "no", "off"].includes(normalized)) {
+      return 0;
+    }
+  }
+
+  return fallback;
+}
+
+function loadLegacyConfig(projectRoot: string): {
+  configPath: string | null;
+  rawConfig: Partial<AppConfig> | undefined;
+} {
+  const configPath = resolveLegacyConfigPath(projectRoot);
+  if (!configPath) {
+    return {
+      configPath: null,
+      rawConfig: undefined
+    };
+  }
+
+  try {
+    const content = fs.readFileSync(configPath, "utf8");
+    const normalized = content.replace(/^\uFEFF/, "");
+    return {
+      configPath,
+      rawConfig: JSON.parse(normalized) as Partial<AppConfig>
+    };
+  } catch {
+    console.warn(`Invalid legacy config file: ${configPath}`);
+    return {
+      configPath,
+      rawConfig: undefined
+    };
+  }
+}
 
 function normalizeConfig(raw: Partial<AppConfig> | undefined): AppConfig {
-  const serverPort = Number(raw?.server?.port ?? 3000) || 3000;
-  const databaseUrl = (raw?.database?.url ?? "").trim() || DEFAULT_DATABASE_URL;
+  const serverPort = readNumberEnv(
+    ["PORT", "SERVER_PORT"],
+    Number(raw?.server?.port ?? DEFAULT_SERVER_PORT) || DEFAULT_SERVER_PORT
+  );
+  const databaseUrl = readStringEnv(["DATABASE_URL"], String(raw?.database?.url ?? "").trim());
   const smtp = (raw?.smtp ?? {}) as Partial<AppConfig["smtp"]>;
 
   return {
@@ -65,16 +157,16 @@ function normalizeConfig(raw: Partial<AppConfig> | undefined): AppConfig {
       url: databaseUrl
     },
     smtp: {
-      email: String(smtp.email ?? "").trim(),
-      host: String(smtp.host ?? "").trim(),
-      port: Number(smtp.port ?? 465) || 465,
-      password: String(smtp.password ?? ""),
-      ssl: Number(smtp.ssl ?? 0) || 0,
-      codeTemplate: String(smtp.codeTemplate ?? "")
+      email: readStringEnv(["SMTP_EMAIL"], String(smtp.email ?? "").trim()),
+      host: readStringEnv(["SMTP_HOST"], String(smtp.host ?? "").trim()),
+      port: readNumberEnv(["SMTP_PORT"], Number(smtp.port ?? 465) || 465),
+      password: readStringEnv(["SMTP_PASSWORD"], String(smtp.password ?? ""), false),
+      ssl: readFlagEnv(["SMTP_SSL", "SMTP_SECURE"], Number(smtp.ssl ?? 0) || 0),
+      codeTemplate: readStringEnv(["SMTP_CODE_TEMPLATE"], String(smtp.codeTemplate ?? ""), false)
     },
     admin: {
-      email: String(raw?.admin?.email ?? "").trim(),
-      password: String(raw?.admin?.password ?? "")
+      email: readStringEnv(["ADMIN_EMAIL"], String(raw?.admin?.email ?? "").trim()),
+      password: readStringEnv(["ADMIN_PASSWORD"], String(raw?.admin?.password ?? ""), false)
     }
   };
 }
@@ -84,24 +176,41 @@ export function loadConfig(): AppConfig {
     return cachedConfig;
   }
 
-  let parsed: unknown;
-  try {
-    const content = fs.readFileSync(CONFIG_PATH, "utf8");
-    const normalized = content.replace(/^\uFEFF/, "");
-    parsed = JSON.parse(normalized) as Partial<AppConfig>;
-  } catch {
-    const fallback = normalizeConfig(undefined);
-    cachedConfig = fallback;
-    console.warn(`Missing or invalid config file: ${CONFIG_PATH}`);
-    return cachedConfig;
+  const projectRoot = resolveProjectRoot();
+  const envFiles = loadDotenvFiles(projectRoot);
+  const { configPath, rawConfig } = loadLegacyConfig(projectRoot);
+
+  cachedSource = {
+    envFiles,
+    legacyConfigPath: configPath,
+    primarySource: envFiles[0] ?? configPath ?? path.join(projectRoot, ".env"),
+    projectRoot
+  };
+
+  if (envFiles.length === 0 && !configPath) {
+    console.warn(
+      `No configuration file found. Copy ${path.join(projectRoot, ".env.example")} to ${path.join(projectRoot, ".env")}.`
+    );
+  } else if (envFiles.length === 0 && configPath) {
+    console.warn(`Using deprecated legacy config file: ${configPath}. Prefer .env files instead.`);
   }
 
-  cachedConfig = normalizeConfig(parsed as Partial<AppConfig>);
+  cachedConfig = normalizeConfig(rawConfig);
   return cachedConfig;
 }
 
 export function getConfigPath(): string {
-  return CONFIG_PATH;
+  return getConfigSource().primarySource;
+}
+
+export function getConfigSource(): AppConfigSource {
+  loadConfig();
+  return {
+    envFiles: [...(cachedSource?.envFiles ?? getLoadedDotenvFiles())],
+    legacyConfigPath: cachedSource?.legacyConfigPath ?? null,
+    primarySource: cachedSource?.primarySource ?? path.join(resolveProjectRoot(), ".env"),
+    projectRoot: cachedSource?.projectRoot ?? resolveProjectRoot()
+  };
 }
 
 export function getDatabaseUrl(): string {

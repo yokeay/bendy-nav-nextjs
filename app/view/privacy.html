@@ -1,32 +1,169 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>服务条款 - {$title}</title>
+    <title>服务条款 | {$title}</title>
     <link href="{$logo}" rel="icon">
     <style>
-        header,body{
-            margin: 0;
-            padding: 0;
+        :root {
+            color-scheme: light;
+            --bg: #f4f4f1;
+            --card: #ffffff;
+            --text: #171717;
+            --muted: #5f5a52;
+            --line: rgba(23, 23, 23, 0.08);
+            --accent: #111111;
         }
-        header{
-            box-shadow: 0 0 10px #e1e1e1;
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top, rgba(255,255,255,0.96), rgba(244,244,241,0.92) 45%, rgba(236,235,230,1) 100%),
+                linear-gradient(180deg, #fafaf7 0%, #f0eee8 100%);
+        }
+        a {
+            color: inherit;
+        }
+        .shell {
+            width: min(1040px, calc(100vw - 32px));
+            margin: 0 auto;
+        }
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(14px);
+            background: rgba(244, 244, 241, 0.82);
+            border-bottom: 1px solid var(--line);
+        }
+        .topbar-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 0;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+        .brand img {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #111111;
+            object-fit: cover;
+            box-shadow: 0 14px 28px rgba(17, 17, 17, 0.18);
+        }
+        .brand-copy {
+            min-width: 0;
+        }
+        .brand-copy strong {
+            display: block;
+            font-size: 1.05rem;
+            letter-spacing: 0.02em;
+        }
+        .brand-copy span {
+            display: block;
+            color: var(--muted);
+            font-size: 0.88rem;
+            margin-top: 2px;
+        }
+        .home-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 0.92rem;
+            white-space: nowrap;
+        }
+        .content {
+            padding: 28px 0 48px;
+        }
+        .article {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            padding: 28px;
+            box-shadow: 0 24px 60px rgba(26, 22, 15, 0.08);
+        }
+        .article h1,
+        .article h2,
+        .article h3 {
+            line-height: 1.25;
+        }
+        .article p,
+        .article li {
+            color: #2d2925;
+            line-height: 1.75;
+        }
+        .article table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            overflow: hidden;
+            border-radius: 16px;
+        }
+        .article th,
+        .article td {
+            border: 1px solid var(--line);
+            padding: 12px 14px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .article th {
+            background: #f7f5ef;
+        }
+        .article code {
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.95em;
+            background: #f5f1e8;
+            padding: 0.12em 0.4em;
+            border-radius: 6px;
+        }
+        @media (max-width: 720px) {
+            .topbar-inner {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .home-link {
+                width: 100%;
+            }
+            .article {
+                padding: 20px;
+                border-radius: 22px;
+            }
         }
     </style>
 </head>
 <body>
-<header style="background: #ffffff;z-index: 10;position: sticky;top: 0">
-    <div style="max-width: 1000px;align-items: center;padding: 15px;margin: 0 auto;display: flex;justify-content: space-between;">
-        <div style="font-size: 25px;font-weight: bolder;display: flex;align-items: center;gap: 15px">
-            <img src="{$logo}" alt="logo" style="width: 40px;height: 40px" />
-            {$title}
+<header class="topbar">
+    <div class="shell topbar-inner">
+        <div class="brand">
+            <img src="{$logo}" alt="logo" />
+            <div class="brand-copy">
+                <strong>{$title}</strong>
+                <span>Service Terms / 服务条款</span>
+            </div>
         </div>
-        <a href="/" style="padding: 10px 20px;border-radius: 6px;background: #1e9fff;color: #FFFFFF;text-decoration: none;font-size: 13px">返回首页</a>
+        <a href="/" class="home-link">返回首页 / Back to Home</a>
     </div>
 </header>
-<div style="max-width: 1000px;padding: 15px;margin: 0 auto;">
-    {$content|raw}
-</div>
+<main class="shell content">
+    <article class="article">
+        {$content|raw}
+    </article>
+</main>
 </body>
 </html>

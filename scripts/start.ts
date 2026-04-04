@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   if (reason === "occupied") {
     console.warn(`Port ${preferredPort} is in use, switching to ${port}.`);
   } else if (reason === "unconfigured") {
-    console.warn(`No port configured in ${configPath}, using random port ${port}.`);
+    console.warn(`No PORT configured in ${configPath}, using random port ${port}.`);
   } else if (reason === "fallback") {
     console.warn(`Failed to find a random port, falling back to ${port}.`);
   }

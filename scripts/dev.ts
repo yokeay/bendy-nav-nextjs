@@ -1,20 +1,35 @@
 ﻿import path from "node:path";
 import { spawn } from "node:child_process";
+import { rm } from "node:fs/promises";
 import { loadRuntimeConfig, getConfiguredPort } from "./runtime/config";
 import { resolvePort } from "./runtime/port";
 import { initOnStart } from "./runtime/init-on-start";
+
+async function resetNextArtifacts(): Promise<void> {
+  try {
+    await rm(path.join(process.cwd(), ".next"), {
+      recursive: true,
+      force: true
+    });
+  } catch (error) {
+    console.warn(
+      `[dev] failed to clean .next before startup: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
 
 async function main(): Promise<void> {
   const { config, configPath } = loadRuntimeConfig();
   const preferredPort = getConfiguredPort(config);
 
-  await initOnStart();
+  await resetNextArtifacts();
+  await initOnStart({ strict: false, label: "dev" });
   const { port, reason } = await resolvePort(preferredPort);
 
   if (reason === "occupied") {
     console.warn(`Port ${preferredPort} is in use, switching to ${port}.`);
   } else if (reason === "unconfigured") {
-    console.warn(`No port configured in ${configPath}, using random port ${port}.`);
+    console.warn(`No PORT configured in ${configPath}, using random port ${port}.`);
   } else if (reason === "fallback") {
     console.warn(`Failed to find a random port, falling back to ${port}.`);
   }

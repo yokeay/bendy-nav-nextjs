@@ -2,14 +2,14 @@
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import postgres from "postgres";
-import { loadRuntimeConfig } from "./config";
+import {
+  getAdminBootstrapConfig,
+  getDatabaseUrl
+} from "../../src/server/infrastructure/config/app-config";
 
-const DEFAULT_DATABASE_URL =
-  "postgresql://neondb_owner:npg_LvTB3UknZyC0@ep-old-haze-a1b9r6vf-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
-
-const DEFAULT_ADMIN = {
-  email: "admin@polofox.com",
-  password: "scx999gd"
+type InitOnStartOptions = {
+  strict?: boolean;
+  label?: string;
 };
 
 function md5(value: string): string {
@@ -34,20 +34,16 @@ function nowDateTimeString(): string {
   ].join("");
 }
 
-function resolveDatabaseUrl(config: Record<string, unknown>): string {
-  const database = (config.database ?? {}) as Record<string, unknown>;
-  const url = String(database.url ?? "").trim();
-  return url || DEFAULT_DATABASE_URL;
-}
-
-function resolveAdminConfig(config: Record<string, unknown>): { email: string; password: string } {
-  const admin = (config.admin ?? {}) as Record<string, unknown>;
-  const email = String(admin.email ?? "").trim();
-  const password = String(admin.password ?? "");
-  if (email && password) {
-    return { email, password };
+function describeError(error: unknown): string {
+  if (error instanceof AggregateError) {
+    return error.errors
+      .map((item) => (item instanceof Error ? item.message : String(item)))
+      .join(" | ");
   }
-  return { ...DEFAULT_ADMIN };
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
 }
 
 async function ensureSchema(sql: postgres.Sql<{}>): Promise<void> {
@@ -126,17 +122,34 @@ async function ensureAdminUser(
   `;
 }
 
-export async function initOnStart(): Promise<void> {
-  const { config } = loadRuntimeConfig();
-  const databaseUrl = resolveDatabaseUrl(config);
-  const admin = resolveAdminConfig(config);
+export async function initOnStart(options: InitOnStartOptions = {}): Promise<void> {
+  const { strict = false, label = "startup" } = options;
+  const databaseUrl = getDatabaseUrl();
+  const admin = getAdminBootstrapConfig();
 
-  const sql = postgres(databaseUrl, { prepare: false, max: 1 });
+  if (!databaseUrl) {
+    console.warn("DATABASE_URL is missing, skipping startup database bootstrap.");
+    return;
+  }
+
+  const sql = postgres(databaseUrl, {
+    prepare: false,
+    max: 1,
+    connect_timeout: 5,
+    idle_timeout: 5
+  });
+
   try {
     await ensureSchema(sql);
     const groupId = await ensureDefaultGroup(sql);
     await ensureAdminUser(sql, admin, groupId);
+  } catch (error) {
+    const message = `[${label}] database bootstrap skipped: ${describeError(error)}`;
+    if (strict) {
+      throw error;
+    }
+    console.warn(message);
   } finally {
-    await sql.end({ timeout: 5 });
+    await sql.end({ timeout: 5 }).catch(() => undefined);
   }
 }

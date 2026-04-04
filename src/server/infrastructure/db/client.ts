@@ -9,7 +9,12 @@ declare global {
 }
 
 function createClient(): SqlClient {
-  return postgres(getDatabaseUrl(), {
+  const databaseUrl = getDatabaseUrl();
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is not configured. Copy .env.example to .env before starting the app.");
+  }
+
+  return postgres(databaseUrl, {
     max: 10,
     idle_timeout: 30,
     connect_timeout: 30,
@@ -24,4 +29,3 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export default sql;
-

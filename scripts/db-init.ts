@@ -4,7 +4,12 @@ import postgres from "postgres";
 import { getDatabaseUrl } from "../src/server/infrastructure/config/app-config";
 
 async function run(): Promise<void> {
-  const sql = postgres(getDatabaseUrl(), { prepare: false, max: 1 });
+  const databaseUrl = getDatabaseUrl();
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is not configured. Copy .env.example to .env and fill in the database connection first.");
+  }
+
+  const sql = postgres(databaseUrl, { prepare: false, max: 1 });
   try {
     const schemaPath = path.join(process.cwd(), "scripts", "sql", "schema.sql");
     const seedPath = path.join(process.cwd(), "scripts", "sql", "seed.sql");
@@ -24,4 +29,3 @@ run().catch((error: unknown) => {
   console.error("db:init failed", error);
   process.exit(1);
 });
-
