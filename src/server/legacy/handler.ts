@@ -59,6 +59,8 @@ const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const RUNTIME_DIR = path.join(ROOT_DIR, "runtime");
 
 const BROWSER_EXT_TEMPLATE_DIR = path.join(ROOT_DIR, "resources", "browserExt");
+const DEFAULT_BRAND_ICON = "/brand/logo-192.png";
+const DEFAULT_GUEST_AVATAR = DEFAULT_BRAND_ICON;
 
 
 
@@ -628,6 +630,25 @@ function sanitizeRelativePublicPath(relativePath: string): string {
 
   return cleaned.replace(/\.\./g, "");
 
+}
+
+function resolveBrandAssetPath(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+
+  const normalized = trimmed.toLowerCase();
+  if (
+    normalized === "/static/mtab.png" ||
+    normalized === "/favicon.ico" ||
+    normalized === "/favicon.png" ||
+    normalized === "/favicon"
+  ) {
+    return fallback;
+  }
+
+  return trimmed;
 }
 
 
@@ -2097,15 +2118,17 @@ async function renderIndexHtml(ctx: LegacyContext): Promise<NextResponse> {
 
   }
 
-  const favicon = settingValue(
+  const favicon = resolveBrandAssetPath(settingValue(
 
     ctx.settings,
 
     "favicon",
 
-    settingValue(ctx.settings, "logo", "/favicon.ico")
+    settingValue(ctx.settings, "logo", DEFAULT_BRAND_ICON),
 
-  );
+    true
+
+  ), DEFAULT_BRAND_ICON);
 
   const html = template
 
@@ -2133,7 +2156,10 @@ async function renderPrivacyHtml(ctx: LegacyContext): Promise<NextResponse> {
 
   const title = settingValue(ctx.settings, "title", "笨迪导航");
 
-  const logo = settingValue(ctx.settings, "logo", "");
+  const logo = resolveBrandAssetPath(
+    settingValue(ctx.settings, "logo", DEFAULT_BRAND_ICON, true),
+    DEFAULT_BRAND_ICON
+  );
 
   let content = settingValue(ctx.settings, "privacy", "");
 
@@ -2209,8 +2235,14 @@ async function getSiteData(ctx: LegacyContext): Promise<AnyObject> {
     recordNumber: settingValue(ctx.settings, "recordNumber", ""),
     mobileRecordNumber: settingValue(ctx.settings, "mobileRecordNumber", "0"),
     auth: ctx.auth,
-    def_user_avatar: settingValue(ctx.settings, "def_user_avatar", ""),
-    logo: settingValue(ctx.settings, "logo", ""),
+    def_user_avatar: resolveBrandAssetPath(
+      settingValue(ctx.settings, "def_user_avatar", DEFAULT_GUEST_AVATAR, true),
+      DEFAULT_GUEST_AVATAR
+    ),
+    logo: resolveBrandAssetPath(
+      settingValue(ctx.settings, "logo", DEFAULT_BRAND_ICON, true),
+      DEFAULT_BRAND_ICON
+    ),
     qq_login: settingValue(ctx.settings, "qq_login", "0"),
     wx_login: settingValue(ctx.settings, "wx_login", "0"),
     loginCloseRecordNumber: settingValue(ctx.settings, "loginCloseRecordNumber", "0"),
@@ -2518,8 +2550,24 @@ async function handleIndexController(ctx: LegacyContext, action: string): Promis
       return jsonSuccess("ok", result);
     }
     case "favicon": {
-      const favicon = settingValue(ctx.settings, "logo", "");
+      const favicon = resolveBrandAssetPath(
+        settingValue(
+          ctx.settings,
+          "favicon",
+          settingValue(ctx.settings, "logo", DEFAULT_BRAND_ICON),
+          true
+        ),
+        DEFAULT_BRAND_ICON
+      );
       if (favicon) {
+
+        if (/^https?:\/\//i.test(favicon)) {
+          return NextResponse.redirect(favicon);
+        }
+
+        if (favicon.startsWith("//")) {
+          return NextResponse.redirect(`https:${favicon}`);
+        }
 
         const abs = toPublicAbsPath(favicon);
 
@@ -2535,7 +2583,7 @@ async function handleIndexController(ctx: LegacyContext, action: string): Promis
 
       }
 
-      return NextResponse.redirect(new URL("/static/mtab.png", ctx.request.url));
+      return NextResponse.redirect(new URL(DEFAULT_BRAND_ICON, ctx.request.url));
 
     }
 
