@@ -3,13 +3,15 @@
 import Link from "next/link";
 import type { CSSProperties, FormEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
-import type { HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
+import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AuthDialog, UserMenu } from "./home-auth";
+import { requestLegacy } from "./home-client";
+import { HomeSettingsDialog } from "./home-settings";
 import { HomeToastViewport, type HomeToastItem, type HomeToastTone } from "./home-toast";
 import styles from "./home-page.module.css";
 
-const COMPACT_MODE_STORAGE_KEY = "bendy.home.compact-mode";
-const SEARCH_ENGINE_STORAGE_KEY = "bendy.home.search-engine";
+const LOCAL_HOME_CONFIG_STORAGE_KEY = "config";
+const SEARCH_ENGINE_STORAGE_KEY = "SearchEngineLocal";
 const PAGE_GROUP_STORAGE_KEY = "bendy.home.page-group";
 
 type HomePageProps = {
@@ -20,6 +22,28 @@ type TimeState = {
   value: string;
   meta: string[];
 };
+
+function mergeHomeConfig(
+  baseConfig: HomeConfig,
+  incoming:
+    | {
+        openType?: Partial<HomeConfig["openType"]>;
+        theme?: Partial<HomeConfig["theme"]>;
+      }
+    | null
+    | undefined
+): HomeConfig {
+  return {
+    openType: {
+      ...baseConfig.openType,
+      ...(incoming?.openType ?? {})
+    },
+    theme: {
+      ...baseConfig.theme,
+      ...(incoming?.theme ?? {})
+    }
+  };
+}
 
 function buildTimeState(theme: HomeTheme, date: Date): TimeState {
   const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
@@ -251,6 +275,7 @@ function Toolbar({
   legacyUrl,
   user,
   onOpenAuth,
+  onOpenSettings,
   onNotify
 }: {
   compactMode: boolean;
@@ -258,6 +283,7 @@ function Toolbar({
   legacyUrl: string;
   user: HomeData["user"];
   onOpenAuth: () => void;
+  onOpenSettings: () => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
   return (
@@ -273,6 +299,9 @@ function Toolbar({
       <Link className={styles.toolbarButton} href={legacyUrl} title="打开兼容模式">
         <img src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
       </Link>
+      <button className={styles.toolbarButton} type="button" onClick={onOpenSettings} title="打开设置中心">
+        <img src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
+      </button>
       <button
         className={styles.toolbarButton}
         type="button"
@@ -597,9 +626,11 @@ function NoticeBanner({
 
 export function HomePage({ data }: HomePageProps) {
   const [activeGroupId, setActiveGroupId] = useState("");
-  const [compactMode, setCompactMode] = useState(data.config.theme.CompactMode);
+  const [currentConfig, setCurrentConfig] = useState<HomeConfig>(data.config);
   const [openFolderId, setOpenFolderId] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(Boolean(data.notice));
   const [toasts, setToasts] = useState<HomeToastItem[]>([]);
 
@@ -619,12 +650,16 @@ export function HomePage({ data }: HomePageProps) {
   }, []);
 
   useEffect(() => {
-    const storedCompactMode = window.localStorage.getItem(COMPACT_MODE_STORAGE_KEY);
-    if (storedCompactMode === "1") {
-      setCompactMode(true);
-    }
-    if (storedCompactMode === "0") {
-      setCompactMode(false);
+    if (!data.user) {
+      const localConfigRaw = window.localStorage.getItem(LOCAL_HOME_CONFIG_STORAGE_KEY);
+      if (localConfigRaw) {
+        try {
+          const parsed = JSON.parse(localConfigRaw) as Partial<HomeConfig>;
+          setCurrentConfig((baseConfig) => mergeHomeConfig(baseConfig, parsed));
+        } catch {
+          // ignore invalid local config
+        }
+      }
     }
 
     const storedGroupId = window.localStorage.getItem(PAGE_GROUP_STORAGE_KEY);
@@ -635,25 +670,47 @@ export function HomePage({ data }: HomePageProps) {
     if (storedGroupId === "" || data.pageGroups.some((group) => group.id === storedGroupId)) {
       setActiveGroupId(storedGroupId);
     }
-  }, [data.pageGroups]);
-
-  useEffect(() => {
-    window.localStorage.setItem(COMPACT_MODE_STORAGE_KEY, compactMode ? "1" : "0");
-  }, [compactMode]);
+  }, [data.pageGroups, data.user]);
 
   useEffect(() => {
     window.localStorage.setItem(PAGE_GROUP_STORAGE_KEY, activeGroupId);
   }, [activeGroupId]);
 
+  async function handleSaveSettings() {
+    if (settingsSaving) {
+      return;
+    }
+
+    setSettingsSaving(true);
+    try {
+      if (data.user) {
+        await requestLegacy<unknown>("/config/update", {
+          method: "POST",
+          data: { config: currentConfig }
+        });
+        notify("设置已保存到当前账户。", "success");
+      } else {
+        window.localStorage.setItem(LOCAL_HOME_CONFIG_STORAGE_KEY, JSON.stringify(currentConfig));
+        notify("设置已保存到当前浏览器。", "success");
+      }
+      setSettingsOpen(false);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "保存设置失败。", "error");
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
   const tiles = buildRootTiles(data, activeGroupId);
   const folder = openFolderId ? data.links.find((item) => item.id === openFolderId) ?? null : null;
   const folderChildren = folder ? buildFolderChildren(data, folder.id) : [];
   const dockLinks = buildDockLinks(data);
+  const compactMode = currentConfig.theme.CompactMode;
 
   const cssVariables = {
-    "--icon-size": `${data.config.theme.iconWidth}px`,
-    "--icon-radius": `${data.config.theme.iconRadius}px`,
-    "--name-color": data.config.theme.nameColor
+    "--icon-size": `${currentConfig.theme.iconWidth}px`,
+    "--icon-radius": `${currentConfig.theme.iconRadius}px`,
+    "--name-color": currentConfig.theme.nameColor
   } as CSSProperties;
 
   return (
@@ -661,8 +718,8 @@ export function HomePage({ data }: HomePageProps) {
       <div
         className={styles.background}
         style={{
-          backgroundImage: `url("${data.config.theme.backgroundImage}")`,
-          filter: `blur(${data.config.theme.blur}px)`
+          backgroundImage: `url("${currentConfig.theme.backgroundImage}")`,
+          filter: `blur(${currentConfig.theme.blur}px)`
         }}
       />
       <div className={styles.scrim} />
@@ -675,10 +732,19 @@ export function HomePage({ data }: HomePageProps) {
 
         <Toolbar
           compactMode={compactMode}
-          onToggleCompact={() => setCompactMode(!compactMode)}
+          onToggleCompact={() =>
+            setCurrentConfig((config) =>
+              mergeHomeConfig(config, {
+                theme: {
+                  CompactMode: !config.theme.CompactMode
+                }
+              })
+            )
+          }
           legacyUrl={data.legacyUrl}
           user={data.user}
           onOpenAuth={() => setAuthOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
           onNotify={notify}
         />
 
@@ -691,11 +757,11 @@ export function HomePage({ data }: HomePageProps) {
                 onClose={() => setNoticeOpen(false)}
               />
             ) : null}
-            <ClockPanel theme={data.config.theme} />
-            {data.config.openType.searchStatus ? (
+            <ClockPanel theme={currentConfig.theme} />
+            {currentConfig.openType.searchStatus ? (
               <SearchBar
                 engines={data.searchEngines}
-                searchOpen={data.config.openType.searchOpen}
+                searchOpen={currentConfig.openType.searchOpen}
               />
             ) : null}
           </section>
@@ -720,7 +786,7 @@ export function HomePage({ data }: HomePageProps) {
                       <IconTile
                         key={item.id}
                         link={item}
-                        openInBlank={data.config.openType.linkOpen}
+                        openInBlank={currentConfig.openType.linkOpen}
                       />
                     );
                   })}
@@ -732,8 +798,8 @@ export function HomePage({ data }: HomePageProps) {
           ) : null}
         </main>
 
-        {!compactMode && data.config.theme.tabbar ? (
-          <Dock links={dockLinks} openInBlank={data.config.openType.linkOpen} />
+        {!compactMode && currentConfig.theme.tabbar ? (
+          <Dock links={dockLinks} openInBlank={currentConfig.openType.linkOpen} />
         ) : null}
         <RecordBar site={data.site} />
 
@@ -741,7 +807,7 @@ export function HomePage({ data }: HomePageProps) {
           <FolderModal
             folder={folder}
             items={folderChildren}
-            openInBlank={data.config.openType.linkOpen}
+            openInBlank={currentConfig.openType.linkOpen}
             onClose={() => setOpenFolderId("")}
           />
         ) : null}
@@ -750,6 +816,16 @@ export function HomePage({ data }: HomePageProps) {
           site={data.site}
           onClose={() => setAuthOpen(false)}
           onNotify={notify}
+        />
+        <HomeSettingsDialog
+          open={settingsOpen}
+          config={currentConfig}
+          site={data.site}
+          saving={settingsSaving}
+          loggedIn={Boolean(data.user)}
+          onClose={() => setSettingsOpen(false)}
+          onSave={handleSaveSettings}
+          onConfigChange={setCurrentConfig}
         />
       </div>
     </div>

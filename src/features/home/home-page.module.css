@@ -805,6 +805,252 @@
   background: rgba(18, 28, 44, 0.94);
 }
 
+.settingsBackdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 7, 14, 0.56);
+  backdrop-filter: blur(14px);
+  z-index: 110;
+}
+
+.settingsDialog {
+  width: min(980px, calc(100vw - 24px));
+  max-height: min(760px, calc(100vh - 48px));
+  overflow: auto;
+  border-radius: 28px;
+  padding: 24px;
+  background: rgba(17, 26, 40, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 48px rgba(0, 0, 0, 0.35);
+}
+
+.settingsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settingsEyebrow {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.settingsTitle {
+  margin: 6px 0 0;
+  font-size: 1.5rem;
+}
+
+.settingsDescription {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.settingsClose {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.35rem;
+}
+
+.settingsLayout {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 20px;
+}
+
+.settingsNav {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.settingsNavItem,
+.settingsNavItemActive {
+  min-height: 42px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.settingsNavItem {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.settingsNavItemActive {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.settingsContent {
+  display: grid;
+  gap: 18px;
+}
+
+.settingsSection {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.settingsSectionTitle {
+  margin: 0 0 16px;
+  font-size: 1rem;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settingRow:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.settingRowBlock {
+  display: grid;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settingRowBlock:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.settingRowText {
+  min-width: 0;
+}
+
+.settingRowTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settingRowDescription {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.settingSwitch {
+  width: 50px;
+  height: 30px;
+  padding: 3px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.settingSwitch span {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #fff;
+  transform: translateX(0);
+  transition: transform 160ms ease;
+}
+
+.settingSwitchOn {
+  background: #1570ef;
+}
+
+.settingSwitchOn span {
+  transform: translateX(20px);
+}
+
+.settingRangeMeta {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.settingRange {
+  width: 100%;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.segmentedItem,
+.segmentedItemActive {
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.segmentedItem {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.segmentedItemActive {
+  background: #1570ef;
+  color: #fff;
+}
+
+.settingsFooter {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.settingsFooterPrimary,
+.settingsFooterSecondary {
+  min-width: 140px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.settingsFooterSecondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.settingsFooterPrimary {
+  background: #1570ef;
+  color: #fff;
+}
+
+.settingsFooterPrimary:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
 @media (max-width: 1080px) {
   .grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -893,6 +1139,32 @@
 
   .authDialog {
     padding: 20px;
+  }
+
+  .settingsDialog {
+    padding: 20px;
+  }
+
+  .settingsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsNav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .settingsNavItem,
+  .settingsNavItemActive {
+    text-align: center;
+  }
+
+  .settingsFooter {
+    flex-direction: column;
+  }
+
+  .settingsFooterPrimary,
+  .settingsFooterSecondary {
+    width: 100%;
   }
 
   .authInlineField {
