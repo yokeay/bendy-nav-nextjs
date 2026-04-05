@@ -39,8 +39,8 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 76px;
-  padding: 14px 0 18px;
+  width: 55px;
+  padding: 0 0 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -55,19 +55,31 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  padding-top: 12px;
+}
+
+.sidebarProfile {
+  padding-top: 18px;
+  padding-bottom: 8px;
+}
+
+.sidebarFooter {
+  padding-top: 0;
+  padding-bottom: 8px;
+  gap: 10px;
 }
 
 .sidebarLink {
-  width: 54px;
-  min-height: 54px;
+  width: 100%;
+  min-height: 46px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   border: none;
-  border-radius: 14px;
+  border-radius: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
@@ -126,18 +138,16 @@
 }
 
 .sidebarLogo {
-  width: 44px;
-  height: 44px;
-  padding: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   object-fit: contain;
-  border-radius: 14px;
-  background: rgba(7, 12, 20, 0.26);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
 }
 
 .sidebarIcon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
 }
 
@@ -146,10 +156,38 @@
   line-height: 1;
 }
 
+.sidebarFooterButton {
+  width: 35px;
+  height: 35px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 180ms ease, color 180ms ease, backdrop-filter 180ms ease;
+}
+
+.sidebarFooterButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  backdrop-filter: blur(5px);
+}
+
+.sidebarFooterIcon {
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+  opacity: 0.88;
+}
+
 .toolbar {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: 15px;
+  right: 15px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -157,8 +195,8 @@
 }
 
 .toolbarButton {
-  width: 38px;
-  height: 38px;
+  width: 35px;
+  height: 35px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -175,36 +213,40 @@
 }
 
 .userButton {
-  min-width: 38px;
-  max-width: 260px;
-  height: 38px;
+  width: 35px;
+  min-width: 35px;
+  max-width: none;
+  height: 35px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 10px 0 6px;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
   border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: transparent;
+  backdrop-filter: blur(0);
+  box-shadow: none;
   color: #fff;
   cursor: pointer;
+  transition: background-color 180ms ease, backdrop-filter 180ms ease;
+}
+
+.userButton:hover {
+  background: rgba(148, 148, 148, 0.2);
+  backdrop-filter: blur(5px);
 }
 
 .userAvatar {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.12);
+  background: transparent;
 }
 
 .userButtonText {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
+  display: none;
 }
 
 .userPanel {
@@ -312,8 +354,8 @@
 }
 
 .main {
-  margin-left: 76px;
-  padding: 28px 32px 150px;
+  margin-left: 55px;
+  padding: 0 0 150px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -322,67 +364,77 @@
 
 .hero {
   width: min(720px, 100%);
-  padding-top: clamp(18px, 7vh, 80px);
+  padding-top: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 26px;
+  gap: 14px;
 }
 
 .heroCompact {
-  padding-top: clamp(56px, 18vh, 160px);
+  padding-top: 150px;
 }
 
 .timePanel {
+  user-select: none;
   text-align: center;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
 }
 
 .timeValue {
-  font-size: clamp(3.4rem, 8vw, 5.6rem);
-  line-height: 1;
+  font-size: clamp(3.75rem, 8vw, 4.8rem);
+  line-height: 80px;
   font-weight: 500;
   letter-spacing: 0.04em;
 }
 
 .timeMeta {
-  margin-top: 10px;
+  margin-top: -3px;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  font-size: clamp(0.9rem, 2vw, 1.05rem);
-  font-weight: 500;
-  opacity: 0.9;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 26px;
+  opacity: 0.88;
 }
 
 .searchShell {
-  width: min(560px, 100%);
+  width: min(610px, calc(100% - 30px));
+  position: relative;
+  min-height: 45px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 14px 30px rgba(2, 8, 18, 0.16);
-  backdrop-filter: blur(14px);
+  gap: 0;
+  padding: 0 15px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 10px 3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(40px);
 }
 
 .searchEngineButton {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  flex-shrink: 0;
   border: none;
   background: transparent;
-  color: #24344c;
-  padding: 0 4px;
+  color: #747474;
+  padding: 0;
+  width: 22px;
+  height: 22px;
   cursor: pointer;
-  font-size: 0.9rem;
+  margin-right: 10px;
 }
 
 .searchEngineButton img {
   width: 20px;
   height: 20px;
+}
+
+.searchEngineLabel {
+  display: none;
 }
 
 .searchInput {
@@ -391,23 +443,27 @@
   border: none;
   background: transparent;
   outline: none;
-  font-size: 1rem;
-  color: #21314a;
+  font-size: 16px;
+  line-height: 45px;
+  color: #333;
+  text-indent: 5px;
 }
 
 .searchInput::placeholder {
-  color: rgba(33, 49, 74, 0.54);
+  color: #333;
+  font-size: 14px;
 }
 
 .searchSubmit {
-  width: 40px;
-  height: 40px;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 999px;
-  background: rgba(33, 49, 74, 0.08);
+  border-radius: 0;
+  background: transparent;
+  margin-left: 10px;
   cursor: pointer;
 }
 
@@ -419,7 +475,7 @@
 
 .content {
   width: 100%;
-  margin-top: clamp(46px, 10vh, 96px);
+  margin-top: 26px;
   display: flex;
   justify-content: center;
 }
@@ -429,7 +485,7 @@
   grid-auto-flow: dense;
   grid-auto-rows: calc(var(--icon-size) + 25px);
   column-gap: var(--grid-gap, 35px);
-  row-gap: 18px;
+  row-gap: 7px;
   align-items: start;
   justify-content: start;
   max-width: 100%;
@@ -439,7 +495,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   position: relative;
 }
 
@@ -454,6 +510,7 @@
   overflow: hidden;
   background: transparent;
   cursor: pointer;
+  user-select: none;
 }
 
 .tileDragging {
@@ -468,34 +525,68 @@
 
 .tileEditActions {
   position: absolute;
-  top: -10px;
-  right: -6px;
+  top: -8px;
+  right: -8px;
   z-index: 4;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tileEditButton,
 .tileDeleteButton {
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--icon-radius);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(3, 10, 20, 0.26);
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: none;
+  transition: background-color 180ms ease, transform 180ms ease;
 }
 
 .tileEditButton {
-  background: rgba(21, 112, 239, 0.92);
-  color: #fff;
+  background: rgba(212, 212, 212, 0.65);
+  color: rgba(17, 22, 30, 0.92);
 }
 
 .tileDeleteButton {
-  background: rgba(164, 33, 55, 0.94);
+  background: rgba(212, 212, 212, 0.65);
+  color: rgba(17, 22, 30, 0.92);
+}
+
+.tilePinButton {
+  background: rgba(4, 163, 255, 0.95);
   color: #fff;
+}
+
+.tileEditButton:hover,
+.tileDeleteButton:hover {
+  transform: scale(1.06);
+}
+
+.tilePinButton:hover {
+  background: rgba(4, 163, 255, 1);
+}
+
+.tileDeleteButton:hover {
+  background: rgba(248, 248, 248, 0.92);
+}
+
+.tileEditButton:hover:not(.tilePinButton) {
+  background: rgba(248, 248, 248, 0.92);
+}
+
+.tileAction:hover {
+  filter: brightness(1.03);
+}
+
+.tileAction:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.72);
+  outline-offset: 2px;
 }
 
 .tileIconBox {
@@ -504,6 +595,30 @@
   display: block;
   object-fit: cover;
   border-radius: inherit;
+  pointer-events: none;
+  user-select: none;
+}
+
+.tileAppBadge {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 10;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  overflow: hidden;
+  background: #0084ff;
+  border-radius: 0 30px 0 var(--icon-radius);
+  pointer-events: none;
+}
+
+.tileAppBadgeIcon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  top: 3px;
+  left: 0;
 }
 
 .tileIconText {
@@ -529,23 +644,60 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--name-color);
-  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.36);
+  z-index: 10;
+  pointer-events: none;
+  text-shadow: 0 0 1px rgba(107, 63, 63, 0.3);
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
   font-size: 12px;
 }
 
 .folderCard {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(12px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  background: rgba(186, 186, 186, 0.1);
+  border: 1px solid rgba(220, 220, 220, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.folderCardWide {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.36);
+  backdrop-filter: none;
 }
 
 .folderGrid {
   width: 100%;
   height: 100%;
   display: grid;
+}
+
+.folderGridCompact {
   grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 6px;
+  padding: 6px;
+}
+
+.folderGridStrip {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr;
+  gap: 6px;
+  padding: 6px 8px;
+  align-items: center;
+}
+
+.folderGridLarge {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   gap: 8px;
   padding: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.folderGridWide {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 10px;
+  padding: 8px;
 }
 
 .folderSlot {
@@ -555,11 +707,44 @@
   min-height: 0;
 }
 
+.folderGridCompact .folderSlot {
+  border-radius: 4px;
+}
+
+.folderGridLarge .folderSlot {
+  width: calc(var(--icon-size) / 1.5);
+  height: calc(var(--icon-size) / 1.5);
+  justify-self: center;
+  align-self: center;
+  border-radius: 10px;
+}
+
+.folderGridWide .folderSlot {
+  width: calc(var(--icon-size) + 2px);
+  height: calc(var(--icon-size) + 2px);
+  justify-self: center;
+  align-self: center;
+}
+
 .folderSlot img {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+.folderSlotText {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  color: rgba(34, 42, 56, 0.88);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .folderSlotEmpty {
@@ -579,39 +764,72 @@
 .dock {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  bottom: 10px;
   transform: translateX(-50%);
   display: flex;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 22px;
+  align-items: center;
+  padding: 0 5px;
+  min-height: 60px;
+  height: 75px;
+  max-width: calc(100vw - 24px);
+  border-radius: 20px;
   background: rgba(18, 28, 44, 0.48);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(50px);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.08),
     0 18px 36px rgba(3, 10, 20, 0.28);
   z-index: 25;
 }
 
-.dockItem {
-  width: 58px;
+.dockList {
   display: flex;
-  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 10px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dockList::-webkit-scrollbar {
+  display: none;
+}
+
+.dockItem {
+  width: 50px;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-bottom: 12px;
+  position: relative;
   color: rgba(255, 255, 255, 0.84);
   text-decoration: none;
 }
 
+.dockItemDropTarget .dockItemFrame {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.72),
+    0 10px 18px rgba(3, 10, 20, 0.32);
+}
+
 .dockItemFrame {
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
+  position: relative;
+  border-radius: 14px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.dockItem > .tileDeleteButton {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 10;
 }
 
 .dockItemFrame img {
@@ -620,23 +838,55 @@
   object-fit: cover;
 }
 
-.dockItemLabel {
-  max-width: 64px;
-  font-size: 11px;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.dockUtility {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 10px 12px 0;
+}
+
+.dockDivider {
+  width: 2px;
+  height: 50px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dockTrash {
+  width: 55px;
+  height: 50px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.dockTrash img {
+  width: 43px;
+  height: 50px;
+  display: block;
+}
+
+.dockTrashActive {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .recordBar {
   position: fixed;
-  left: 96px;
-  right: 24px;
-  bottom: 102px;
+  left: 0;
+  right: 0;
+  bottom: 5px;
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
+  width: 100%;
+  padding: 0 15px;
   color: rgba(255, 255, 255, 0.84);
   font-size: 12px;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.26);
@@ -645,6 +895,111 @@
 
 .recordBar a {
   color: inherit;
+}
+
+.contextMenu {
+  position: fixed;
+  z-index: 80;
+  padding: 5px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 1px rgba(104, 104, 104, 0.72);
+}
+
+.contextMenuDesktop {
+  width: 140px;
+}
+
+.contextMenuTile {
+  width: 150px;
+}
+
+.contextMenuSectionLabel {
+  padding: 2px 10px 8px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+}
+
+.contextMenuLayoutSet {
+  padding: 0 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.contextMenuLayoutButton,
+.contextMenuItem {
+  border: none;
+  cursor: pointer;
+}
+
+.contextMenuLayoutButton {
+  width: 100%;
+  min-height: 20px;
+  padding: 0 5px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.64);
+  color: #1f2a39;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.contextMenuLayoutButton:hover,
+.contextMenuLayoutButtonActive {
+  background: #fff;
+}
+
+.contextMenuItem {
+  width: calc(100% - 10px);
+  min-height: 35px;
+  margin: 0 5px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  text-align: left;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.contextMenuItem:hover {
+  background: rgba(255, 255, 255, 0.37);
+  color: #000;
+}
+
+.contextMenuDivider {
+  height: 1px;
+  margin: 4px 8px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.contextMenuSubmenuWrap {
+  position: relative;
+}
+
+.contextMenuSubmenu {
+  position: absolute;
+  top: -5px;
+  width: 120px;
+  padding: 5px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 0 1px rgba(104, 104, 104, 0.72);
+}
+
+.contextMenuSubmenuRight {
+  left: calc(100% + 6px);
+}
+
+.contextMenuSubmenuLeft {
+  right: calc(100% + 6px);
 }
 
 .folderBackdrop {
@@ -659,12 +1014,14 @@
 }
 
 .folderPanel {
-  width: min(720px, calc(100vw - 24px));
-  max-height: min(640px, calc(100vh - 48px));
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 48px);
   overflow: auto;
-  border-radius: 28px;
-  padding: 28px;
-  background: rgba(17, 26, 40, 0.74);
+  border-radius: 20px;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.08),
     0 24px 48px rgba(0, 0, 0, 0.35);
@@ -673,18 +1030,23 @@
 .folderPanelHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
-  margin-bottom: 22px;
+  margin-bottom: 25px;
 }
 
 .folderPanelTitle {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 25px;
   font-weight: 600;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
 }
 
 .folderPanelClose {
+  position: absolute;
+  top: 18px;
+  right: 18px;
   width: 36px;
   height: 36px;
   border: none;
@@ -697,8 +1059,12 @@
 
 .folderPanelGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px 16px;
+  width: max-content;
+  grid-auto-flow: dense;
+  grid-template-columns: repeat(8, var(--icon-size));
+  grid-auto-rows: calc(var(--icon-size) + 25px);
+  column-gap: 30px;
+  row-gap: 0;
 }
 
 .authBackdrop {
@@ -1424,7 +1790,7 @@
 
 @media (max-width: 1080px) {
   .content {
-    margin-top: 54px;
+    margin-top: 26px;
   }
 }
 
@@ -1448,15 +1814,30 @@
     gap: 8px;
   }
 
+  .sidebarProfile {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
   .main {
     margin-left: 0;
     padding: 92px 18px 154px;
   }
 
   .recordBar {
-    left: 18px;
-    right: 18px;
-    bottom: 108px;
+    left: 0;
+    right: 0;
+    bottom: 5px;
+    padding: 0 18px;
+  }
+
+  .folderPanel {
+    padding: 20px;
+  }
+
+  .folderPanelGrid {
+    grid-template-columns: repeat(4, var(--icon-size));
+    column-gap: 20px;
   }
 }
 
@@ -1472,8 +1853,6 @@
 
   .dock {
     width: calc(100% - 24px);
-    overflow-x: auto;
-    justify-content: flex-start;
   }
 
   .toolbar {
@@ -1487,12 +1866,9 @@
     max-width: 100%;
   }
 
-  .folderPanel {
-    padding: 22px 18px;
-  }
-
   .folderPanelGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, var(--icon-size));
+    column-gap: 20px;
   }
 
   .authDialog {

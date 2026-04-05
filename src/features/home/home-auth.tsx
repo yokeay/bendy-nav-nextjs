@@ -396,7 +396,13 @@ export function UserMenu({ user, legacyUrl, onNotify }: UserMenuProps) {
 
   return (
     <div className={styles.userMenuRoot} data-home-user-menu="true">
-      <button className={styles.userButton} type="button" onClick={() => setOpen(!open)}>
+      <button
+        className={styles.userButton}
+        type="button"
+        title="打开账户菜单"
+        aria-label="打开账户菜单"
+        onClick={() => setOpen(!open)}
+      >
         <img className={styles.userAvatar} src={user.avatar} alt={user.nickname || user.email || "用户"} />
         <span className={styles.userButtonText}>{user.nickname || user.email || `用户 #${user.userId}`}</span>
       </button>

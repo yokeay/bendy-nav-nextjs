@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties, FormEvent } from "react";
+import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AddLinkDialog, BackgroundDialog, PageGroupManagerDialog, buildActionLink } from "./home-actions";
@@ -26,6 +26,36 @@ type TimeState = {
   meta: string[];
 };
 
+type ContextMenuState = {
+  open: boolean;
+  x: number;
+  y: number;
+};
+
+type TileContextMenuState = ContextMenuState & {
+  linkId: string;
+};
+
+const CLOSED_CONTEXT_MENU: ContextMenuState = {
+  open: false,
+  x: 0,
+  y: 0
+};
+
+const CLOSED_TILE_CONTEXT_MENU: TileContextMenuState = {
+  open: false,
+  x: 0,
+  y: 0,
+  linkId: ""
+};
+
+const DESKTOP_CONTEXT_MENU_WIDTH = 176;
+const DESKTOP_CONTEXT_MENU_HEIGHT = 248;
+const TILE_CONTEXT_MENU_WIDTH = 164;
+const TILE_CONTEXT_MENU_HEIGHT = 188;
+
+const WEEKDAY_LABELS = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+
 function mergeHomeConfig(
   baseConfig: HomeConfig,
   incoming:
@@ -48,31 +78,37 @@ function mergeHomeConfig(
   };
 }
 
+function padTimeSegment(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function formatClockValue(date: Date, theme: HomeTheme) {
+  const hours = date.getHours();
+  const minutes = padTimeSegment(date.getMinutes());
+  const seconds = padTimeSegment(date.getSeconds());
+
+  if (theme.time24) {
+    return theme.timeSecond ? `${padTimeSegment(hours)}:${minutes}:${seconds}` : `${padTimeSegment(hours)}:${minutes}`;
+  }
+
+  const hour12 = hours % 12 || 12;
+  return theme.timeSecond ? `${hour12}:${minutes}:${seconds}` : `${hour12}:${minutes}`;
+}
+
+function formatMonthDay(date: Date) {
+  return `${padTimeSegment(date.getMonth() + 1)}月${padTimeSegment(date.getDate())}日`;
+}
+
 function buildTimeState(theme: HomeTheme, date: Date): TimeState {
-  const timeFormatter = new Intl.DateTimeFormat("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: theme.timeSecond ? "2-digit" : undefined,
-    hour12: !theme.time24
-  });
-  const value = timeFormatter.format(date);
+  const value = formatClockValue(date, theme);
 
   const meta: string[] = [];
   if (theme.timeMonthDay) {
-    meta.push(
-      new Intl.DateTimeFormat("zh-CN", {
-        month: "2-digit",
-        day: "2-digit"
-      }).format(date)
-    );
+    meta.push(formatMonthDay(date));
   }
 
   if (theme.timeWeek) {
-    meta.push(
-      new Intl.DateTimeFormat("zh-CN", {
-        weekday: "long"
-      }).format(date)
-    );
+    meta.push(WEEKDAY_LABELS[date.getDay()] ?? "");
   }
 
   if (theme.timeLunar) {
@@ -128,6 +164,10 @@ function isTextIcon(link: HomeLink): boolean {
   return link.src.startsWith("txt:");
 }
 
+function isAppLink(link: HomeLink): boolean {
+  return link.app === 1;
+}
+
 function isRenderableTile(link: HomeLink): boolean {
   if (link.type === "component" && link.component === "iconGroup") {
     return true;
@@ -163,21 +203,7 @@ function buildSidebarLinks(data: HomeData) {
       label: "首页",
       icon: "/static/pageGroup/home.svg"
     },
-    ...dynamicGroups,
-    {
-      type: "link" as const,
-      id: "legacy",
-      label: "旧版",
-      icon: "/dist/assets/kongzhi.23e322eb.1766672520393.svg",
-      href: data.legacyUrl
-    },
-    {
-      type: "link" as const,
-      id: "privacy",
-      label: "隐私",
-      icon: "/dist/assets/setting.6abb23f3.1766672520393.svg",
-      href: "/privacy"
-    }
+    ...dynamicGroups
   ];
 }
 
@@ -252,7 +278,9 @@ function canEditTile(link: HomeLink) {
 }
 
 function buildFolderChildren(links: HomeLink[], folderId: string) {
-  return links.filter((item) => item.pid === folderId && item.type === "icon" && !isSpecialLegacyLink(item));
+  return normalizeLinksOrder(
+    links.filter((item) => item.pid === folderId && item.type === "icon" && !isSpecialLegacyLink(item))
+  );
 }
 
 function buildDockLinks(data: HomeData) {
@@ -285,24 +313,72 @@ function getLinkSurfaceStyle(link: HomeLink): CSSProperties {
   };
 }
 
+function clampContextMenuPosition(x: number, y: number, width: number, height: number) {
+  if (typeof window === "undefined") {
+    return { x, y };
+  }
+
+  return {
+    x: Math.max(8, Math.min(x, window.innerWidth - width - 8)),
+    y: Math.max(8, Math.min(y, window.innerHeight - height - 8))
+  };
+}
+
+function getFolderPreviewLimit(size: string) {
+  switch (size) {
+    case "2x2":
+    case "2x4":
+      return 8;
+    default:
+      return 4;
+  }
+}
+
+function getFolderGridClassName(size: string) {
+  switch (size) {
+    case "1x2":
+      return `${styles.folderGrid} ${styles.folderGridStrip}`;
+    case "2x2":
+      return `${styles.folderGrid} ${styles.folderGridLarge}`;
+    case "2x4":
+      return `${styles.folderGrid} ${styles.folderGridWide}`;
+    default:
+      return `${styles.folderGrid} ${styles.folderGridCompact}`;
+  }
+}
+
+function getFolderCardClassName(size: string) {
+  return size === "2x4" ? `${styles.folderCard} ${styles.folderCardWide}` : styles.folderCard;
+}
+
 function Sidebar({
   data,
   pageGroups,
   activeGroupId,
   editMode,
+  legacyUrl,
+  user,
+  onOpenAuth,
   onSelectGroup,
   onOpenGroupManager,
+  onOpenSettings,
   onEditGroup,
-  onDeleteGroup
+  onDeleteGroup,
+  onNotify
 }: {
   data: HomeData;
   pageGroups: HomeLink[];
   activeGroupId: string;
   editMode: boolean;
+  legacyUrl: string;
+  user: HomeData["user"];
+  onOpenAuth: () => void;
   onSelectGroup: (groupId: string) => void;
   onOpenGroupManager: () => void;
+  onOpenSettings: () => void;
   onEditGroup: (groupId: string) => void;
   onDeleteGroup: (groupId: string) => void;
+  onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
   const sidebarLinks = buildSidebarLinks({
     ...data,
@@ -312,64 +388,62 @@ function Sidebar({
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarGroup}>
-        <Link className={styles.sidebarLink} href="/" title={data.site.title}>
-          <img className={styles.sidebarLogo} src={data.site.logo} alt={data.site.title} />
-        </Link>
+        <div className={styles.sidebarProfile}>
+          {user ? (
+            <UserMenu user={user} legacyUrl={legacyUrl} onNotify={onNotify} />
+          ) : (
+            <button
+              className={styles.userButton}
+              type="button"
+              onClick={onOpenAuth}
+              title="登录"
+              aria-label="登录"
+            >
+              <img className={styles.userAvatar} src={data.site.logo} alt={data.site.title} />
+              <span className={styles.userButtonText}>登录</span>
+            </button>
+          )}
+        </div>
         {sidebarLinks.map((item) => {
-          if (item.type === "group") {
-            const isActive = activeGroupId === item.id;
-            const className = isActive
-              ? `${styles.sidebarLink} ${styles.sidebarLinkActive}`
-              : styles.sidebarLink;
-            const canManageGroup = editMode && item.id;
-
-            return (
-              <div className={styles.sidebarRow} key={item.id || "home"}>
-                {canManageGroup ? (
-                  <div className={styles.sidebarRowControls}>
-                    <button
-                      className={styles.sidebarRowButton}
-                      type="button"
-                      onClick={() => onEditGroup(item.id)}
-                      aria-label={`编辑分组 ${item.label}`}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className={styles.sidebarRowDelete}
-                      type="button"
-                      onClick={() => onDeleteGroup(item.id)}
-                      aria-label={`删除分组 ${item.label}`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : null}
-                <button
-                  className={className}
-                  type="button"
-                  onClick={() => onSelectGroup(item.id)}
-                  title={item.label}
-                  aria-label={item.label}
-                >
-                  <img className={styles.sidebarIcon} src={item.icon} alt="" />
-                  <span className={styles.sidebarText}>{item.label}</span>
-                </button>
-              </div>
-            );
-          }
+          const isActive = activeGroupId === item.id;
+          const className = isActive
+            ? `${styles.sidebarLink} ${styles.sidebarLinkActive}`
+            : styles.sidebarLink;
+          const canManageGroup = editMode && item.id;
 
           return (
-            <Link
-              key={item.id}
-              className={styles.sidebarLink}
-              href={item.href}
-              title={item.label}
-              aria-label={item.label}
-            >
-              <img className={styles.sidebarIcon} src={item.icon} alt="" />
-              <span className={styles.sidebarText}>{item.label}</span>
-            </Link>
+            <div className={styles.sidebarRow} key={item.id || "home"}>
+              {canManageGroup ? (
+                <div className={styles.sidebarRowControls}>
+                  <button
+                    className={styles.sidebarRowButton}
+                    type="button"
+                    onClick={() => onEditGroup(item.id)}
+                    aria-label={`编辑分组 ${item.label}`}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className={styles.sidebarRowDelete}
+                    type="button"
+                    onClick={() => onDeleteGroup(item.id)}
+                    aria-label={`删除分组 ${item.label}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : null}
+              <button
+                className={className}
+                type="button"
+                onClick={() => onSelectGroup(item.id)}
+                title={item.label}
+                aria-label={item.label}
+              >
+                <img className={styles.sidebarIcon} src={item.icon} alt="" />
+                <span className={styles.sidebarText}>{item.label}</span>
+              </button>
+            </div>
           );
         })}
         {editMode ? (
@@ -385,7 +459,20 @@ function Sidebar({
           </button>
         ) : null}
       </div>
-      <div className={styles.sidebarGroup} />
+      <div className={`${styles.sidebarGroup} ${styles.sidebarFooter}`}>
+        <Link className={styles.sidebarFooterButton} href={legacyUrl} title="打开兼容模式" aria-label="打开兼容模式">
+          <img className={styles.sidebarFooterIcon} src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
+        </Link>
+        <button
+          className={styles.sidebarFooterButton}
+          type="button"
+          onClick={onOpenSettings}
+          title="打开设置中心"
+          aria-label="打开设置中心"
+        >
+          <img className={styles.sidebarFooterIcon} src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
+        </button>
+      </div>
     </aside>
   );
 }
@@ -413,20 +500,32 @@ function Toolbar({
 }) {
   return (
     <div className={styles.toolbar}>
-      {user ? (
-        <UserMenu user={user} legacyUrl={legacyUrl} onNotify={onNotify} />
-      ) : (
-        <button className={styles.userButton} type="button" onClick={onOpenAuth}>
-          <img className={styles.userAvatar} src="/brand/logo-192.png" alt="" />
-          <span className={styles.userButtonText}>登录</span>
+      {compactMode ? (
+        user ? (
+          <UserMenu user={user} legacyUrl={legacyUrl} onNotify={onNotify} />
+        ) : (
+          <button
+            className={styles.userButton}
+            type="button"
+            onClick={onOpenAuth}
+            title="登录"
+            aria-label="登录"
+          >
+            <img className={styles.userAvatar} src="/brand/logo-192.png" alt="" />
+            <span className={styles.userButtonText}>登录</span>
+          </button>
+        )
+      ) : null}
+      {compactMode ? (
+        <Link className={styles.toolbarButton} href={legacyUrl} title="打开兼容模式">
+          <img src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
+        </Link>
+      ) : null}
+      {compactMode ? (
+        <button className={styles.toolbarButton} type="button" onClick={onOpenSettings} title="打开设置中心">
+          <img src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
         </button>
-      )}
-      <Link className={styles.toolbarButton} href={legacyUrl} title="打开兼容模式">
-        <img src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
-      </Link>
-      <button className={styles.toolbarButton} type="button" onClick={onOpenSettings} title="打开设置中心">
-        <img src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
-      </button>
+      ) : null}
       <button
         className={styles.toolbarButton}
         type="button"
@@ -533,9 +632,10 @@ function SearchBar({
         type="button"
         onClick={() => setEngineIndex((engineIndex + 1) % engines.length)}
         title={`切换搜索引擎，当前为 ${currentEngine.name}`}
+        aria-label={`切换搜索引擎，当前为 ${currentEngine.name}`}
       >
         <img src={currentEngine.icon} alt="" />
-        <span>{currentEngine.name}</span>
+        <span className={styles.searchEngineLabel}>{currentEngine.name}</span>
       </button>
       <input
         className={styles.searchInput}
@@ -564,7 +664,7 @@ function TileEditControls({
     <div className={styles.tileEditActions}>
       {onPin ? (
         <button
-          className={styles.tileEditButton}
+          className={`${styles.tileEditButton} ${styles.tilePinButton}`}
           type="button"
           onClick={(event) => {
             event.preventDefault();
@@ -610,6 +710,7 @@ function IconTile({
   editMode,
   isDragging,
   isDropTarget,
+  onContextMenu,
   onEdit,
   onDelete,
   onPin,
@@ -623,6 +724,7 @@ function IconTile({
   editMode: boolean;
   isDragging: boolean;
   isDropTarget: boolean;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onPin?: () => void;
@@ -644,9 +746,15 @@ function IconTile({
 
   return (
     <div
+      data-home-tile="true"
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onContextMenu?.(event);
+      }}
       onDragStart={editMode ? onDragStart : undefined}
       onDragEnter={editMode ? onDragEnter : undefined}
       onDragOver={editMode ? (event) => event.preventDefault() : undefined}
@@ -665,6 +773,11 @@ function IconTile({
         onClick={editMode ? (event) => event.preventDefault() : undefined}
         style={getLinkSurfaceStyle(link)}
       >
+        {isAppLink(link) ? (
+          <span className={styles.tileAppBadge}>
+            <img className={styles.tileAppBadgeIcon} src="/dist/assets/wapp.cf7c9591.1766672520393.svg" alt="" />
+          </span>
+        ) : null}
         {isTextIcon(link) ? (
           <span className={styles.tileIconText}>{link.src.replace(/^txt:/, "")}</span>
         ) : (
@@ -681,6 +794,7 @@ function ActionTile({
   editMode,
   isDragging,
   isDropTarget,
+  onContextMenu,
   onClick,
   onDragStart,
   onDragEnter,
@@ -691,6 +805,7 @@ function ActionTile({
   editMode: boolean;
   isDragging: boolean;
   isDropTarget: boolean;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onClick: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
@@ -708,9 +823,15 @@ function ActionTile({
 
   return (
     <div
+      data-home-tile="true"
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onContextMenu?.(event);
+      }}
       onDragStart={editMode ? onDragStart : undefined}
       onDragEnter={editMode ? onDragEnter : undefined}
       onDragOver={editMode ? (event) => event.preventDefault() : undefined}
@@ -742,6 +863,7 @@ function FolderTile({
   editMode,
   isDragging,
   isDropTarget,
+  onContextMenu,
   onDragStart,
   onDragEnter,
   onDrop,
@@ -753,12 +875,15 @@ function FolderTile({
   editMode: boolean;
   isDragging: boolean;
   isDropTarget: boolean;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
   onDrop?: () => void;
   onDragEnd?: () => void;
 }) {
-  const slots = children.slice(0, 4);
+  const previewLimit = getFolderPreviewLimit(link.size);
+  const slots = children.slice(0, previewLimit);
+  const emptySlotCount = Math.max(0, previewLimit - slots.length);
   const tileClassName = [
     styles.tile,
     isDragging ? styles.tileDragging : "",
@@ -769,9 +894,15 @@ function FolderTile({
 
   return (
     <div
+      data-home-tile="true"
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onContextMenu?.(event);
+      }}
       onDragStart={editMode ? onDragStart : undefined}
       onDragEnter={editMode ? onDragEnter : undefined}
       onDragOver={editMode ? (event) => event.preventDefault() : undefined}
@@ -779,22 +910,22 @@ function FolderTile({
       onDragEnd={editMode ? onDragEnd : undefined}
     >
       <button
-        className={`${styles.tileAction} ${styles.folderCard}`}
+        className={`${styles.tileAction} ${getFolderCardClassName(link.size)}`}
         type="button"
         onClick={onOpen}
         title={link.tips || resolveTileLabel(link)}
       >
-        <div className={styles.folderGrid}>
+        <div className={getFolderGridClassName(link.size)}>
           {slots.map((child) => (
             <div className={styles.folderSlot} key={child.id}>
               {isTextIcon(child) ? (
-                <span className={styles.tileIconText}>{child.src.replace(/^txt:/, "")}</span>
+                <span className={styles.folderSlotText}>{child.src.replace(/^txt:/, "")}</span>
               ) : (
                 <img src={child.src} alt="" />
               )}
             </div>
           ))}
-          {Array.from({ length: Math.max(0, 4 - slots.length) }).map((_, index) => (
+          {Array.from({ length: emptySlotCount }).map((_, index) => (
             <div className={`${styles.folderSlot} ${styles.folderSlotEmpty}`} key={`empty-${index}`} />
           ))}
         </div>
@@ -858,24 +989,34 @@ function Dock({
   links,
   openInBlank,
   editMode,
+  showTrash,
   draggingDockId,
   dockDropTargetId,
+  trashActive,
   onRemove,
   onDragStart,
   onDragEnter,
   onDrop,
-  onDragEnd
+  onDragEnd,
+  onTrashDragEnter,
+  onTrashDragLeave,
+  onTrashDrop
 }: {
   links: HomeLink[];
   openInBlank: boolean;
   editMode: boolean;
+  showTrash: boolean;
   draggingDockId: string;
   dockDropTargetId: string;
+  trashActive: boolean;
   onRemove: (linkId: string) => void;
   onDragStart: (linkId: string) => void;
   onDragEnter: (linkId: string) => void;
   onDrop: (linkId: string) => void;
   onDragEnd: () => void;
+  onTrashDragEnter: () => void;
+  onTrashDragLeave: () => void;
+  onTrashDrop: () => void;
 }) {
   if (links.length === 0) {
     return null;
@@ -883,58 +1024,121 @@ function Dock({
 
   return (
     <div className={styles.dock}>
-      {links.map((item) => {
-        const target = openInBlank && !isInternalLink(item.url) ? "_blank" : "_self";
-        const rel = target === "_blank" ? "noreferrer" : undefined;
-        const dockItemClassName = [
-          styles.dockItem,
-          draggingDockId === item.id ? styles.tileDragging : "",
-          dockDropTargetId === item.id && draggingDockId !== item.id ? styles.tileDropTarget : ""
-        ]
-          .filter(Boolean)
-          .join(" ");
+      <div className={styles.dockList}>
+        {links.map((item) => {
+          const target = openInBlank && !isInternalLink(item.url) ? "_blank" : "_self";
+          const rel = target === "_blank" ? "noreferrer" : undefined;
+          const dockItemClassName = [
+            styles.dockItem,
+            draggingDockId === item.id ? styles.tileDragging : "",
+            dockDropTargetId === item.id && draggingDockId !== item.id ? styles.dockItemDropTarget : ""
+          ]
+            .filter(Boolean)
+            .join(" ");
 
-        return (
-          <a
-            key={item.id}
-            className={dockItemClassName}
-            href={item.url}
-            target={target}
-            rel={rel}
-            title={resolveTileLabel(item)}
-            draggable={editMode}
-            onDragStart={editMode ? () => onDragStart(item.id) : undefined}
-            onDragEnter={editMode ? () => onDragEnter(item.id) : undefined}
+          return (
+            <a
+              key={item.id}
+              className={dockItemClassName}
+              href={item.url}
+              target={target}
+              rel={rel}
+              title={resolveTileLabel(item)}
+              aria-label={resolveTileLabel(item)}
+              draggable={editMode}
+              onDragStart={
+                editMode
+                  ? () => {
+                      onTrashDragLeave();
+                      onDragStart(item.id);
+                    }
+                  : undefined
+              }
+              onDragEnter={
+                editMode
+                  ? () => {
+                      onTrashDragLeave();
+                      onDragEnter(item.id);
+                    }
+                  : undefined
+              }
+              onDragOver={editMode ? (event) => event.preventDefault() : undefined}
+              onDrop={
+                editMode
+                  ? () => {
+                      onTrashDragLeave();
+                      onDrop(item.id);
+                    }
+                  : undefined
+              }
+              onDragEnd={editMode ? onDragEnd : undefined}
+              onClick={editMode ? (event) => event.preventDefault() : undefined}
+            >
+              {editMode ? (
+                <button
+                  className={styles.tileDeleteButton}
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onRemove(item.id);
+                  }}
+                  aria-label="移出 Dock"
+                >
+                  ×
+                </button>
+              ) : null}
+              <span className={styles.dockItemFrame} style={getLinkSurfaceStyle(item)}>
+                {isAppLink(item) ? (
+                  <span className={styles.tileAppBadge}>
+                    <img className={styles.tileAppBadgeIcon} src="/dist/assets/wapp.cf7c9591.1766672520393.svg" alt="" />
+                  </span>
+                ) : null}
+                {isTextIcon(item) ? (
+                  <span className={styles.tileIconText}>{item.src.replace(/^txt:/, "")}</span>
+                ) : (
+                  <img src={item.src} alt={resolveTileLabel(item)} />
+                )}
+              </span>
+            </a>
+          );
+        })}
+      </div>
+      {showTrash ? (
+        <div className={styles.dockUtility}>
+          <div className={styles.dockDivider} />
+          <button
+            className={[
+              styles.dockTrash,
+              trashActive && draggingDockId ? styles.dockTrashActive : ""
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            type="button"
+            aria-label="拖入此处移出 Dock"
+            onDragEnter={
+              editMode
+                ? (event) => {
+                    event.preventDefault();
+                    onTrashDragEnter();
+                  }
+                : undefined
+            }
             onDragOver={editMode ? (event) => event.preventDefault() : undefined}
-            onDrop={editMode ? () => onDrop(item.id) : undefined}
-            onDragEnd={editMode ? onDragEnd : undefined}
-            onClick={editMode ? (event) => event.preventDefault() : undefined}
+            onDragLeave={editMode ? onTrashDragLeave : undefined}
+            onDrop={
+              editMode
+                ? (event) => {
+                    event.preventDefault();
+                    onTrashDrop();
+                  }
+                : undefined
+            }
           >
-            {editMode ? (
-              <button
-                className={styles.tileDeleteButton}
-                type="button"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onRemove(item.id);
-                }}
-                aria-label="移出 Dock"
-              >
-                ×
-              </button>
-            ) : null}
-            <span className={styles.dockItemFrame} style={getLinkSurfaceStyle(item)}>
-              {isTextIcon(item) ? (
-                <span className={styles.tileIconText}>{item.src.replace(/^txt:/, "")}</span>
-              ) : (
-                <img src={item.src} alt={resolveTileLabel(item)} />
-              )}
-            </span>
-            <span className={styles.dockItemLabel}>{resolveTileLabel(item)}</span>
-          </a>
-        );
-      })}
+            <img src="/dist/assets/lajitong.15d0afcb.1766672520393.png" alt="" />
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -996,6 +1200,288 @@ function NoticeBanner({
   );
 }
 
+function DesktopContextMenu({
+  open,
+  x,
+  y,
+  compactMode,
+  onClose,
+  onAddLink,
+  onAddGroup,
+  onOpenBackground,
+  onOpenSettings,
+  onToggleCompact,
+  onRefresh
+}: {
+  open: boolean;
+  x: number;
+  y: number;
+  compactMode: boolean;
+  onClose: () => void;
+  onAddLink: () => void;
+  onAddGroup: () => void;
+  onOpenBackground: () => void;
+  onOpenSettings: () => void;
+  onToggleCompact: () => void;
+  onRefresh: () => void;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`${styles.contextMenu} ${styles.contextMenuDesktop}`}
+      style={{ left: x, top: y }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div className={styles.contextMenuSectionLabel}>布局</div>
+      <div className={styles.contextMenuLayoutSet}>
+        <button
+          className={!compactMode ? `${styles.contextMenuLayoutButton} ${styles.contextMenuLayoutButtonActive}` : styles.contextMenuLayoutButton}
+          type="button"
+          onClick={() => {
+            if (compactMode) {
+              onToggleCompact();
+            }
+            onClose();
+          }}
+        >
+          标准
+        </button>
+        <button
+          className={compactMode ? `${styles.contextMenuLayoutButton} ${styles.contextMenuLayoutButtonActive}` : styles.contextMenuLayoutButton}
+          type="button"
+          onClick={() => {
+            if (!compactMode) {
+              onToggleCompact();
+            }
+            onClose();
+          }}
+        >
+          简洁
+        </button>
+      </div>
+      <button
+        className={styles.contextMenuItem}
+        type="button"
+        onClick={() => {
+          onAddLink();
+          onClose();
+        }}
+      >
+        添加标签
+      </button>
+      <button
+        className={styles.contextMenuItem}
+        type="button"
+        onClick={() => {
+          onAddGroup();
+          onClose();
+        }}
+      >
+        添加分类
+      </button>
+      <button
+        className={styles.contextMenuItem}
+        type="button"
+        onClick={() => {
+          onOpenBackground();
+          onClose();
+        }}
+      >
+        壁纸
+      </button>
+      <button
+        className={styles.contextMenuItem}
+        type="button"
+        onClick={() => {
+          onOpenSettings();
+          onClose();
+        }}
+      >
+        设置中心
+      </button>
+      <div className={styles.contextMenuDivider} />
+      <button
+        className={styles.contextMenuItem}
+        type="button"
+        onClick={() => {
+          onRefresh();
+          onClose();
+        }}
+      >
+        刷新页面
+      </button>
+    </div>
+  );
+}
+
+function TileContextMenu({
+  open,
+  x,
+  y,
+  link,
+  tabbarEnabled,
+  pinned,
+  pageGroups,
+  submenuDirection,
+  onClose,
+  onOpen,
+  onEdit,
+  onDelete,
+  onPin,
+  onUnpin,
+  onMoveToGroup
+}: {
+  open: boolean;
+  x: number;
+  y: number;
+  link: HomeLink | null;
+  tabbarEnabled: boolean;
+  pinned: boolean;
+  pageGroups: HomeLink[];
+  submenuDirection: "left" | "right";
+  onClose: () => void;
+  onOpen?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onPin?: () => void;
+  onUnpin?: () => void;
+  onMoveToGroup?: (groupId: string) => void;
+}) {
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setGroupMenuOpen(false);
+    }
+  }, [open]);
+
+  if (!open || !link) {
+    return null;
+  }
+
+  const isFolder = link.type === "component" && link.component === "iconGroup";
+  const isAction = isActionTile(link);
+  const canOpen = isFolder || isAction;
+  const canMoveToGroup = Boolean(onMoveToGroup);
+  const canTogglePin = tabbarEnabled && (Boolean(onPin) || Boolean(onUnpin));
+  const deleteLabel = isFolder ? "删除文件夹" : "删除标签";
+  const editLabel = "编辑标签";
+
+  return (
+    <div
+      className={`${styles.contextMenu} ${styles.contextMenuTile}`}
+      style={{ left: x, top: y }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      {canOpen ? (
+        <button
+          className={styles.contextMenuItem}
+          type="button"
+          onClick={() => {
+            onOpen?.();
+            onClose();
+          }}
+        >
+          {isFolder ? "打开文件夹" : "打开入口"}
+        </button>
+      ) : null}
+      {onEdit ? (
+        <button
+          className={styles.contextMenuItem}
+          type="button"
+          onClick={() => {
+            onEdit();
+            onClose();
+          }}
+        >
+          {editLabel}
+        </button>
+      ) : null}
+      {onDelete ? (
+        <button
+          className={styles.contextMenuItem}
+          type="button"
+          onClick={() => {
+            onDelete();
+            onClose();
+          }}
+        >
+          {deleteLabel}
+        </button>
+      ) : null}
+      {canTogglePin ? (
+        <button
+          className={styles.contextMenuItem}
+          type="button"
+          onClick={() => {
+            if (pinned) {
+              onUnpin?.();
+            } else {
+              onPin?.();
+            }
+            onClose();
+          }}
+        >
+          {pinned ? "移出 Dock" : "加入 Dock"}
+        </button>
+      ) : null}
+      {canMoveToGroup ? (
+        <div
+          className={styles.contextMenuSubmenuWrap}
+          onMouseEnter={() => setGroupMenuOpen(true)}
+          onMouseLeave={() => setGroupMenuOpen(false)}
+        >
+          <button className={styles.contextMenuItem} type="button">
+            移动至分类
+          </button>
+          {groupMenuOpen ? (
+            <div
+              className={`${styles.contextMenuSubmenu} ${
+                submenuDirection === "left" ? styles.contextMenuSubmenuLeft : styles.contextMenuSubmenuRight
+              }`}
+            >
+              <button
+                className={styles.contextMenuItem}
+                type="button"
+                onClick={() => {
+                  onMoveToGroup?.("");
+                  onClose();
+                }}
+              >
+                首页
+              </button>
+              {pageGroups.map((group) => (
+                <button
+                  key={group.id}
+                  className={styles.contextMenuItem}
+                  type="button"
+                  onClick={() => {
+                    onMoveToGroup?.(group.id);
+                    onClose();
+                  }}
+                >
+                  {resolveTileLabel(group)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function HomePage({ data }: HomePageProps) {
   const [activeGroupId, setActiveGroupId] = useState("");
   const [currentConfig, setCurrentConfig] = useState<HomeConfig>(data.config);
@@ -1015,9 +1501,12 @@ export function HomePage({ data }: HomePageProps) {
   const [dropTargetId, setDropTargetId] = useState("");
   const [draggingDockId, setDraggingDockId] = useState("");
   const [dockDropTargetId, setDockDropTargetId] = useState("");
+  const [dockTrashActive, setDockTrashActive] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(Boolean(data.notice));
   const [toasts, setToasts] = useState<HomeToastItem[]>([]);
   const [viewportWidth, setViewportWidth] = useState(1440);
+  const [desktopMenu, setDesktopMenu] = useState<ContextMenuState>(CLOSED_CONTEXT_MENU);
+  const [tileMenu, setTileMenu] = useState<TileContextMenuState>(CLOSED_TILE_CONTEXT_MENU);
 
   const notify = useCallback((message: string, tone: HomeToastTone = "info") => {
     setToasts((current) => [
@@ -1032,6 +1521,11 @@ export function HomePage({ data }: HomePageProps) {
 
   const dismissToast = useCallback((id: number) => {
     setToasts((current) => current.filter((item) => item.id !== id));
+  }, []);
+
+  const closeContextMenus = useCallback(() => {
+    setDesktopMenu(CLOSED_CONTEXT_MENU);
+    setTileMenu(CLOSED_TILE_CONTEXT_MENU);
   }, []);
 
   useEffect(() => {
@@ -1094,6 +1588,7 @@ export function HomePage({ data }: HomePageProps) {
       setDropTargetId("");
       setDraggingDockId("");
       setDockDropTargetId("");
+      setDockTrashActive(false);
       setOpenFolderId("");
     }
   }, [editMode]);
@@ -1109,6 +1604,34 @@ export function HomePage({ data }: HomePageProps) {
       window.removeEventListener("resize", syncViewportWidth);
     };
   }, []);
+
+  useEffect(() => {
+    if (!desktopMenu.open && !tileMenu.open) {
+      return;
+    }
+
+    function handleClose() {
+      closeContextMenus();
+    }
+
+    function handleKeydown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeContextMenus();
+      }
+    }
+
+    window.addEventListener("mousedown", handleClose);
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
+    window.addEventListener("keydown", handleKeydown);
+
+    return () => {
+      window.removeEventListener("mousedown", handleClose);
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
+      window.removeEventListener("keydown", handleKeydown);
+    };
+  }, [closeContextMenus, desktopMenu.open, tileMenu.open]);
 
   async function handleSaveSettings() {
     if (settingsSaving) {
@@ -1214,6 +1737,19 @@ export function HomePage({ data }: HomePageProps) {
     const nextLinks = currentLinks.filter((item) => item.id !== linkId && item.pid !== linkId);
     await persistLinks(nextLinks);
     notify("标签已删除。", "success");
+  }
+
+  async function handleDeleteFolder(folderId: string) {
+    if (!window.confirm("确认删除这个文件夹吗？文件夹内标签会一并删除。")) {
+      return;
+    }
+
+    const nextLinks = currentLinks.filter((item) => item.id !== folderId && item.pid !== folderId);
+    await persistLinks(nextLinks);
+    if (openFolderId === folderId) {
+      setOpenFolderId("");
+    }
+    notify("文件夹已删除。", "success");
   }
 
   async function handlePinToDock(link: HomeLink) {
@@ -1384,6 +1920,57 @@ export function HomePage({ data }: HomePageProps) {
     notify("壁纸已更新。", "success");
   }
 
+  async function handleMoveLinkToGroup(linkId: string, groupId: string) {
+    const nextLinks = currentLinks.map((item) =>
+      item.id === linkId
+        ? {
+            ...item,
+            pageGroup: groupId
+          }
+        : item
+    );
+
+    await persistLinks(nextLinks);
+    notify("标签已移动。", "success");
+  }
+
+  function openDesktopContextMenu(x: number, y: number) {
+    const position = clampContextMenuPosition(
+      x,
+      y,
+      DESKTOP_CONTEXT_MENU_WIDTH,
+      DESKTOP_CONTEXT_MENU_HEIGHT
+    );
+    setTileMenu(CLOSED_TILE_CONTEXT_MENU);
+    setDesktopMenu({
+      open: true,
+      x: position.x,
+      y: position.y
+    });
+  }
+
+  function openTileContextMenu(linkId: string, x: number, y: number) {
+    const position = clampContextMenuPosition(x, y, TILE_CONTEXT_MENU_WIDTH, TILE_CONTEXT_MENU_HEIGHT);
+    setDesktopMenu(CLOSED_CONTEXT_MENU);
+    setTileMenu({
+      open: true,
+      x: position.x,
+      y: position.y,
+      linkId
+    });
+  }
+
+  function handleMainContextMenu(event: ReactMouseEvent<HTMLElement>) {
+    event.preventDefault();
+
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("[data-home-tile='true']")) {
+      return;
+    }
+
+    openDesktopContextMenu(event.clientX, event.clientY);
+  }
+
   function handleActionTileClick(link: HomeLink) {
     if (link.url === "tab://addicon") {
       setEditingLink(null);
@@ -1409,6 +1996,15 @@ export function HomePage({ data }: HomePageProps) {
   const currentPageGroups = normalizeLinksOrder(
     currentLinks.filter((item) => item.type === "pageGroup")
   );
+  const tileMenuLink = tileMenu.linkId ? currentLinks.find((item) => item.id === tileMenu.linkId) ?? null : null;
+  const tileMenuPinned =
+    tileMenuLink && canEditTile(tileMenuLink) ? currentTabbar.some((item) => item.id === tileMenuLink.id) : false;
+  const tileMenuCanEdit = tileMenuLink ? canEditTile(tileMenuLink) : false;
+  const tileMenuIsFolder = tileMenuLink?.type === "component" && tileMenuLink.component === "iconGroup";
+  const tileMenuIsAction = tileMenuLink ? isActionTile(tileMenuLink) : false;
+  const tileMenuCanMove = Boolean(tileMenuLink) && !tileMenuIsAction;
+  const tileMenuSubmenuDirection =
+    tileMenu.x > viewportWidth - (TILE_CONTEXT_MENU_WIDTH * 2 + 24) ? "left" : "right";
   const gridColumnCount = getGridColumnCount(
     viewportWidth,
     currentConfig.theme.iconWidth,
@@ -1446,15 +2042,20 @@ export function HomePage({ data }: HomePageProps) {
             pageGroups={currentPageGroups}
             activeGroupId={activeGroupId}
             editMode={editMode}
+            legacyUrl={data.legacyUrl}
+            user={data.user}
+            onOpenAuth={() => setAuthOpen(true)}
             onSelectGroup={setActiveGroupId}
             onOpenGroupManager={() => {
               setGroupManagerInitialId("");
               setGroupManagerOpen(true);
             }}
+            onOpenSettings={() => setSettingsOpen(true)}
             onEditGroup={handleEditGroup}
             onDeleteGroup={(groupId) => {
               void handleDeleteGroup(groupId);
             }}
+            onNotify={notify}
           />
         ) : null}
 
@@ -1477,8 +2078,114 @@ export function HomePage({ data }: HomePageProps) {
           onToggleEditMode={() => setEditMode((current) => !current)}
           onNotify={notify}
         />
+        <DesktopContextMenu
+          open={desktopMenu.open}
+          x={desktopMenu.x}
+          y={desktopMenu.y}
+          compactMode={compactMode}
+          onClose={closeContextMenus}
+          onAddLink={() => {
+            setEditingLink(null);
+            setLinkEditorOpen(true);
+          }}
+          onAddGroup={() => {
+            setGroupManagerInitialId("");
+            setGroupManagerOpen(true);
+          }}
+          onOpenBackground={() => setBackgroundOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onToggleCompact={() =>
+            setCurrentConfig((config) =>
+              mergeHomeConfig(config, {
+                theme: {
+                  CompactMode: !config.theme.CompactMode
+                }
+              })
+            )
+          }
+          onRefresh={() => window.location.reload()}
+        />
+        <TileContextMenu
+          open={tileMenu.open}
+          x={tileMenu.x}
+          y={tileMenu.y}
+          link={tileMenuLink}
+          tabbarEnabled={currentConfig.theme.tabbar && tileMenuCanEdit}
+          pinned={tileMenuPinned}
+          pageGroups={currentPageGroups}
+          submenuDirection={tileMenuSubmenuDirection}
+          onClose={closeContextMenus}
+          onOpen={
+            tileMenuIsFolder
+              ? () => {
+                  if (tileMenuLink) {
+                    setOpenFolderId(tileMenuLink.id);
+                  }
+                }
+              : tileMenuIsAction
+                ? () => {
+                    if (tileMenuLink) {
+                      handleActionTileClick(tileMenuLink);
+                    }
+                  }
+                : undefined
+          }
+          onEdit={
+            tileMenuCanEdit
+              ? () => {
+                  if (!tileMenuLink) {
+                    return;
+                  }
+                  setEditingLink(tileMenuLink);
+                  setLinkEditorOpen(true);
+                }
+              : undefined
+          }
+          onDelete={
+            tileMenuCanEdit
+              ? () => {
+                  if (tileMenuLink) {
+                    void handleDeleteLink(tileMenuLink.id);
+                  }
+                }
+              : tileMenuIsFolder
+                ? () => {
+                    if (tileMenuLink) {
+                      void handleDeleteFolder(tileMenuLink.id);
+                    }
+                  }
+                : undefined
+          }
+          onPin={
+            tileMenuCanEdit
+              ? () => {
+                  if (tileMenuLink) {
+                    void handlePinToDock(tileMenuLink);
+                  }
+                }
+              : undefined
+          }
+          onUnpin={
+            tileMenuCanEdit
+              ? () => {
+                  if (tileMenuLink) {
+                    void handleRemoveDockItem(tileMenuLink.id);
+                  }
+                }
+              : undefined
+          }
+          onMoveToGroup={
+            tileMenuCanMove
+              ? (groupId) => {
+                  if (tileMenuLink) {
+                    void handleMoveLinkToGroup(tileMenuLink.id, groupId);
+                  }
+                }
+              : undefined
+          }
+        />
 
-        <main className={styles.main}>
+        <main className={styles.main} onContextMenu={handleMainContextMenu}>
           <section className={compactMode ? `${styles.hero} ${styles.heroCompact}` : styles.hero}>
             {noticeOpen && data.notice ? (
               <NoticeBanner
@@ -1541,6 +2248,7 @@ export function HomePage({ data }: HomePageProps) {
                           editMode={editMode}
                           isDragging={isDragging}
                           isDropTarget={isDropTarget}
+                          onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
                           onDrop={dragHandlers.onDrop}
@@ -1557,6 +2265,7 @@ export function HomePage({ data }: HomePageProps) {
                           editMode={editMode}
                           isDragging={isDragging}
                           isDropTarget={isDropTarget}
+                          onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                           onClick={() => handleActionTileClick(item)}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
@@ -1574,6 +2283,7 @@ export function HomePage({ data }: HomePageProps) {
                         editMode={editMode}
                         isDragging={isDragging}
                         isDropTarget={isDropTarget}
+                        onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                         onEdit={
                           canEditTile(item)
                             ? () => {
@@ -1616,22 +2326,43 @@ export function HomePage({ data }: HomePageProps) {
             links={dockLinks}
             openInBlank={currentConfig.openType.linkOpen}
             editMode={editMode}
+            showTrash={currentConfig.theme.trash || Boolean(draggingDockId)}
             draggingDockId={draggingDockId}
             dockDropTargetId={dockDropTargetId}
+            trashActive={dockTrashActive}
             onRemove={(linkId) => {
               void handleRemoveDockItem(linkId);
             }}
-            onDragStart={(linkId) => setDraggingDockId(linkId)}
-            onDragEnter={(linkId) => setDockDropTargetId(linkId)}
+            onDragStart={(linkId) => {
+              setDockTrashActive(false);
+              setDraggingDockId(linkId);
+            }}
+            onDragEnter={(linkId) => {
+              setDockTrashActive(false);
+              setDockDropTargetId(linkId);
+            }}
             onDrop={(linkId) => {
               const sourceId = draggingDockId;
               setDraggingDockId("");
               setDockDropTargetId("");
+              setDockTrashActive(false);
               void handleReorderDock(sourceId, linkId);
             }}
             onDragEnd={() => {
               setDraggingDockId("");
               setDockDropTargetId("");
+              setDockTrashActive(false);
+            }}
+            onTrashDragEnter={() => setDockTrashActive(true)}
+            onTrashDragLeave={() => setDockTrashActive(false)}
+            onTrashDrop={() => {
+              const sourceId = draggingDockId;
+              setDraggingDockId("");
+              setDockDropTargetId("");
+              setDockTrashActive(false);
+              if (sourceId) {
+                void handleRemoveDockItem(sourceId);
+              }
             }}
           />
         ) : null}
