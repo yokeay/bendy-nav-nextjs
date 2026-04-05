@@ -399,6 +399,11 @@
   opacity: 0.88;
 }
 
+.searchBox {
+  width: min(610px, calc(100% - 30px));
+  position: relative;
+}
+
 .searchShell {
   width: min(610px, calc(100% - 30px));
   position: relative;
@@ -471,6 +476,158 @@
   width: 20px;
   height: 20px;
   opacity: 0.7;
+}
+
+.searchPanel {
+  position: absolute;
+  z-index: 12;
+  width: calc(100% - 28px);
+  margin-top: 6px;
+  left: 14px;
+  right: 14px;
+}
+
+.searchPanelSection {
+  position: relative;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 15px 10px;
+  border-radius: 25px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 2px rgba(64, 64, 64, 0.54);
+  backdrop-filter: blur(40px);
+}
+
+.searchPanelTitle {
+  margin: 0 0 10px;
+  color: #4c586b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.searchEngineGrid {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.searchEngineGrid::-webkit-scrollbar {
+  display: none;
+}
+
+.searchEngineGridItem {
+  width: 70px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #2f3b4e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.searchEngineGridItem img {
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.searchEngineGridItem span {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  text-align: center;
+}
+
+.searchEngineGridItemActive img {
+  box-shadow: 0 0 0 2px rgba(4, 163, 255, 0.22);
+}
+
+.searchHistoryList {
+  display: grid;
+  gap: 2px;
+}
+
+.searchIconResultList {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.searchIconResultList::-webkit-scrollbar {
+  display: none;
+}
+
+.searchIconResultItem {
+  width: 60px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.searchIconResultItem img,
+.searchIconResultText {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+}
+
+.searchIconResultItem img {
+  object-fit: contain;
+}
+
+.searchIconResultText {
+  padding: 4px;
+  color: #2f3b4e;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.searchIconResultItem span:last-child {
+  width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #2f3b4e;
+  font-size: 12px;
+  text-align: center;
+}
+
+.searchPanelItem {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 15px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #2f3b4e;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 180ms ease, padding-left 180ms ease;
+}
+
+.searchPanelItem:hover {
+  padding-left: 25px;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .content {
@@ -1002,6 +1159,25 @@
   right: calc(100% + 6px);
 }
 
+.contextMenuSubmenuRight::after,
+.contextMenuSubmenuLeft::after {
+  position: absolute;
+  top: 0;
+  z-index: 0;
+  content: "";
+  width: 50px;
+  height: 50px;
+  background: transparent;
+}
+
+.contextMenuSubmenuRight::after {
+  left: -25px;
+}
+
+.contextMenuSubmenuLeft::after {
+  right: -25px;
+}
+
 .folderBackdrop {
   position: fixed;
   inset: 0;
@@ -1070,27 +1246,88 @@
 .authBackdrop {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 24px;
-  background: rgba(2, 7, 14, 0.56);
-  backdrop-filter: blur(14px);
+  background: rgba(13, 12, 34, 0.56);
   z-index: 100;
 }
 
+.authLoginCard {
+  position: relative;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  height: 550px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  background: #fff;
+}
+
+.authLoginVisual {
+  position: relative;
+  flex: 1;
+  width: 550px;
+  min-width: 550px;
+  background:
+    linear-gradient(180deg, rgba(18, 24, 38, 0.16), rgba(18, 24, 38, 0.42)),
+    linear-gradient(135deg, rgba(80, 111, 255, 0.72), rgba(33, 177, 255, 0.52));
+}
+
+.authVisualImage {
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+.authVisualOverlay {
+  position: absolute;
+  inset: 0;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: #fff;
+}
+
+.authVisualEyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.authVisualTitle {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.authVisualText {
+  margin: 12px 0 0;
+  max-width: 280px;
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.92;
+}
+
 .authDialog {
-  width: min(420px, calc(100vw - 24px));
-  border-radius: 28px;
-  padding: 24px;
-  background: rgba(249, 249, 250, 0.96);
+  position: relative;
+  flex-shrink: 0;
+  width: 350px;
+  padding: 40px 35px;
+  background: #fff;
   color: #182235;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
 }
 
 .authHeader {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
 }
 
@@ -1102,18 +1339,22 @@
 
 .authTitle {
   margin: 6px 0 0;
-  font-size: 1.45rem;
+  font-size: 1.5rem;
 }
 
 .authClose {
-  width: 34px;
-  height: 34px;
+  position: absolute;
+  top: 35px;
+  right: 25px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: 999px;
-  background: rgba(24, 34, 53, 0.08);
+  background: transparent;
   color: #182235;
   cursor: pointer;
-  font-size: 1.35rem;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .authTabs {
@@ -1142,7 +1383,7 @@
 }
 
 .authForm {
-  margin-top: 18px;
+  margin-top: 20px;
   display: grid;
   gap: 14px;
 }
@@ -1159,18 +1400,20 @@
 
 .authInput {
   width: 100%;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(24, 34, 53, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  min-height: 45px;
+  padding: 0 12px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #f3f3f3;
   color: #182235;
   outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 
 .authInput:focus {
-  border-color: rgba(21, 112, 239, 0.54);
-  box-shadow: 0 0 0 4px rgba(21, 112, 239, 0.12);
+  border-color: rgba(74, 157, 236, 0.76);
+  box-shadow: 0 0 0 5px rgba(74, 157, 236, 0.2);
+  background: #fff;
 }
 
 .authInlineField {
@@ -1180,13 +1423,13 @@
 
 .authSecondaryButton {
   flex-shrink: 0;
-  min-width: 110px;
-  min-height: 44px;
+  min-width: 100px;
+  min-height: 45px;
   padding: 0 14px;
-  border: 1px solid rgba(24, 34, 53, 0.12);
-  border-radius: 12px;
-  background: rgba(24, 34, 53, 0.06);
-  color: #182235;
+  border: 1px solid #f1f1f1;
+  border-radius: 8px;
+  background: #f3f3f3;
+  color: #6c6c6c;
   cursor: pointer;
 }
 
@@ -1196,12 +1439,13 @@
 }
 
 .authSubmit {
-  min-height: 46px;
+  min-height: 38px;
   border: none;
-  border-radius: 14px;
-  background: #1570ef;
+  border-radius: 8px;
+  background: #007aff;
   color: #fff;
   cursor: pointer;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -1215,6 +1459,43 @@
   font-size: 12px;
   line-height: 1.5;
   color: rgba(24, 34, 53, 0.54);
+}
+
+.authSocial {
+  margin-top: 24px;
+}
+
+.authSocialDivider {
+  height: 1px;
+  background: #f1f1f1;
+}
+
+.authSocialRow {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 24px;
+}
+
+.authSocialButton {
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eee;
+  color: #1f2a39;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.authSocialButton img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
 }
 
 .toastViewport {
@@ -1851,6 +2132,10 @@
     width: 100%;
   }
 
+  .searchBox {
+    width: 100%;
+  }
+
   .dock {
     width: calc(100% - 24px);
   }
@@ -1871,8 +2156,20 @@
     column-gap: 20px;
   }
 
+  .authLoginCard {
+    width: 100%;
+    height: auto;
+    min-height: calc(100vh - 24px);
+    border-radius: 16px;
+  }
+
+  .authLoginVisual {
+    display: none;
+  }
+
   .authDialog {
-    padding: 20px;
+    width: 100%;
+    padding: 50px 16px 24px;
   }
 
   .settingsDialog {

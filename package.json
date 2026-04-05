@@ -1,13 +1,13 @@
 {
   "name": "bendy-nav-nextjs",
-  "version": "2.4.9",
+  "version": "2.4.10",
   "private": true,
   "scripts": {
     "dev": "tsx scripts/dev.ts",
     "build": "next build",
     "start": "tsx scripts/start.ts",
     "db:init": "tsx scripts/db-init.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "check:encoding": "node --experimental-vm-modules scripts/check-encoding.mjs"
   },
   "dependencies": {

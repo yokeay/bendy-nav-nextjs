@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AddLinkDialog, BackgroundDialog, PageGroupManagerDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
@@ -13,6 +13,7 @@ import styles from "./home-page.module.css";
 
 const LOCAL_HOME_CONFIG_STORAGE_KEY = "config";
 const SEARCH_ENGINE_STORAGE_KEY = "SearchEngineLocal";
+const SEARCH_HISTORY_STORAGE_KEY = "bendy.home.search-history";
 const LOCAL_HOME_LINK_STORAGE_KEY = "link";
 const LOCAL_HOME_TABBAR_STORAGE_KEY = "tabbar";
 const PAGE_GROUP_STORAGE_KEY = "bendy.home.page-group";
@@ -34,6 +35,14 @@ type ContextMenuState = {
 
 type TileContextMenuState = ContextMenuState & {
   linkId: string;
+};
+
+type LegacySearchEngineRow = {
+  id: number;
+  name: string;
+  icon: string;
+  url: string;
+  tips: string;
 };
 
 const CLOSED_CONTEXT_MENU: ContextMenuState = {
@@ -168,8 +177,12 @@ function isAppLink(link: HomeLink): boolean {
   return link.app === 1;
 }
 
+function isFolderLink(link: HomeLink): boolean {
+  return link.type === "component" && link.component === "iconGroup";
+}
+
 function isRenderableTile(link: HomeLink): boolean {
-  if (link.type === "component" && link.component === "iconGroup") {
+  if (isFolderLink(link)) {
     return true;
   }
 
@@ -189,12 +202,27 @@ function isInternalLink(url: string): boolean {
 }
 
 function buildSidebarLinks(data: HomeData) {
-  const dynamicGroups = data.pageGroups.map((group) => ({
-    type: "group" as const,
-    id: group.id,
-    label: resolveTileLabel(group),
-    icon: group.src || "/static/pageGroup/home.svg"
-  }));
+  const homeGroup = data.pageGroups.find((group) => resolveTileLabel(group) === "首页") ?? null;
+  const dynamicGroups = data.pageGroups
+    .filter((group) => group.id !== homeGroup?.id)
+    .map((group) => ({
+      type: "group" as const,
+      id: group.id,
+      label: resolveTileLabel(group),
+      icon: group.src || "/static/pageGroup/home.svg"
+    }));
+
+  if (homeGroup) {
+    return [
+      {
+        type: "group" as const,
+        id: homeGroup.id,
+        label: "首页",
+        icon: homeGroup.src || "/static/pageGroup/home.svg"
+      },
+      ...dynamicGroups
+    ];
+  }
 
   return [
     {
@@ -207,7 +235,12 @@ function buildSidebarLinks(data: HomeData) {
   ];
 }
 
-function buildRootTiles(data: HomeData, activeGroupId: string) {
+function resolveHomeGroupId(links: HomeLink[]) {
+  const homeGroup = links.find((item) => item.type === "pageGroup" && resolveTileLabel(item) === "首页");
+  return homeGroup?.id ?? "";
+}
+
+function buildRootTiles(data: HomeData, activeGroupId: string, homeGroupId = "") {
   return data.links.filter((item) => {
     if (item.type === "pageGroup") {
       return false;
@@ -225,6 +258,10 @@ function buildRootTiles(data: HomeData, activeGroupId: string) {
       return item.pageGroup === activeGroupId;
     }
 
+    if (homeGroupId) {
+      return !item.pageGroup || item.pageGroup === homeGroupId;
+    }
+
     return !item.pageGroup;
   });
 }
@@ -233,7 +270,7 @@ function isActionTile(link: HomeLink): boolean {
   return ["tab://addicon", "tab://background", "tab://setting"].includes(link.url);
 }
 
-function buildVisibleTiles(links: HomeLink[], activeGroupId: string) {
+function buildVisibleTiles(links: HomeLink[], activeGroupId: string, homeGroupId = "") {
   return [...links]
     .filter((item) => {
       if (item.type === "pageGroup") {
@@ -250,6 +287,10 @@ function buildVisibleTiles(links: HomeLink[], activeGroupId: string) {
 
       if (activeGroupId) {
         return item.pageGroup === activeGroupId;
+      }
+
+      if (homeGroupId) {
+        return !item.pageGroup || item.pageGroup === homeGroupId;
       }
 
       return !item.pageGroup;
@@ -281,6 +322,47 @@ function buildFolderChildren(links: HomeLink[], folderId: string) {
   return normalizeLinksOrder(
     links.filter((item) => item.pid === folderId && item.type === "icon" && !isSpecialLegacyLink(item))
   );
+}
+
+function getNextFolderSort(links: HomeLink[], folderId: string) {
+  const children = links.filter((item) => item.pid === folderId);
+  if (children.length === 0) {
+    return 0;
+  }
+
+  return Math.max(...children.map((item) => item.sort), -1) + 1;
+}
+
+function getNextRootSort(links: HomeLink[], groupId: string, homeGroupId = "") {
+  const rootTiles = links.filter((item) => {
+    if (item.type === "pageGroup") {
+      return false;
+    }
+
+    if (item.pid) {
+      return false;
+    }
+
+    if (!isRenderableTile(item)) {
+      return false;
+    }
+
+    if (groupId) {
+      return item.pageGroup === groupId;
+    }
+
+    if (homeGroupId) {
+      return !item.pageGroup || item.pageGroup === homeGroupId;
+    }
+
+    return !item.pageGroup;
+  });
+
+  if (rootTiles.length === 0) {
+    return 0;
+  }
+
+  return Math.max(...rootTiles.map((item) => item.sort), -1) + 1;
 }
 
 function buildDockLinks(data: HomeData) {
@@ -321,6 +403,62 @@ function clampContextMenuPosition(x: number, y: number, width: number, height: n
   return {
     x: Math.max(8, Math.min(x, window.innerWidth - width - 8)),
     y: Math.max(8, Math.min(y, window.innerHeight - height - 8))
+  };
+}
+
+function normalizeSearchEngineKey(name: string, id: number) {
+  const normalized = name.trim().toLowerCase();
+
+  if (normalized.includes("bing") || normalized.includes("必应")) {
+    return "bing";
+  }
+
+  if (normalized.includes("百度")) {
+    return "baidu";
+  }
+
+  if (normalized.includes("google")) {
+    return "google";
+  }
+
+  if (normalized.includes("duckduckgo")) {
+    return "duckduckgo";
+  }
+
+  return `legacy-${id}`;
+}
+
+function mapLegacySearchEngine(row: LegacySearchEngineRow): HomeSearchEngine | null {
+  const url = row.url.trim();
+  if (!url) {
+    return null;
+  }
+
+  const placeholderIndex = url.indexOf("{1}");
+  if (placeholderIndex < 0) {
+    return null;
+  }
+
+  const [baseUrl, queryString = ""] = url.split("?", 2);
+  const params = new URLSearchParams(queryString);
+  let queryParam = "";
+
+  params.forEach((value, key) => {
+    if (!queryParam && value.includes("{1}")) {
+      queryParam = key;
+    }
+  });
+
+  if (!queryParam) {
+    return null;
+  }
+
+  return {
+    key: normalizeSearchEngineKey(row.name, row.id),
+    name: row.name,
+    icon: row.icon,
+    action: baseUrl,
+    queryParam
   };
 }
 
@@ -572,8 +710,10 @@ function ClockPanel({ theme }: { theme: HomeTheme }) {
 
   return (
     <div className={styles.timePanel} style={{ color: theme.timeColor }}>
-      <div className={styles.timeValue}>{clock.value}</div>
-      <div className={styles.timeMeta}>
+      <div className={styles.timeValue} suppressHydrationWarning>
+        {clock.value}
+      </div>
+      <div className={styles.timeMeta} suppressHydrationWarning>
         {clock.meta.map((item) => (
           <span key={item}>{item}</span>
         ))}
@@ -584,13 +724,53 @@ function ClockPanel({ theme }: { theme: HomeTheme }) {
 
 function SearchBar({
   engines,
-  searchOpen
+  searchOpen,
+  searchRecommend,
+  searchLink,
+  quickLinks
 }: {
   engines: HomeSearchEngine[];
   searchOpen: boolean;
+  searchRecommend: boolean;
+  searchLink: boolean;
+  quickLinks: HomeLink[];
 }) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
+  const [availableEngines, setAvailableEngines] = useState<HomeSearchEngine[]>(engines);
   const [engineIndex, setEngineIndex] = useState(0);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
+
+  useEffect(() => {
+    setAvailableEngines(engines);
+  }, [engines]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSearchEngines() {
+      try {
+        const response = await requestLegacy<LegacySearchEngineRow[]>("/searchengine/searchengine");
+        if (cancelled || !Array.isArray(response.data)) {
+          return;
+        }
+
+        const mapped = response.data.map(mapLegacySearchEngine).filter((item): item is HomeSearchEngine => item !== null);
+        if (mapped.length > 0) {
+          setAvailableEngines(mapped);
+        }
+      } catch {
+        // keep fallback engines
+      }
+    }
+
+    void loadSearchEngines();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const storedKey = window.localStorage.getItem(SEARCH_ENGINE_STORAGE_KEY);
@@ -598,56 +778,250 @@ function SearchBar({
       return;
     }
 
-    const nextIndex = engines.findIndex((engine) => engine.key === storedKey);
+    const nextIndex = availableEngines.findIndex((engine) => engine.key === storedKey);
     if (nextIndex >= 0) {
       setEngineIndex(nextIndex);
     }
-  }, [engines]);
+  }, [availableEngines]);
 
   useEffect(() => {
     window.localStorage.setItem(
       SEARCH_ENGINE_STORAGE_KEY,
-      engines[engineIndex]?.key ?? engines[0]?.key ?? "bing"
+      availableEngines[engineIndex]?.key ?? availableEngines[0]?.key ?? "bing"
     );
-  }, [engineIndex, engines]);
+  }, [availableEngines, engineIndex]);
 
-  const currentEngine = engines[engineIndex] ?? engines[0];
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const keyword = query.trim();
-    if (!keyword) {
+  useEffect(() => {
+    const raw = window.localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
+    if (!raw) {
       return;
     }
 
+    try {
+      const parsed = JSON.parse(raw) as string[];
+      if (Array.isArray(parsed)) {
+        setHistory(parsed.filter((item) => typeof item === "string" && item.trim()).slice(0, 10));
+      }
+    } catch {
+      // ignore invalid local history
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!panelOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      if (rootRef.current?.contains(target)) {
+        return;
+      }
+
+      setPanelOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setPanelOpen(false);
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [panelOpen]);
+
+  const currentEngine = availableEngines[engineIndex] ?? availableEngines[0];
+  const normalizedQuery = query.trim().toLowerCase();
+  const iconResults =
+    normalizedQuery && searchLink
+      ? quickLinks
+          .filter((item) => resolveTileLabel(item).toLowerCase().includes(normalizedQuery))
+          .slice(0, 8)
+      : [];
+  const recommendWords =
+    searchRecommend && !normalizedQuery
+      ? quickLinks
+          .map((item) => resolveTileLabel(item))
+          .filter((item, index, list) => Boolean(item) && list.indexOf(item) === index)
+          .slice(0, 8)
+      : [];
+
+  function persistHistory(nextHistory: string[]) {
+    setHistory(nextHistory);
+    window.localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
+  }
+
+  function rememberKeyword(keyword: string) {
+    const normalized = keyword.trim();
+    if (!normalized) {
+      return;
+    }
+
+    const nextHistory = [normalized, ...history.filter((item) => item !== normalized)].slice(0, 10);
+    persistHistory(nextHistory);
+  }
+
+  function searchKeyword(keyword: string) {
+    const normalized = keyword.trim();
+    if (!normalized) {
+      return;
+    }
+
+    rememberKeyword(normalized);
     const url = new URL(currentEngine.action);
-    url.searchParams.set(currentEngine.queryParam, keyword);
+    url.searchParams.set(currentEngine.queryParam, normalized);
     window.open(url.toString(), searchOpen ? "_blank" : "_self", "noopener,noreferrer");
   }
 
+  function openQuickLink(link: HomeLink) {
+    const target = searchOpen && !isInternalLink(link.url) ? "_blank" : "_self";
+    const rel = target === "_blank" ? "noreferrer" : undefined;
+    window.open(link.url, target, rel ? "noopener,noreferrer" : "noopener");
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    searchKeyword(query);
+  }
+
   return (
-    <form className={styles.searchShell} onSubmit={handleSubmit}>
-      <button
+    <div className={styles.searchBox} ref={rootRef}>
+      <form className={styles.searchShell} onSubmit={handleSubmit}>
+        <button
         className={styles.searchEngineButton}
         type="button"
-        onClick={() => setEngineIndex((engineIndex + 1) % engines.length)}
+        onClick={() => {
+          if (availableEngines.length === 0) {
+            return;
+          }
+          setEngineIndex((engineIndex + 1) % availableEngines.length);
+        }}
         title={`切换搜索引擎，当前为 ${currentEngine.name}`}
         aria-label={`切换搜索引擎，当前为 ${currentEngine.name}`}
       >
-        <img src={currentEngine.icon} alt="" />
-        <span className={styles.searchEngineLabel}>{currentEngine.name}</span>
-      </button>
-      <input
-        className={styles.searchInput}
-        name="keyword"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="输入并搜索..."
-      />
-      <button className={styles.searchSubmit} type="submit" aria-label="开始搜索">
-        <img src="/dist/assets/search.e0864ada.1766672520393.svg" alt="" />
-      </button>
-    </form>
+          <img src={currentEngine.icon} alt="" />
+          <span className={styles.searchEngineLabel}>{currentEngine.name}</span>
+        </button>
+        <input
+          className={styles.searchInput}
+          name="keyword"
+          value={query}
+          onFocus={() => setPanelOpen(true)}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="输入并搜索..."
+        />
+        <button className={styles.searchSubmit} type="submit" aria-label="开始搜索">
+          <img src="/dist/assets/search.e0864ada.1766672520393.svg" alt="" />
+        </button>
+      </form>
+      {panelOpen ? (
+        <div className={styles.searchPanel}>
+          <div className={styles.searchPanelSection}>
+            <div className={styles.searchPanelTitle}>搜索引擎</div>
+            <div className={styles.searchEngineGrid}>
+              {availableEngines.map((engine, index) => (
+                <button
+                  key={engine.key}
+                  className={
+                    index === engineIndex
+                      ? `${styles.searchEngineGridItem} ${styles.searchEngineGridItemActive}`
+                      : styles.searchEngineGridItem
+                  }
+                  type="button"
+                  onClick={() => setEngineIndex(index)}
+                >
+                  <img src={engine.icon} alt="" />
+                  <span>{engine.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {query.trim() && searchRecommend ? (
+            <div className={styles.searchPanelSection}>
+              <div className={styles.searchPanelTitle}>快捷搜索</div>
+              <button
+                className={styles.searchPanelItem}
+                type="button"
+                onClick={() => searchKeyword(query)}
+              >
+                使用 {currentEngine.name} 搜索 “{query.trim()}”
+              </button>
+            </div>
+          ) : null}
+          {iconResults.length > 0 ? (
+            <div className={styles.searchPanelSection}>
+              <div className={styles.searchPanelTitle}>图标搜索结果</div>
+              <div className={styles.searchIconResultList}>
+                {iconResults.map((link) => (
+                  <button
+                    key={link.id}
+                    className={styles.searchIconResultItem}
+                    type="button"
+                    onClick={() => openQuickLink(link)}
+                  >
+                    {isTextIcon(link) ? (
+                      <span className={styles.searchIconResultText}>{link.src.replace(/^txt:/, "")}</span>
+                    ) : (
+                      <img src={link.src} alt="" />
+                    )}
+                    <span>{resolveTileLabel(link)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {recommendWords.length > 0 ? (
+            <div className={styles.searchPanelSection}>
+              <div className={styles.searchPanelTitle}>推荐词</div>
+              <div className={styles.searchHistoryList}>
+                {recommendWords.map((item) => (
+                  <button
+                    key={item}
+                    className={styles.searchPanelItem}
+                    type="button"
+                    onClick={() => {
+                      setQuery(item);
+                      searchKeyword(item);
+                    }}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {history.length > 0 ? (
+            <div className={styles.searchPanelSection}>
+              <div className={styles.searchPanelTitle}>搜索历史</div>
+              <div className={styles.searchHistoryList}>
+                {history.map((item) => (
+                  <button
+                    key={item}
+                    className={styles.searchPanelItem}
+                    type="button"
+                    onClick={() => {
+                      setQuery(item);
+                      searchKeyword(item);
+                    }}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -939,12 +1313,34 @@ function FolderModal({
   folder,
   items,
   openInBlank,
-  onClose
+  editMode,
+  draggingId,
+  dropTargetId,
+  onClose,
+  onContextMenu,
+  onEdit,
+  onDelete,
+  onPin,
+  onDragStart,
+  onDragEnter,
+  onDrop,
+  onDragEnd
 }: {
   folder: HomeLink;
   items: HomeLink[];
   openInBlank: boolean;
+  editMode: boolean;
+  draggingId: string;
+  dropTargetId: string;
   onClose: () => void;
+  onContextMenu: (linkId: string, event: ReactMouseEvent<HTMLDivElement>) => void;
+  onEdit: (link: HomeLink) => void;
+  onDelete: (link: HomeLink) => void;
+  onPin: (link: HomeLink) => void;
+  onDragStart: (linkId: string) => void;
+  onDragEnter: (linkId: string) => void;
+  onDrop: (linkId: string) => void;
+  onDragEnd: () => void;
 }) {
   useEffect(() => {
     function handleKeydown(event: KeyboardEvent) {
@@ -974,9 +1370,17 @@ function FolderModal({
               key={item.id}
               link={item}
               openInBlank={openInBlank}
-              editMode={false}
-              isDragging={false}
-              isDropTarget={false}
+              editMode={editMode}
+              isDragging={draggingId === item.id}
+              isDropTarget={dropTargetId === item.id && draggingId !== item.id}
+              onContextMenu={(event) => onContextMenu(item.id, event)}
+              onEdit={() => onEdit(item)}
+              onDelete={() => onDelete(item)}
+              onPin={() => onPin(item)}
+              onDragStart={() => onDragStart(item.id)}
+              onDragEnter={() => onDragEnter(item.id)}
+              onDrop={() => onDrop(item.id)}
+              onDragEnd={onDragEnd}
             />
           ))}
         </div>
@@ -990,14 +1394,18 @@ function Dock({
   openInBlank,
   editMode,
   showTrash,
+  draggingTileId,
+  draggingFolderTileId,
   draggingDockId,
   dockDropTargetId,
   trashActive,
+  onContextMenu,
   onRemove,
   onDragStart,
   onDragEnter,
   onDrop,
   onDragEnd,
+  onGridDropToDock,
   onTrashDragEnter,
   onTrashDragLeave,
   onTrashDrop
@@ -1006,25 +1414,57 @@ function Dock({
   openInBlank: boolean;
   editMode: boolean;
   showTrash: boolean;
+  draggingTileId: string;
+  draggingFolderTileId: string;
   draggingDockId: string;
   dockDropTargetId: string;
   trashActive: boolean;
+  onContextMenu: (linkId: string, event: ReactMouseEvent<HTMLAnchorElement>) => void;
   onRemove: (linkId: string) => void;
   onDragStart: (linkId: string) => void;
   onDragEnter: (linkId: string) => void;
   onDrop: (linkId: string) => void;
   onDragEnd: () => void;
+  onGridDropToDock: (sourceId: string, targetId?: string) => void;
   onTrashDragEnter: () => void;
   onTrashDragLeave: () => void;
   onTrashDrop: () => void;
 }) {
-  if (links.length === 0) {
+  const draggingLinkId = draggingTileId || draggingFolderTileId;
+
+  if (links.length === 0 && !editMode) {
     return null;
   }
 
   return (
     <div className={styles.dock}>
-      <div className={styles.dockList}>
+      <div
+        className={[
+          styles.dockList,
+          draggingLinkId ? styles.dockListDropTarget : ""
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onDragOver={
+          editMode && draggingLinkId
+            ? (event) => {
+                event.preventDefault();
+              }
+            : undefined
+        }
+        onDrop={
+          editMode && draggingLinkId
+            ? (event) => {
+                const target = event.target;
+                if (target instanceof HTMLElement && target.closest("[data-dock-item='true']")) {
+                  return;
+                }
+                event.preventDefault();
+                onGridDropToDock(draggingLinkId);
+              }
+            : undefined
+        }
+      >
         {links.map((item) => {
           const target = openInBlank && !isInternalLink(item.url) ? "_blank" : "_self";
           const rel = target === "_blank" ? "noreferrer" : undefined;
@@ -1039,6 +1479,7 @@ function Dock({
           return (
             <a
               key={item.id}
+              data-dock-item="true"
               className={dockItemClassName}
               href={item.url}
               target={target}
@@ -1046,6 +1487,11 @@ function Dock({
               title={resolveTileLabel(item)}
               aria-label={resolveTileLabel(item)}
               draggable={editMode}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onContextMenu(item.id, event);
+              }}
               onDragStart={
                 editMode
                   ? () => {
@@ -1066,9 +1512,13 @@ function Dock({
               onDrop={
                 editMode
                   ? () => {
-                      onTrashDragLeave();
-                      onDrop(item.id);
+                    onTrashDragLeave();
+                    if (draggingLinkId) {
+                      onGridDropToDock(draggingLinkId, item.id);
+                      return;
                     }
+                    onDrop(item.id);
+                  }
                   : undefined
               }
               onDragEnd={editMode ? onDragEnd : undefined}
@@ -1327,6 +1777,7 @@ function TileContextMenu({
   y,
   link,
   tabbarEnabled,
+  insideFolder,
   pinned,
   pageGroups,
   submenuDirection,
@@ -1334,6 +1785,7 @@ function TileContextMenu({
   onOpen,
   onEdit,
   onDelete,
+  onMoveOutOfFolder,
   onPin,
   onUnpin,
   onMoveToGroup
@@ -1343,6 +1795,7 @@ function TileContextMenu({
   y: number;
   link: HomeLink | null;
   tabbarEnabled: boolean;
+  insideFolder: boolean;
   pinned: boolean;
   pageGroups: HomeLink[];
   submenuDirection: "left" | "right";
@@ -1350,6 +1803,7 @@ function TileContextMenu({
   onOpen?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onMoveOutOfFolder?: () => void;
   onPin?: () => void;
   onUnpin?: () => void;
   onMoveToGroup?: (groupId: string) => void;
@@ -1366,9 +1820,10 @@ function TileContextMenu({
     return null;
   }
 
-  const isFolder = link.type === "component" && link.component === "iconGroup";
+  const isFolder = isFolderLink(link);
   const isAction = isActionTile(link);
   const canOpen = isFolder || isAction;
+  const canMoveOutOfFolder = insideFolder && Boolean(onMoveOutOfFolder);
   const canMoveToGroup = Boolean(onMoveToGroup);
   const canTogglePin = tabbarEnabled && (Boolean(onPin) || Boolean(onUnpin));
   const deleteLabel = isFolder ? "删除文件夹" : "删除标签";
@@ -1418,6 +1873,18 @@ function TileContextMenu({
           }}
         >
           {deleteLabel}
+        </button>
+      ) : null}
+      {canMoveOutOfFolder ? (
+        <button
+          className={styles.contextMenuItem}
+          type="button"
+          onClick={() => {
+            onMoveOutOfFolder?.();
+            onClose();
+          }}
+        >
+          移出文件夹
         </button>
       ) : null}
       {canTogglePin ? (
@@ -1499,6 +1966,8 @@ export function HomePage({ data }: HomePageProps) {
   const [groupManagerInitialId, setGroupManagerInitialId] = useState("");
   const [draggingTileId, setDraggingTileId] = useState("");
   const [dropTargetId, setDropTargetId] = useState("");
+  const [draggingFolderTileId, setDraggingFolderTileId] = useState("");
+  const [folderDropTargetId, setFolderDropTargetId] = useState("");
   const [draggingDockId, setDraggingDockId] = useState("");
   const [dockDropTargetId, setDockDropTargetId] = useState("");
   const [dockTrashActive, setDockTrashActive] = useState(false);
@@ -1529,54 +1998,70 @@ export function HomePage({ data }: HomePageProps) {
   }, []);
 
   useEffect(() => {
-    if (!data.user) {
-      const localConfigRaw = window.localStorage.getItem(LOCAL_HOME_CONFIG_STORAGE_KEY);
-      if (localConfigRaw) {
-        try {
-          const parsed = JSON.parse(localConfigRaw) as Partial<HomeConfig>;
-          setCurrentConfig((baseConfig) => mergeHomeConfig(baseConfig, parsed));
-        } catch {
-          // ignore invalid local config
-        }
-      }
-
-      const localLinksRaw = window.localStorage.getItem(LOCAL_HOME_LINK_STORAGE_KEY);
-      if (localLinksRaw) {
-        try {
-          const parsed = JSON.parse(localLinksRaw) as HomeLink[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCurrentLinks(parsed);
-          }
-        } catch {
-          // ignore invalid local links
-        }
-      }
-
-      const localTabbarRaw = window.localStorage.getItem(LOCAL_HOME_TABBAR_STORAGE_KEY);
-      if (localTabbarRaw) {
-        try {
-          const parsed = JSON.parse(localTabbarRaw) as HomeLink[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCurrentTabbar(normalizeTabbarOrder(parsed));
-          }
-        } catch {
-          // ignore invalid local tabbar
-        }
-      }
-    }
-
-    const storedGroupId = window.localStorage.getItem(PAGE_GROUP_STORAGE_KEY);
-    if (!storedGroupId) {
+    if (data.user) {
       return;
     }
 
-    if (
-      storedGroupId === "" ||
-      currentLinks.some((group) => group.type === "pageGroup" && group.id === storedGroupId)
-    ) {
+    const localConfigRaw = window.localStorage.getItem(LOCAL_HOME_CONFIG_STORAGE_KEY);
+    if (localConfigRaw) {
+      try {
+        const parsed = JSON.parse(localConfigRaw) as Partial<HomeConfig>;
+        setCurrentConfig(mergeHomeConfig(data.config, parsed));
+      } catch {
+        // ignore invalid local config
+      }
+    } else {
+      setCurrentConfig(data.config);
+    }
+
+    const localLinksRaw = window.localStorage.getItem(LOCAL_HOME_LINK_STORAGE_KEY);
+    if (localLinksRaw) {
+      try {
+        const parsed = JSON.parse(localLinksRaw) as HomeLink[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCurrentLinks(normalizeLinksOrder(parsed));
+        }
+      } catch {
+        // ignore invalid local links
+      }
+    } else {
+      setCurrentLinks(data.links);
+    }
+
+    const localTabbarRaw = window.localStorage.getItem(LOCAL_HOME_TABBAR_STORAGE_KEY);
+    if (localTabbarRaw) {
+      try {
+        const parsed = JSON.parse(localTabbarRaw) as HomeLink[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCurrentTabbar(normalizeTabbarOrder(parsed));
+        }
+      } catch {
+        // ignore invalid local tabbar
+      }
+    } else {
+      setCurrentTabbar(normalizeTabbarOrder(data.tabbar));
+    }
+  }, [data.config, data.links, data.tabbar, data.user]);
+
+  useEffect(() => {
+    const homeGroupId = resolveHomeGroupId(currentLinks);
+    const storedGroupId = window.localStorage.getItem(PAGE_GROUP_STORAGE_KEY);
+    if (!storedGroupId) {
+      if (homeGroupId) {
+        setActiveGroupId(homeGroupId);
+      }
+      return;
+    }
+
+    if (storedGroupId === "") {
+      setActiveGroupId(homeGroupId || "");
+      return;
+    }
+
+    if (currentLinks.some((group) => group.type === "pageGroup" && group.id === storedGroupId)) {
       setActiveGroupId(storedGroupId);
     }
-  }, [currentLinks, data.user]);
+  }, [currentLinks]);
 
   useEffect(() => {
     window.localStorage.setItem(PAGE_GROUP_STORAGE_KEY, activeGroupId);
@@ -1586,6 +2071,8 @@ export function HomePage({ data }: HomePageProps) {
     if (!editMode) {
       setDraggingTileId("");
       setDropTargetId("");
+      setDraggingFolderTileId("");
+      setFolderDropTargetId("");
       setDraggingDockId("");
       setDockDropTargetId("");
       setDockTrashActive(false);
@@ -1710,7 +2197,21 @@ export function HomePage({ data }: HomePageProps) {
             }
           : item
       );
+      const nextTabbar = currentTabbar.map((item) =>
+        item.id === payload.id
+          ? {
+              ...item,
+              name: payload.name,
+              url: payload.url,
+              src: payload.src,
+              bgColor: payload.bgColor
+            }
+          : item
+      );
       await persistLinks(nextLinks);
+      if (nextTabbar.some((item) => item.id === payload.id)) {
+        await persistTabbar(nextTabbar);
+      }
       notify("标签已更新。", "success");
       return;
     }
@@ -1736,6 +2237,10 @@ export function HomePage({ data }: HomePageProps) {
 
     const nextLinks = currentLinks.filter((item) => item.id !== linkId && item.pid !== linkId);
     await persistLinks(nextLinks);
+    if (currentTabbar.some((item) => item.id === linkId)) {
+      const nextTabbar = currentTabbar.filter((item) => item.id !== linkId);
+      await persistTabbar(nextTabbar);
+    }
     notify("标签已删除。", "success");
   }
 
@@ -1771,6 +2276,41 @@ export function HomePage({ data }: HomePageProps) {
     const nextTabbar = currentTabbar.filter((item) => item.id !== linkId);
     await persistTabbar(nextTabbar);
     notify("已移出 Dock。", "success");
+  }
+
+  async function handleDropTileToDock(sourceId: string, targetId?: string) {
+    if (!sourceId) {
+      return;
+    }
+
+    const sourceLink = currentLinks.find((item) => item.id === sourceId);
+    if (!sourceLink || !canEditTile(sourceLink)) {
+      return;
+    }
+
+    const existingIndex = currentTabbar.findIndex((item) => item.id === sourceId);
+    if (existingIndex >= 0) {
+      if (targetId && targetId !== sourceId) {
+        await handleReorderDock(sourceId, targetId);
+      }
+      return;
+    }
+
+    const nextTabbar = [...currentTabbar];
+    const dockItem = {
+      ...sourceLink,
+      sort: nextTabbar.length
+    };
+    const targetIndex = targetId ? nextTabbar.findIndex((item) => item.id === targetId) : -1;
+
+    if (targetIndex >= 0) {
+      nextTabbar.splice(targetIndex, 0, dockItem);
+    } else {
+      nextTabbar.push(dockItem);
+    }
+
+    await persistTabbar(nextTabbar);
+    notify("已加入 Dock。", "success");
   }
 
   async function handleSaveGroup(payload: { id?: string; name: string; src: string }) {
@@ -1842,7 +2382,7 @@ export function HomePage({ data }: HomePageProps) {
       return;
     }
 
-    const visibleTiles = buildVisibleTiles(currentLinks, activeGroupId);
+    const visibleTiles = buildVisibleTiles(currentLinks, activeGroupId, resolveHomeGroupId(currentLinks));
     const orderedIds = visibleTiles.map((item) => item.id);
     const sourceIndex = orderedIds.indexOf(sourceId);
     const targetIndex = orderedIds.indexOf(targetId);
@@ -1858,6 +2398,36 @@ export function HomePage({ data }: HomePageProps) {
     const sortMap = new Map(nextOrderedIds.map((id, index) => [id, index]));
     const nextLinks = currentLinks.map((item) =>
       sortMap.has(item.id)
+        ? {
+            ...item,
+            sort: sortMap.get(item.id) ?? item.sort
+          }
+        : item
+    );
+
+    await persistLinks(nextLinks);
+  }
+
+  async function handleReorderFolderChildren(folderId: string, sourceId: string, targetId: string) {
+    if (!folderId || !sourceId || !targetId || sourceId === targetId) {
+      return;
+    }
+
+    const orderedIds = buildFolderChildren(currentLinks, folderId).map((item) => item.id);
+    const sourceIndex = orderedIds.indexOf(sourceId);
+    const targetIndex = orderedIds.indexOf(targetId);
+
+    if (sourceIndex < 0 || targetIndex < 0) {
+      return;
+    }
+
+    const nextOrderedIds = [...orderedIds];
+    const [source] = nextOrderedIds.splice(sourceIndex, 1);
+    nextOrderedIds.splice(targetIndex, 0, source);
+
+    const sortMap = new Map(nextOrderedIds.map((id, index) => [id, index]));
+    const nextLinks = currentLinks.map((item) =>
+      item.pid === folderId && sortMap.has(item.id)
         ? {
             ...item,
             sort: sortMap.get(item.id) ?? item.sort
@@ -1894,6 +2464,71 @@ export function HomePage({ data }: HomePageProps) {
     await persistTabbar(nextTabbar);
   }
 
+  async function handleMoveLinkIntoFolder(
+    sourceId: string,
+    folderId: string,
+    options: { removeFromDock?: boolean } = {}
+  ) {
+    if (!sourceId || !folderId || sourceId === folderId) {
+      return;
+    }
+
+    const sourceLink = currentLinks.find((item) => item.id === sourceId);
+    const folderLink = currentLinks.find((item) => item.id === folderId);
+
+    if (!sourceLink || !folderLink || !canEditTile(sourceLink) || !isFolderLink(folderLink)) {
+      return;
+    }
+
+    if (sourceLink.pid === folderId) {
+      return;
+    }
+
+    const nextLinks = currentLinks.map((item) =>
+      item.id === sourceId
+        ? {
+            ...item,
+            pid: folderId,
+            pageGroup: folderLink.pageGroup,
+            sort: getNextFolderSort(currentLinks, folderId)
+          }
+        : item
+    );
+
+    await persistLinks(nextLinks);
+
+    if (options.removeFromDock && currentTabbar.some((item) => item.id === sourceId)) {
+      await persistTabbar(currentTabbar.filter((item) => item.id !== sourceId));
+    }
+
+    notify("标签已移入文件夹。", "success");
+  }
+
+  async function handleMoveLinkToRoot(linkId: string) {
+    const sourceLink = currentLinks.find((item) => item.id === linkId);
+    if (!sourceLink || !sourceLink.pid) {
+      return;
+    }
+
+    const parentFolder = currentLinks.find((item) => item.id === sourceLink.pid);
+    const targetGroupId = sourceLink.pageGroup || parentFolder?.pageGroup || "";
+    const nextSort = getNextRootSort(currentLinks, targetGroupId, resolveHomeGroupId(currentLinks));
+
+    const nextLinks = currentLinks.map((item) =>
+      item.id === linkId
+        ? {
+            ...item,
+            pid: null,
+            pageGroup: targetGroupId,
+            sort: nextSort
+          }
+        : item
+    );
+
+    await persistLinks(nextLinks);
+    notify("标签已移出文件夹。", "success");
+  }
+
   function handleEditGroup(groupId: string) {
     setGroupManagerInitialId(groupId);
     setGroupManagerOpen(true);
@@ -1921,14 +2556,32 @@ export function HomePage({ data }: HomePageProps) {
   }
 
   async function handleMoveLinkToGroup(linkId: string, groupId: string) {
-    const nextLinks = currentLinks.map((item) =>
-      item.id === linkId
-        ? {
-            ...item,
-            pageGroup: groupId
-          }
-        : item
-    );
+    const sourceLink = currentLinks.find((item) => item.id === linkId);
+    if (!sourceLink) {
+      return;
+    }
+
+    const moveChildrenWithFolder = isFolderLink(sourceLink);
+    const nextSort = getNextRootSort(currentLinks, groupId, resolveHomeGroupId(currentLinks));
+    const nextLinks = currentLinks.map((item) => {
+      if (item.id === linkId) {
+        return {
+          ...item,
+          pageGroup: groupId,
+          pid: sourceLink.pid ? null : item.pid,
+          sort: nextSort
+        };
+      }
+
+      if (moveChildrenWithFolder && item.pid === linkId) {
+        return {
+          ...item,
+          pageGroup: groupId
+        };
+      }
+
+      return item;
+    });
 
     await persistLinks(nextLinks);
     notify("标签已移动。", "success");
@@ -1988,23 +2641,25 @@ export function HomePage({ data }: HomePageProps) {
     }
   }
 
-  const tiles = buildVisibleTiles(currentLinks, activeGroupId);
+  const homeGroupId = resolveHomeGroupId(currentLinks);
+  const tiles = buildVisibleTiles(currentLinks, activeGroupId, homeGroupId);
   const folder = openFolderId ? currentLinks.find((item) => item.id === openFolderId) ?? null : null;
   const folderChildren = folder ? buildFolderChildren(currentLinks, folder.id) : [];
   const dockLinks = normalizeTabbarOrder(currentTabbar).slice(0, 9);
   const compactMode = currentConfig.theme.CompactMode;
-  const currentPageGroups = normalizeLinksOrder(
-    currentLinks.filter((item) => item.type === "pageGroup")
-  );
+  const currentPageGroups = normalizeLinksOrder(currentLinks.filter((item) => item.type === "pageGroup"));
   const tileMenuLink = tileMenu.linkId ? currentLinks.find((item) => item.id === tileMenu.linkId) ?? null : null;
   const tileMenuPinned =
     tileMenuLink && canEditTile(tileMenuLink) ? currentTabbar.some((item) => item.id === tileMenuLink.id) : false;
   const tileMenuCanEdit = tileMenuLink ? canEditTile(tileMenuLink) : false;
-  const tileMenuIsFolder = tileMenuLink?.type === "component" && tileMenuLink.component === "iconGroup";
+  const tileMenuIsFolder = tileMenuLink ? isFolderLink(tileMenuLink) : false;
   const tileMenuIsAction = tileMenuLink ? isActionTile(tileMenuLink) : false;
+  const tileMenuInsideFolder = Boolean(tileMenuLink?.pid);
   const tileMenuCanMove = Boolean(tileMenuLink) && !tileMenuIsAction;
   const tileMenuSubmenuDirection =
     tileMenu.x > viewportWidth - (TILE_CONTEXT_MENU_WIDTH * 2 + 24) ? "left" : "right";
+  const gridDraggedLinkId = draggingDockId || draggingTileId;
+  const gridDraggedLink = gridDraggedLinkId ? currentLinks.find((item) => item.id === gridDraggedLinkId) ?? null : null;
   const gridColumnCount = getGridColumnCount(
     viewportWidth,
     currentConfig.theme.iconWidth,
@@ -2111,6 +2766,7 @@ export function HomePage({ data }: HomePageProps) {
           y={tileMenu.y}
           link={tileMenuLink}
           tabbarEnabled={currentConfig.theme.tabbar && tileMenuCanEdit}
+          insideFolder={tileMenuInsideFolder}
           pinned={tileMenuPinned}
           pageGroups={currentPageGroups}
           submenuDirection={tileMenuSubmenuDirection}
@@ -2153,8 +2809,17 @@ export function HomePage({ data }: HomePageProps) {
                     if (tileMenuLink) {
                       void handleDeleteFolder(tileMenuLink.id);
                     }
+                }
+              : undefined
+          }
+          onMoveOutOfFolder={
+            tileMenuInsideFolder
+              ? () => {
+                  if (tileMenuLink) {
+                    void handleMoveLinkToRoot(tileMenuLink.id);
                   }
-                : undefined
+                }
+              : undefined
           }
           onPin={
             tileMenuCanEdit
@@ -2199,12 +2864,39 @@ export function HomePage({ data }: HomePageProps) {
               <SearchBar
                 engines={data.searchEngines}
                 searchOpen={currentConfig.openType.searchOpen}
+                searchRecommend={currentConfig.openType.searchRecommend}
+                searchLink={currentConfig.openType.searchLink}
+                quickLinks={tiles.filter((item) => item.type !== "pageGroup" && !item.pid)}
               />
             ) : null}
           </section>
 
           {!compactMode ? (
-            <section className={styles.content}>
+            <section
+              className={styles.content}
+              onDragOver={
+                editMode && draggingDockId
+                  ? (event) => {
+                      event.preventDefault();
+                    }
+                  : undefined
+              }
+              onDrop={
+                editMode && draggingDockId
+                  ? (event) => {
+                      const target = event.target;
+                      if (target instanceof HTMLElement && target.closest("[data-home-tile='true']")) {
+                        return;
+                      }
+                      event.preventDefault();
+                      const sourceDockId = draggingDockId;
+                      setDraggingDockId("");
+                      setDockDropTargetId("");
+                      void handleRemoveDockItem(sourceDockId);
+                    }
+                  : undefined
+              }
+            >
               {tiles.length > 0 ? (
                 <div
                   className={styles.grid}
@@ -2216,19 +2908,52 @@ export function HomePage({ data }: HomePageProps) {
                   {tiles.map((item) => {
                     const isDragging = draggingTileId === item.id;
                     const isDropTarget = dropTargetId === item.id && draggingTileId !== item.id;
+                    const shouldMoveIntoFolder =
+                      isFolderLink(item) &&
+                      Boolean(gridDraggedLink) &&
+                      canEditTile(gridDraggedLink) &&
+                      gridDraggedLink.id !== item.id;
                     const dragHandlers = editMode
-                      ? {
-                          onDragStart: () => setDraggingTileId(item.id),
-                          onDragEnter: () => setDropTargetId(item.id),
+                        ? {
+                          onDragStart: () => {
+                            setDraggingFolderTileId("");
+                            setFolderDropTargetId("");
+                            setDraggingDockId("");
+                            setDockDropTargetId("");
+                            setDraggingTileId(item.id);
+                          },
+                          onDragEnter: () => {
+                            setDropTargetId(item.id);
+                          },
                           onDrop: () => {
-                            const sourceId = draggingTileId;
+                            const sourceDockId = draggingDockId;
+                            const sourceTileId = draggingTileId;
+                            const sourceLinkId = sourceDockId || sourceTileId;
+
                             setDraggingTileId("");
                             setDropTargetId("");
-                            void handleReorderVisibleTiles(sourceId, item.id);
+                            setDraggingDockId("");
+                            setDockDropTargetId("");
+
+                            if (shouldMoveIntoFolder && sourceLinkId) {
+                              void handleMoveLinkIntoFolder(sourceLinkId, item.id, {
+                                removeFromDock: Boolean(sourceDockId)
+                              });
+                              return;
+                            }
+
+                            if (sourceDockId) {
+                              void handleRemoveDockItem(sourceDockId);
+                              return;
+                            }
+
+                            void handleReorderVisibleTiles(sourceTileId, item.id);
                           },
                           onDragEnd: () => {
                             setDraggingTileId("");
                             setDropTargetId("");
+                            setDraggingDockId("");
+                            setDockDropTargetId("");
                           }
                         }
                       : {
@@ -2327,13 +3052,20 @@ export function HomePage({ data }: HomePageProps) {
             openInBlank={currentConfig.openType.linkOpen}
             editMode={editMode}
             showTrash={currentConfig.theme.trash || Boolean(draggingDockId)}
+            draggingTileId={draggingTileId}
+            draggingFolderTileId={draggingFolderTileId}
             draggingDockId={draggingDockId}
             dockDropTargetId={dockDropTargetId}
             trashActive={dockTrashActive}
+            onContextMenu={(linkId, event) => openTileContextMenu(linkId, event.clientX, event.clientY)}
             onRemove={(linkId) => {
               void handleRemoveDockItem(linkId);
             }}
             onDragStart={(linkId) => {
+              setDraggingTileId("");
+              setDropTargetId("");
+              setDraggingFolderTileId("");
+              setFolderDropTargetId("");
               setDockTrashActive(false);
               setDraggingDockId(linkId);
             }}
@@ -2352,6 +3084,13 @@ export function HomePage({ data }: HomePageProps) {
               setDraggingDockId("");
               setDockDropTargetId("");
               setDockTrashActive(false);
+            }}
+            onGridDropToDock={(sourceId, targetId) => {
+              setDraggingTileId("");
+              setDropTargetId("");
+              setDraggingFolderTileId("");
+              setFolderDropTargetId("");
+              void handleDropTileToDock(sourceId, targetId);
             }}
             onTrashDragEnter={() => setDockTrashActive(true)}
             onTrashDragLeave={() => setDockTrashActive(false)}
@@ -2373,7 +3112,45 @@ export function HomePage({ data }: HomePageProps) {
             folder={folder}
             items={folderChildren}
             openInBlank={currentConfig.openType.linkOpen}
-            onClose={() => setOpenFolderId("")}
+            editMode={editMode}
+            draggingId={draggingFolderTileId}
+            dropTargetId={folderDropTargetId}
+            onClose={() => {
+              setOpenFolderId("");
+              setDraggingFolderTileId("");
+              setFolderDropTargetId("");
+            }}
+            onContextMenu={(linkId, event) => openTileContextMenu(linkId, event.clientX, event.clientY)}
+            onEdit={(link) => {
+              setEditingLink(link);
+              setLinkEditorOpen(true);
+            }}
+            onDelete={(link) => {
+              void handleDeleteLink(link.id);
+            }}
+            onPin={(link) => {
+              void handlePinToDock(link);
+            }}
+            onDragStart={(linkId) => {
+              setDraggingTileId("");
+              setDropTargetId("");
+              setDraggingDockId("");
+              setDockDropTargetId("");
+              setDraggingFolderTileId(linkId);
+            }}
+            onDragEnter={(linkId) => {
+              setFolderDropTargetId(linkId);
+            }}
+            onDrop={(linkId) => {
+              const sourceId = draggingFolderTileId;
+              setDraggingFolderTileId("");
+              setFolderDropTargetId("");
+              void handleReorderFolderChildren(folder.id, sourceId, linkId);
+            }}
+            onDragEnd={() => {
+              setDraggingFolderTileId("");
+              setFolderDropTargetId("");
+            }}
           />
         ) : null}
         <AuthDialog
