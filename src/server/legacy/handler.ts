@@ -48,9 +48,9 @@ import { TtlCache } from "@/lib/cache";
 
 
 
-const APP_VERSION = "2.4.7";
+const APP_VERSION = "2.4.8";
 
-const APP_VERSION_CODE = 247;
+const APP_VERSION_CODE = 248;
 
 const ROOT_DIR = process.cwd();
 

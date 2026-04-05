@@ -14,6 +14,7 @@ import styles from "./home-page.module.css";
 const LOCAL_HOME_CONFIG_STORAGE_KEY = "config";
 const SEARCH_ENGINE_STORAGE_KEY = "SearchEngineLocal";
 const LOCAL_HOME_LINK_STORAGE_KEY = "link";
+const LOCAL_HOME_TABBAR_STORAGE_KEY = "tabbar";
 const PAGE_GROUP_STORAGE_KEY = "bendy.home.page-group";
 
 type HomePageProps = {
@@ -243,6 +244,18 @@ function buildFolderChildren(links: HomeLink[], folderId: string) {
 
 function buildDockLinks(data: HomeData) {
   return data.tabbar.filter((item) => item.type === "icon" && !isSpecialLegacyLink(item)).slice(0, 9);
+}
+
+function normalizeTabbarOrder(links: HomeLink[]) {
+  return [...links]
+    .filter((item) => item.type === "icon" && !isSpecialLegacyLink(item))
+    .sort((left, right) => {
+      if (left.sort === right.sort) {
+        return left.id.localeCompare(right.id);
+      }
+
+      return left.sort - right.sort;
+    });
 }
 
 function getTileStyle(link: HomeLink): CSSProperties {
@@ -527,13 +540,29 @@ function SearchBar({
 
 function TileEditControls({
   onEdit,
-  onDelete
+  onDelete,
+  onPin
 }: {
   onEdit: () => void;
   onDelete: () => void;
+  onPin?: () => void;
 }) {
   return (
     <div className={styles.tileEditActions}>
+      {onPin ? (
+        <button
+          className={styles.tileEditButton}
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onPin();
+          }}
+          aria-label="加入 Dock"
+        >
+          +
+        </button>
+      ) : null}
       <button
         className={styles.tileEditButton}
         type="button"
@@ -570,6 +599,7 @@ function IconTile({
   isDropTarget,
   onEdit,
   onDelete,
+  onPin,
   onDragStart,
   onDragEnter,
   onDrop,
@@ -582,6 +612,7 @@ function IconTile({
   isDropTarget: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  onPin?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
   onDrop?: () => void;
@@ -609,7 +640,9 @@ function IconTile({
       onDrop={editMode ? onDrop : undefined}
       onDragEnd={editMode ? onDragEnd : undefined}
     >
-      {editMode && onEdit && onDelete ? <TileEditControls onEdit={onEdit} onDelete={onDelete} /> : null}
+      {editMode && onEdit && onDelete ? (
+        <TileEditControls onEdit={onEdit} onDelete={onDelete} onPin={onPin} />
+      ) : null}
       <a
         className={styles.tileAction}
         href={link.url}
@@ -808,7 +841,29 @@ function FolderModal({
   );
 }
 
-function Dock({ links, openInBlank }: { links: HomeLink[]; openInBlank: boolean }) {
+function Dock({
+  links,
+  openInBlank,
+  editMode,
+  draggingDockId,
+  dockDropTargetId,
+  onRemove,
+  onDragStart,
+  onDragEnter,
+  onDrop,
+  onDragEnd
+}: {
+  links: HomeLink[];
+  openInBlank: boolean;
+  editMode: boolean;
+  draggingDockId: string;
+  dockDropTargetId: string;
+  onRemove: (linkId: string) => void;
+  onDragStart: (linkId: string) => void;
+  onDragEnter: (linkId: string) => void;
+  onDrop: (linkId: string) => void;
+  onDragEnd: () => void;
+}) {
   if (links.length === 0) {
     return null;
   }
@@ -818,16 +873,44 @@ function Dock({ links, openInBlank }: { links: HomeLink[]; openInBlank: boolean 
       {links.map((item) => {
         const target = openInBlank && !isInternalLink(item.url) ? "_blank" : "_self";
         const rel = target === "_blank" ? "noreferrer" : undefined;
+        const dockItemClassName = [
+          styles.dockItem,
+          draggingDockId === item.id ? styles.tileDragging : "",
+          dockDropTargetId === item.id && draggingDockId !== item.id ? styles.tileDropTarget : ""
+        ]
+          .filter(Boolean)
+          .join(" ");
 
         return (
           <a
             key={item.id}
-            className={styles.dockItem}
+            className={dockItemClassName}
             href={item.url}
             target={target}
             rel={rel}
             title={resolveTileLabel(item)}
+            draggable={editMode}
+            onDragStart={editMode ? () => onDragStart(item.id) : undefined}
+            onDragEnter={editMode ? () => onDragEnter(item.id) : undefined}
+            onDragOver={editMode ? (event) => event.preventDefault() : undefined}
+            onDrop={editMode ? () => onDrop(item.id) : undefined}
+            onDragEnd={editMode ? onDragEnd : undefined}
+            onClick={editMode ? (event) => event.preventDefault() : undefined}
           >
+            {editMode ? (
+              <button
+                className={styles.tileDeleteButton}
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onRemove(item.id);
+                }}
+                aria-label="移出 Dock"
+              >
+                ×
+              </button>
+            ) : null}
             <span className={styles.dockItemFrame} style={getLinkSurfaceStyle(item)}>
               {isTextIcon(item) ? (
                 <span className={styles.tileIconText}>{item.src.replace(/^txt:/, "")}</span>
@@ -904,6 +987,7 @@ export function HomePage({ data }: HomePageProps) {
   const [activeGroupId, setActiveGroupId] = useState("");
   const [currentConfig, setCurrentConfig] = useState<HomeConfig>(data.config);
   const [currentLinks, setCurrentLinks] = useState<HomeLink[]>(data.links);
+  const [currentTabbar, setCurrentTabbar] = useState<HomeLink[]>(normalizeTabbarOrder(data.tabbar));
   const [editMode, setEditMode] = useState(false);
   const [openFolderId, setOpenFolderId] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
@@ -916,6 +1000,8 @@ export function HomePage({ data }: HomePageProps) {
   const [groupManagerInitialId, setGroupManagerInitialId] = useState("");
   const [draggingTileId, setDraggingTileId] = useState("");
   const [dropTargetId, setDropTargetId] = useState("");
+  const [draggingDockId, setDraggingDockId] = useState("");
+  const [dockDropTargetId, setDockDropTargetId] = useState("");
   const [noticeOpen, setNoticeOpen] = useState(Boolean(data.notice));
   const [toasts, setToasts] = useState<HomeToastItem[]>([]);
 
@@ -957,6 +1043,18 @@ export function HomePage({ data }: HomePageProps) {
           // ignore invalid local links
         }
       }
+
+      const localTabbarRaw = window.localStorage.getItem(LOCAL_HOME_TABBAR_STORAGE_KEY);
+      if (localTabbarRaw) {
+        try {
+          const parsed = JSON.parse(localTabbarRaw) as HomeLink[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCurrentTabbar(normalizeTabbarOrder(parsed));
+          }
+        } catch {
+          // ignore invalid local tabbar
+        }
+      }
     }
 
     const storedGroupId = window.localStorage.getItem(PAGE_GROUP_STORAGE_KEY);
@@ -980,6 +1078,8 @@ export function HomePage({ data }: HomePageProps) {
     if (!editMode) {
       setDraggingTileId("");
       setDropTargetId("");
+      setDraggingDockId("");
+      setDockDropTargetId("");
       setOpenFolderId("");
     }
   }, [editMode]);
@@ -1020,6 +1120,24 @@ export function HomePage({ data }: HomePageProps) {
       window.localStorage.setItem(LOCAL_HOME_LINK_STORAGE_KEY, JSON.stringify(normalizedLinks));
     }
     setCurrentLinks(normalizedLinks);
+  }
+
+  async function persistTabbar(nextTabbar: HomeLink[]) {
+    const normalizedTabbar = normalizeTabbarOrder(nextTabbar).map((item, index) => ({
+      ...item,
+      sort: index
+    }));
+
+    if (data.user) {
+      await requestLegacy<unknown>("/tabbar/update", {
+        method: "POST",
+        data: { tabbar: normalizedTabbar }
+      });
+    } else {
+      window.localStorage.setItem(LOCAL_HOME_TABBAR_STORAGE_KEY, JSON.stringify(normalizedTabbar));
+    }
+
+    setCurrentTabbar(normalizedTabbar);
   }
 
   async function handleSaveLink(payload: {
@@ -1070,6 +1188,27 @@ export function HomePage({ data }: HomePageProps) {
     const nextLinks = currentLinks.filter((item) => item.id !== linkId && item.pid !== linkId);
     await persistLinks(nextLinks);
     notify("标签已删除。", "success");
+  }
+
+  async function handlePinToDock(link: HomeLink) {
+    if (currentTabbar.some((item) => item.id === link.id)) {
+      notify("该标签已经在 Dock 中。", "info");
+      return;
+    }
+
+    const dockItem = {
+      ...link,
+      sort: currentTabbar.length
+    };
+
+    await persistTabbar([...currentTabbar, dockItem]);
+    notify("已加入 Dock。", "success");
+  }
+
+  async function handleRemoveDockItem(linkId: string) {
+    const nextTabbar = currentTabbar.filter((item) => item.id !== linkId);
+    await persistTabbar(nextTabbar);
+    notify("已移出 Dock。", "success");
   }
 
   async function handleSaveGroup(payload: { id?: string; name: string; src: string }) {
@@ -1167,6 +1306,32 @@ export function HomePage({ data }: HomePageProps) {
     await persistLinks(nextLinks);
   }
 
+  async function handleReorderDock(sourceId: string, targetId: string) {
+    if (!sourceId || !targetId || sourceId === targetId) {
+      return;
+    }
+
+    const orderedIds = currentTabbar.map((item) => item.id);
+    const sourceIndex = orderedIds.indexOf(sourceId);
+    const targetIndex = orderedIds.indexOf(targetId);
+
+    if (sourceIndex < 0 || targetIndex < 0) {
+      return;
+    }
+
+    const nextOrderedIds = [...orderedIds];
+    const [source] = nextOrderedIds.splice(sourceIndex, 1);
+    nextOrderedIds.splice(targetIndex, 0, source);
+
+    const sortMap = new Map(nextOrderedIds.map((id, index) => [id, index]));
+    const nextTabbar = currentTabbar.map((item) => ({
+      ...item,
+      sort: sortMap.get(item.id) ?? item.sort
+    }));
+
+    await persistTabbar(nextTabbar);
+  }
+
   function handleEditGroup(groupId: string) {
     setGroupManagerInitialId(groupId);
     setGroupManagerOpen(true);
@@ -1213,7 +1378,7 @@ export function HomePage({ data }: HomePageProps) {
   const tiles = buildVisibleTiles(currentLinks, activeGroupId);
   const folder = openFolderId ? currentLinks.find((item) => item.id === openFolderId) ?? null : null;
   const folderChildren = folder ? buildFolderChildren(currentLinks, folder.id) : [];
-  const dockLinks = buildDockLinks(data);
+  const dockLinks = normalizeTabbarOrder(currentTabbar).slice(0, 9);
   const compactMode = currentConfig.theme.CompactMode;
   const currentPageGroups = normalizeLinksOrder(
     currentLinks.filter((item) => item.type === "pageGroup")
@@ -1381,6 +1546,13 @@ export function HomePage({ data }: HomePageProps) {
                               }
                             : undefined
                         }
+                        onPin={
+                          canEditTile(item) && currentConfig.theme.tabbar
+                            ? () => {
+                                void handlePinToDock(item);
+                              }
+                            : undefined
+                        }
                         onDragStart={dragHandlers.onDragStart}
                         onDragEnter={dragHandlers.onDragEnter}
                         onDrop={dragHandlers.onDrop}
@@ -1397,7 +1569,28 @@ export function HomePage({ data }: HomePageProps) {
         </main>
 
         {!compactMode && currentConfig.theme.tabbar ? (
-          <Dock links={dockLinks} openInBlank={currentConfig.openType.linkOpen} />
+          <Dock
+            links={dockLinks}
+            openInBlank={currentConfig.openType.linkOpen}
+            editMode={editMode}
+            draggingDockId={draggingDockId}
+            dockDropTargetId={dockDropTargetId}
+            onRemove={(linkId) => {
+              void handleRemoveDockItem(linkId);
+            }}
+            onDragStart={(linkId) => setDraggingDockId(linkId)}
+            onDragEnter={(linkId) => setDockDropTargetId(linkId)}
+            onDrop={(linkId) => {
+              const sourceId = draggingDockId;
+              setDraggingDockId("");
+              setDockDropTargetId("");
+              void handleReorderDock(sourceId, linkId);
+            }}
+            onDragEnd={() => {
+              setDraggingDockId("");
+              setDockDropTargetId("");
+            }}
+          />
         ) : null}
         <RecordBar site={data.site} />
 
