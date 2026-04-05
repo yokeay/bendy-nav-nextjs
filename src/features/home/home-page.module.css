@@ -418,16 +418,21 @@
 }
 
 .content {
-  width: min(1280px, calc(100vw - 160px));
+  width: 100%;
   margin-top: clamp(46px, 10vh, 96px);
+  display: flex;
+  justify-content: center;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-auto-rows: calc(var(--icon-size) + 44px);
-  gap: clamp(18px, 2vw, 28px);
+  grid-auto-flow: dense;
+  grid-auto-rows: calc(var(--icon-size) + 25px);
+  column-gap: var(--grid-gap, 35px);
+  row-gap: 18px;
   align-items: start;
+  justify-content: start;
+  max-width: 100%;
 }
 
 .tile {
@@ -440,7 +445,7 @@
 
 .tileAction {
   width: 100%;
-  height: 100%;
+  height: calc(100% - 20px);
   display: block;
   position: relative;
   border: none;
@@ -516,7 +521,9 @@
 }
 
 .tileLabel {
-  width: min(100%, calc(var(--icon-size) + 28px));
+  width: calc(100% + 20px);
+  transform: translateX(-10px);
+  margin-top: 6px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -1416,8 +1423,8 @@
 }
 
 @media (max-width: 1080px) {
-  .grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .content {
+    margin-top: 54px;
   }
 }
 
@@ -1446,18 +1453,10 @@
     padding: 92px 18px 154px;
   }
 
-  .content {
-    width: 100%;
-  }
-
   .recordBar {
     left: 18px;
     right: 18px;
     bottom: 108px;
-  }
-
-  .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -1469,11 +1468,6 @@
 
   .searchShell {
     width: 100%;
-  }
-
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-auto-rows: calc(var(--icon-size) + 36px);
   }
 
   .dock {

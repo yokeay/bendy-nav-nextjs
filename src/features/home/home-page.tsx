@@ -97,7 +97,7 @@ function buildTimeState(theme: HomeTheme, date: Date): TimeState {
 function toGridSpan(size: string) {
   switch (size) {
     case "1x2":
-      return { column: 1, row: 2 };
+      return { column: 2, row: 1 };
     case "2x2":
       return { column: 2, row: 2 };
     case "2x4":
@@ -105,6 +105,19 @@ function toGridSpan(size: string) {
     default:
       return { column: 1, row: 1 };
   }
+}
+
+function getGridColumnCount(
+  viewportWidth: number,
+  iconSize: number,
+  gap: number,
+  maxColumns: number,
+  hasSidebar: boolean
+) {
+  const horizontalPadding = hasSidebar ? 220 : 96;
+  const availableWidth = Math.max(320, viewportWidth - horizontalPadding);
+  const columns = Math.floor((availableWidth + gap) / (iconSize + gap));
+  return Math.max(3, Math.min(maxColumns, columns));
 }
 
 function isSpecialLegacyLink(link: HomeLink): boolean {
@@ -1004,6 +1017,7 @@ export function HomePage({ data }: HomePageProps) {
   const [dockDropTargetId, setDockDropTargetId] = useState("");
   const [noticeOpen, setNoticeOpen] = useState(Boolean(data.notice));
   const [toasts, setToasts] = useState<HomeToastItem[]>([]);
+  const [viewportWidth, setViewportWidth] = useState(1440);
 
   const notify = useCallback((message: string, tone: HomeToastTone = "info") => {
     setToasts((current) => [
@@ -1083,6 +1097,18 @@ export function HomePage({ data }: HomePageProps) {
       setOpenFolderId("");
     }
   }, [editMode]);
+
+  useEffect(() => {
+    function syncViewportWidth() {
+      setViewportWidth(window.innerWidth);
+    }
+
+    syncViewportWidth();
+    window.addEventListener("resize", syncViewportWidth, { passive: true });
+    return () => {
+      window.removeEventListener("resize", syncViewportWidth);
+    };
+  }, []);
 
   async function handleSaveSettings() {
     if (settingsSaving) {
@@ -1383,11 +1409,22 @@ export function HomePage({ data }: HomePageProps) {
   const currentPageGroups = normalizeLinksOrder(
     currentLinks.filter((item) => item.type === "pageGroup")
   );
+  const gridColumnCount = getGridColumnCount(
+    viewportWidth,
+    currentConfig.theme.iconWidth,
+    currentConfig.theme.colsGap,
+    currentConfig.theme.maxColumn,
+    !compactMode && currentConfig.theme.pageGroup
+  );
+  const gridWidth =
+    gridColumnCount * currentConfig.theme.iconWidth +
+    Math.max(0, gridColumnCount - 1) * currentConfig.theme.colsGap;
 
   const cssVariables = {
     "--icon-size": `${currentConfig.theme.iconWidth}px`,
     "--icon-radius": `${currentConfig.theme.iconRadius}px`,
-    "--name-color": currentConfig.theme.nameColor
+    "--name-color": currentConfig.theme.nameColor,
+    "--grid-gap": `${currentConfig.theme.colsGap}px`
   } as CSSProperties;
 
   return (
@@ -1462,7 +1499,13 @@ export function HomePage({ data }: HomePageProps) {
           {!compactMode ? (
             <section className={styles.content}>
               {tiles.length > 0 ? (
-                <div className={styles.grid}>
+                <div
+                  className={styles.grid}
+                  style={{
+                    gridTemplateColumns: `repeat(${gridColumnCount}, ${currentConfig.theme.iconWidth}px)`,
+                    width: `${gridWidth}px`
+                  }}
+                >
                   {tiles.map((item) => {
                     const isDragging = draggingTileId === item.id;
                     const isDropTarget = dropTargetId === item.id && draggingTileId !== item.id;
