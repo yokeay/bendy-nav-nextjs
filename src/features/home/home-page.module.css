@@ -85,6 +85,46 @@
   color: #fff;
 }
 
+.sidebarRow {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebarRowControls {
+  position: absolute;
+  top: -6px;
+  right: 4px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.sidebarRowButton,
+.sidebarRowDelete {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  box-shadow: 0 6px 14px rgba(3, 10, 20, 0.24);
+}
+
+.sidebarRowButton {
+  background: rgba(21, 112, 239, 0.92);
+  color: #fff;
+}
+
+.sidebarRowDelete {
+  background: rgba(164, 33, 55, 0.94);
+  color: #fff;
+}
+
 .sidebarLogo {
   width: 44px;
   height: 44px;
@@ -395,6 +435,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  position: relative;
 }
 
 .tileAction {
@@ -408,6 +449,48 @@
   overflow: hidden;
   background: transparent;
   cursor: pointer;
+}
+
+.tileDragging {
+  opacity: 0.46;
+}
+
+.tileDropTarget .tileAction {
+  box-shadow:
+    inset 0 0 0 2px rgba(21, 112, 239, 0.88),
+    0 12px 24px rgba(3, 10, 20, 0.26);
+}
+
+.tileEditActions {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  z-index: 4;
+  display: flex;
+  gap: 8px;
+}
+
+.tileEditButton,
+.tileDeleteButton {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(3, 10, 20, 0.26);
+}
+
+.tileEditButton {
+  background: rgba(21, 112, 239, 0.92);
+  color: #fff;
+}
+
+.tileDeleteButton {
+  background: rgba(164, 33, 55, 0.94);
+  color: #fff;
 }
 
 .tileIconBox {
@@ -1002,6 +1085,90 @@
   object-fit: cover;
 }
 
+.actionSelect {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  outline: none;
+}
+
+.groupManagerLayout {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.groupManagerList,
+.groupManagerEditor {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.groupManagerToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.groupManagerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.groupManagerItem:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.groupManagerMeta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.groupManagerMeta img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px;
+}
+
+.groupManagerMeta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupManagerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.actionDanger {
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  background: rgba(164, 33, 55, 0.94);
+  color: #fff;
+}
+
 .settingsBackdrop {
   position: fixed;
   inset: 0;
@@ -1375,6 +1542,10 @@
 
   .actionGallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .groupManagerLayout {
+    grid-template-columns: 1fr;
   }
 
   .authInlineField {

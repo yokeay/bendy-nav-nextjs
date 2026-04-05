@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HomeLink } from "@/server/home/types";
 import { requestLegacy } from "./home-client";
 import styles from "./home-page.module.css";
@@ -10,20 +10,33 @@ type ActionDialogProps = {
   onClose: () => void;
 };
 
-type AddLinkDialogProps = ActionDialogProps & {
+type LinkEditorPayload = {
+  id?: string;
+  name: string;
+  url: string;
+  src: string;
+  bgColor: string;
+  pageGroup: string;
+};
+
+type LinkEditorDialogProps = ActionDialogProps & {
+  mode: "create" | "edit";
   activeGroupId: string;
-  onSave: (payload: {
-    name: string;
-    url: string;
-    src: string;
-    bgColor: string;
-    pageGroup: string;
-  }) => Promise<void>;
+  pageGroups: HomeLink[];
+  initialLink?: HomeLink | null;
+  onSave: (payload: LinkEditorPayload) => Promise<void>;
 };
 
 type BackgroundDialogProps = ActionDialogProps & {
   currentBackground: string;
   onApply: (backgroundUrl: string) => Promise<void>;
+};
+
+type PageGroupManagerDialogProps = ActionDialogProps & {
+  pageGroups: HomeLink[];
+  initialGroupId?: string;
+  onSave: (payload: { id?: string; name: string; src: string }) => Promise<void>;
+  onDelete: (groupId: string) => Promise<void>;
 };
 
 type ClassFolderIcon = {
@@ -53,12 +66,7 @@ function normalizeUrl(value: string): string {
   return `https://${trimmed}`;
 }
 
-export function AddLinkDialog({ open, activeGroupId, onClose, onSave }: AddLinkDialogProps) {
-  const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [icon, setIcon] = useState("");
-  const [bgColor, setBgColor] = useState("#ffffff");
-  const [submitting, setSubmitting] = useState(false);
+function useFolderIcons(open: boolean) {
   const [folderIcons, setFolderIcons] = useState<ClassFolderIcon[]>([]);
 
   useEffect(() => {
@@ -69,14 +77,31 @@ export function AddLinkDialog({ open, activeGroupId, onClose, onSave }: AddLinkD
     requestLegacy<ClassFolderIcon[]>("/index/classFolderIcons")
       .then((response) => {
         setFolderIcons(response.data);
-        if (!icon && response.data[0]?.src) {
-          setIcon(response.data[0].src);
-        }
       })
       .catch(() => {
         setFolderIcons([]);
       });
-  }, [open, icon]);
+  }, [open]);
+
+  return folderIcons;
+}
+
+export function AddLinkDialog({
+  open,
+  mode,
+  activeGroupId,
+  pageGroups,
+  initialLink,
+  onClose,
+  onSave
+}: LinkEditorDialogProps) {
+  const folderIcons = useFolderIcons(open);
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [icon, setIcon] = useState("");
+  const [bgColor, setBgColor] = useState("#ffffff");
+  const [pageGroup, setPageGroup] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -84,9 +109,17 @@ export function AddLinkDialog({ open, activeGroupId, onClose, onSave }: AddLinkD
       setUrl("");
       setIcon("");
       setBgColor("#ffffff");
+      setPageGroup("");
       setSubmitting(false);
+      return;
     }
-  }, [open]);
+
+    setName(initialLink?.name ?? "");
+    setUrl(initialLink?.url ?? "");
+    setIcon(initialLink?.src ?? folderIcons[0]?.src ?? "");
+    setBgColor(initialLink?.bgColor ?? "#ffffff");
+    setPageGroup(initialLink?.pageGroup ?? activeGroupId);
+  }, [activeGroupId, folderIcons, initialLink, open]);
 
   async function handleSubmit() {
     if (submitting) {
@@ -102,11 +135,12 @@ export function AddLinkDialog({ open, activeGroupId, onClose, onSave }: AddLinkD
     setSubmitting(true);
     try {
       await onSave({
+        id: initialLink?.id,
         name: normalizedName,
         url: normalizedUrl,
-        src: icon || "/static/addIco.png",
+        src: icon || folderIcons[0]?.src || "/static/addIco.png",
         bgColor,
-        pageGroup: activeGroupId
+        pageGroup
       });
       onClose();
     } finally {
@@ -124,7 +158,7 @@ export function AddLinkDialog({ open, activeGroupId, onClose, onSave }: AddLinkD
         <div className={styles.actionHeader}>
           <div>
             <p className={styles.actionEyebrow}>快捷操作</p>
-            <h2 className={styles.actionTitle}>添加标签</h2>
+            <h2 className={styles.actionTitle}>{mode === "edit" ? "编辑标签" : "添加标签"}</h2>
           </div>
           <button className={styles.actionClose} type="button" onClick={onClose} aria-label="关闭">
             ×
@@ -150,6 +184,22 @@ export function AddLinkDialog({ open, activeGroupId, onClose, onSave }: AddLinkD
               onChange={(event) => setUrl(event.target.value)}
               placeholder="https://github.com"
             />
+          </label>
+
+          <label className={styles.actionLabel}>
+            <span>归属分组</span>
+            <select
+              className={styles.actionSelect}
+              value={pageGroup}
+              onChange={(event) => setPageGroup(event.target.value)}
+            >
+              <option value="">首页</option>
+              {pageGroups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className={styles.actionLabel}>
@@ -191,7 +241,7 @@ export function AddLinkDialog({ open, activeGroupId, onClose, onSave }: AddLinkD
             取消
           </button>
           <button className={styles.actionPrimary} type="button" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "保存中..." : "保存标签"}
+            {submitting ? "保存中..." : mode === "edit" ? "保存修改" : "保存标签"}
           </button>
         </div>
       </div>
@@ -266,7 +316,12 @@ export function BackgroundDialog({
                 onChange={(event) => setCustomUrl(event.target.value)}
                 placeholder="https://example.com/background.jpg"
               />
-              <button className={styles.actionPrimary} type="button" onClick={() => applyBackground(customUrl)} disabled={saving}>
+              <button
+                className={styles.actionPrimary}
+                type="button"
+                onClick={() => applyBackground(customUrl)}
+                disabled={saving}
+              >
                 应用
               </button>
             </div>
@@ -300,6 +355,196 @@ export function BackgroundDialog({
                   <img src={item.thumbor || item.url} alt="" />
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PageGroupManagerDialog({
+  open,
+  pageGroups,
+  initialGroupId,
+  onClose,
+  onSave,
+  onDelete
+}: PageGroupManagerDialogProps) {
+  const folderIcons = useFolderIcons(open);
+  const [editingId, setEditingId] = useState("");
+  const [name, setName] = useState("");
+  const [icon, setIcon] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setEditingId("");
+      setName("");
+      setIcon("");
+      setSaving(false);
+      setDeletingId("");
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !initialGroupId) {
+      return;
+    }
+
+    const matchedGroup = pageGroups.find((group) => group.id === initialGroupId);
+    if (!matchedGroup) {
+      return;
+    }
+
+    setEditingId(matchedGroup.id);
+    setName(matchedGroup.name);
+    setIcon(matchedGroup.src);
+  }, [initialGroupId, open, pageGroups]);
+
+  function beginCreate() {
+    setEditingId("");
+    setName("");
+    setIcon(folderIcons[0]?.src ?? "/static/pageGroup/home.svg");
+  }
+
+  function beginEdit(group: HomeLink) {
+    setEditingId(group.id);
+    setName(group.name);
+    setIcon(group.src);
+  }
+
+  async function handleSubmit() {
+    if (saving || !name.trim() || !icon) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave({
+        id: editingId || undefined,
+        name: name.trim(),
+        src: icon
+      });
+      setEditingId("");
+      setName("");
+      setIcon(folderIcons[0]?.src ?? "/static/pageGroup/home.svg");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(groupId: string) {
+    if (deletingId) {
+      return;
+    }
+
+    setDeletingId(groupId);
+    try {
+      await onDelete(groupId);
+      if (editingId === groupId) {
+        setEditingId("");
+        setName("");
+        setIcon("");
+      }
+    } finally {
+      setDeletingId("");
+    }
+  }
+
+  const hasFormValue = name.trim().length > 0 || icon.length > 0 || editingId.length > 0;
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className={styles.actionBackdrop} onClick={onClose}>
+      <div className={styles.actionDialogWide} onClick={(event) => event.stopPropagation()}>
+        <div className={styles.actionHeader}>
+          <div>
+            <p className={styles.actionEyebrow}>桌面编辑</p>
+            <h2 className={styles.actionTitle}>分组管理</h2>
+          </div>
+          <button className={styles.actionClose} type="button" onClick={onClose} aria-label="关闭">
+            ×
+          </button>
+        </div>
+
+        <div className={styles.groupManagerLayout}>
+          <div className={styles.groupManagerList}>
+            <div className={styles.groupManagerToolbar}>
+              <button className={styles.actionPrimary} type="button" onClick={beginCreate}>
+                新建分组
+              </button>
+            </div>
+            {pageGroups.map((group) => (
+              <div className={styles.groupManagerItem} key={group.id}>
+                <div className={styles.groupManagerMeta}>
+                  <img src={group.src} alt={group.name} />
+                  <span>{group.name}</span>
+                </div>
+                <div className={styles.groupManagerActions}>
+                  <button className={styles.actionSecondary} type="button" onClick={() => beginEdit(group)}>
+                    编辑
+                  </button>
+                  <button
+                    className={styles.actionDanger}
+                    type="button"
+                    onClick={() => handleDelete(group.id)}
+                    disabled={deletingId === group.id}
+                  >
+                    {deletingId === group.id ? "删除中..." : "删除"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.groupManagerEditor}>
+            <div className={styles.actionLabel}>
+              <span>分组名称</span>
+              <input
+                className={styles.actionInput}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="例如：工作"
+              />
+            </div>
+
+            {folderIcons.length > 0 ? (
+              <div className={styles.actionLabel}>
+                <span>分组图标</span>
+                <div className={styles.actionGrid}>
+                  {folderIcons.slice(0, 24).map((item) => (
+                    <button
+                      key={item.src}
+                      className={
+                        icon === item.src
+                          ? `${styles.actionIcon} ${styles.actionIconActive}`
+                          : styles.actionIcon
+                      }
+                      type="button"
+                      title={item.name}
+                      onClick={() => setIcon(item.src)}
+                    >
+                      <img src={item.src} alt={item.name} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className={styles.actionFooter}>
+              {hasFormValue ? (
+                <button className={styles.actionSecondary} type="button" onClick={beginCreate}>
+                  清空
+                </button>
+              ) : null}
+              <button className={styles.actionPrimary} type="button" onClick={handleSubmit} disabled={saving}>
+                {saving ? "保存中..." : editingId ? "保存分组" : "创建分组"}
+              </button>
             </div>
           </div>
         </div>
