@@ -6,6 +6,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AddLinkDialog, BackgroundDialog, PageGroupManagerDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
+import {
+  buildFolderChildren as buildFolderChildrenModel,
+  buildVisibleHomeCards,
+  canEditHomeCard,
+  getHomeActionCardType,
+  getNextFolderSort as getNextFolderSortModel,
+  getNextRootSort as getNextRootSortModel,
+  isActionHomeCard,
+  isAppHomeCard,
+  isFolderHomeCard,
+  isRenderableHomeCard,
+  isSpecialHomeCardLink,
+  isTextHomeCard,
+  normalizeHomeLinksOrder,
+  resolveHomeCardLabel,
+  resolveHomeGroupId as resolveHomeGroupIdModel
+} from "./home-card-model";
 import { requestLegacy } from "./home-client";
 import { HomeSettingsDialog } from "./home-settings";
 import { HomeToastViewport, type HomeToastItem, type HomeToastTone } from "./home-toast";
@@ -166,27 +183,23 @@ function getGridColumnCount(
 }
 
 function isSpecialLegacyLink(link: HomeLink): boolean {
-  return link.url.startsWith("tab://");
+  return isSpecialHomeCardLink(link);
 }
 
 function isTextIcon(link: HomeLink): boolean {
-  return link.src.startsWith("txt:");
+  return isTextHomeCard(link);
 }
 
 function isAppLink(link: HomeLink): boolean {
-  return link.app === 1;
+  return isAppHomeCard(link);
 }
 
 function isFolderLink(link: HomeLink): boolean {
-  return link.type === "component" && link.component === "iconGroup";
+  return isFolderHomeCard(link);
 }
 
 function isRenderableTile(link: HomeLink): boolean {
-  if (isFolderLink(link)) {
-    return true;
-  }
-
-  return link.type === "icon" && !isSpecialLegacyLink(link);
+  return isRenderableHomeCard(link);
 }
 
 function stripHtmlTags(input: string): string {
@@ -267,102 +280,31 @@ function buildRootTiles(data: HomeData, activeGroupId: string, homeGroupId = "")
 }
 
 function isActionTile(link: HomeLink): boolean {
-  return ["tab://addicon", "tab://background", "tab://setting"].includes(link.url);
+  return isActionHomeCard(link) || getHomeActionCardType(link) !== null;
 }
 
 function buildVisibleTiles(links: HomeLink[], activeGroupId: string, homeGroupId = "") {
-  return [...links]
-    .filter((item) => {
-      if (item.type === "pageGroup") {
-        return false;
-      }
-
-      if (item.pid) {
-        return false;
-      }
-
-      if (!isRenderableTile(item) && !isActionTile(item)) {
-        return false;
-      }
-
-      if (activeGroupId) {
-        return item.pageGroup === activeGroupId;
-      }
-
-      if (homeGroupId) {
-        return !item.pageGroup || item.pageGroup === homeGroupId;
-      }
-
-      return !item.pageGroup;
-    })
-    .sort((left, right) => {
-      if (left.sort === right.sort) {
-        return left.id.localeCompare(right.id);
-      }
-
-      return left.sort - right.sort;
-    });
+  return buildVisibleHomeCards(links, activeGroupId, homeGroupId);
 }
 
 function normalizeLinksOrder(links: HomeLink[]) {
-  return [...links].sort((left, right) => {
-    if (left.sort === right.sort) {
-      return left.id.localeCompare(right.id);
-    }
-
-    return left.sort - right.sort;
-  });
+  return normalizeHomeLinksOrder(links);
 }
 
 function canEditTile(link: HomeLink) {
-  return link.type === "icon" && !isSpecialLegacyLink(link);
+  return canEditHomeCard(link);
 }
 
 function buildFolderChildren(links: HomeLink[], folderId: string) {
-  return normalizeLinksOrder(
-    links.filter((item) => item.pid === folderId && item.type === "icon" && !isSpecialLegacyLink(item))
-  );
+  return buildFolderChildrenModel(links, folderId);
 }
 
 function getNextFolderSort(links: HomeLink[], folderId: string) {
-  const children = links.filter((item) => item.pid === folderId);
-  if (children.length === 0) {
-    return 0;
-  }
-
-  return Math.max(...children.map((item) => item.sort), -1) + 1;
+  return getNextFolderSortModel(links, folderId);
 }
 
 function getNextRootSort(links: HomeLink[], groupId: string, homeGroupId = "") {
-  const rootTiles = links.filter((item) => {
-    if (item.type === "pageGroup") {
-      return false;
-    }
-
-    if (item.pid) {
-      return false;
-    }
-
-    if (!isRenderableTile(item)) {
-      return false;
-    }
-
-    if (groupId) {
-      return item.pageGroup === groupId;
-    }
-
-    if (homeGroupId) {
-      return !item.pageGroup || item.pageGroup === homeGroupId;
-    }
-
-    return !item.pageGroup;
-  });
-
-  if (rootTiles.length === 0) {
-    return 0;
-  }
-
-  return Math.max(...rootTiles.map((item) => item.sort), -1) + 1;
+  return getNextRootSortModel(links, groupId, homeGroupId);
 }
 
 function buildDockLinks(data: HomeData) {
