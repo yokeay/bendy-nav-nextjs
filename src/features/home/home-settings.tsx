@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { HomeConfig, HomeSiteInfo } from "@/server/home/types";
 import styles from "./home-page.module.css";
 
-type SettingsSection = "layout" | "search" | "time" | "appearance";
+type SettingsSection = "user" | "theme" | "open" | "about";
 
 type HomeSettingsDialogProps = {
   open: boolean;
@@ -12,16 +12,18 @@ type HomeSettingsDialogProps = {
   site: HomeSiteInfo;
   saving: boolean;
   loggedIn: boolean;
+  pageCount: number;
   onClose: () => void;
   onSave: () => void;
+  onOpenPageManager: () => void;
   onConfigChange: (nextConfig: HomeConfig) => void;
 };
 
 const SECTION_OPTIONS: Array<{ id: SettingsSection; label: string }> = [
-  { id: "layout", label: "布局" },
-  { id: "search", label: "搜索" },
-  { id: "time", label: "时间" },
-  { id: "appearance", label: "外观" }
+  { id: "user", label: "用户中心" },
+  { id: "theme", label: "主题外观" },
+  { id: "open", label: "打开方式" },
+  { id: "about", label: "关于" }
 ];
 
 type ToggleRowProps = {
@@ -117,11 +119,21 @@ export function HomeSettingsDialog({
   site,
   saving,
   loggedIn,
+  pageCount,
   onClose,
   onSave,
+  onOpenPageManager,
   onConfigChange
 }: HomeSettingsDialogProps) {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("layout");
+  const [activeSection, setActiveSection] = useState<SettingsSection>("theme");
+
+  const sideClassName = useMemo(
+    () =>
+      config.theme.userCenterPosition === "right"
+        ? `${styles.controlModel} ${styles.controlModelRight}`
+        : `${styles.controlModel} ${styles.controlModelLeft}`,
+    [config.theme.userCenterPosition]
+  );
 
   if (!open) {
     return null;
@@ -144,233 +156,279 @@ export function HomeSettingsDialog({
   };
 
   return (
-    <div className={styles.settingsBackdrop} onClick={onClose}>
-      <div className={styles.settingsDialog} onClick={(event) => event.stopPropagation()}>
-        <div className={styles.settingsHeader}>
-          <div>
-            <p className={styles.settingsEyebrow}>设置中心</p>
-            <h2 className={styles.settingsTitle}>{site.title}</h2>
-            <p className={styles.settingsDescription}>
-              {loggedIn ? "修改后会写回当前账户配置。" : "访客模式下会保存在当前浏览器。"}
-            </p>
+    <div className={styles.controlCenter} onClick={onClose}>
+      <div className={sideClassName} onClick={(event) => event.stopPropagation()}>
+        <aside className={styles.controlMenu}>
+          <div className={styles.controlUserHeader}>
+            <div className={styles.controlUserAvatar}>{site.title.slice(0, 1)}</div>
+            <div className={styles.controlUserMeta}>
+              <strong>{site.title}</strong>
+              <span>{loggedIn ? "当前账户配置" : "访客本地配置"}</span>
+            </div>
           </div>
-          <button className={styles.settingsClose} type="button" onClick={onClose} aria-label="关闭设置">
-            ×
-          </button>
-        </div>
 
-        <div className={styles.settingsLayout}>
-          <div className={styles.settingsNav}>
+          <div className={styles.controlMenuList}>
             {SECTION_OPTIONS.map((item) => (
               <button
                 key={item.id}
                 className={
                   item.id === activeSection
-                    ? `${styles.settingsNavItem} ${styles.settingsNavItemActive}`
-                    : styles.settingsNavItem
+                    ? `${styles.controlMenuItem} ${styles.controlMenuItemActive}`
+                    : styles.controlMenuItem
                 }
                 type="button"
                 onClick={() => setActiveSection(item.id)}
               >
-                {item.label}
+                <span>{item.label}</span>
               </button>
             ))}
           </div>
+        </aside>
 
-          <div className={styles.settingsContent}>
-            {activeSection === "layout" ? (
-              <section className={styles.settingsSection}>
-              <h3 className={styles.settingsSectionTitle}>布局</h3>
-              <ToggleRow
-                label="简洁模式"
-                description="对应旧版 CompactMode，开启后收起主网格，只保留时间和搜索。"
-                checked={config.theme.CompactMode}
-                onChange={(value) => updateThemeBoolean("CompactMode", value)}
-              />
-              <ToggleRow
-                label="显示分页栏"
-                description="控制左侧分组导航是否展示。"
-                checked={config.theme.pageGroup}
-                onChange={(value) => updateThemeBoolean("pageGroup", value)}
-              />
-              <ToggleRow
-                label="自动隐藏分页栏"
-                description="桌面端启用边缘唤出效果。"
-                checked={config.theme.pageGroupStatus}
-                onChange={(value) => updateThemeBoolean("pageGroupStatus", value)}
-              />
-              <ToggleRow
-                label="显示底部 Dock"
-                description="保留旧版页脚快捷栏。"
-                checked={config.theme.tabbar}
-                onChange={(value) => updateThemeBoolean("tabbar", value)}
-              />
-              <ToggleRow
-                label="简洁模式显示 Dock"
-                description="旧版 tabbarMode，简洁模式下仍显示底部 Dock。"
-                checked={config.theme.tabbarMode}
-                onChange={(value) => updateThemeBoolean("tabbarMode", value)}
-              />
-              <div className={styles.settingRowBlock}>
-                <div className={styles.settingRowText}>
-                  <p className={styles.settingRowTitle}>分页栏位置</p>
-                  <p className={styles.settingRowDescription}>控制左侧分组栏停靠方向。</p>
-                </div>
-                <div className={styles.segmented}>
-                  <button
-                    className={
-                      config.theme.pageGroupPosition === "left"
-                        ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
-                        : styles.segmentedItem
-                    }
-                    type="button"
-                    onClick={() => updateThemeString("pageGroupPosition", "left")}
-                  >
-                    左侧
-                  </button>
-                  <button
-                    className={
-                      config.theme.pageGroupPosition === "right"
-                        ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
-                        : styles.segmentedItem
-                    }
-                    type="button"
-                    onClick={() => updateThemeString("pageGroupPosition", "right")}
-                  >
-                    右侧
-                  </button>
-                </div>
+        <section className={styles.controlSetting}>
+          <div className={styles.controlBox}>
+            {activeSection === "user" ? (
+              <div className={styles.controlSectionStack}>
+                <section className={styles.controlSectionCard}>
+                  <h3 className={styles.controlSectionTitle}>用户中心</h3>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>当前存储位置</p>
+                      <p className={styles.settingRowDescription}>
+                        {loggedIn ? "设置修改后会同步到当前账户。" : "访客模式下仅保存在当前浏览器。"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>页面管理</p>
+                      <p className={styles.settingRowDescription}>当前已有 {pageCount} 个页面，可继续新增和调整排序。</p>
+                    </div>
+                    <button className={styles.controlInlineButton} type="button" onClick={onOpenPageManager}>
+                      打开页面管理
+                    </button>
+                  </div>
+                </section>
               </div>
-              </section>
             ) : null}
 
-            {activeSection === "search" ? (
-              <section className={styles.settingsSection}>
-              <h3 className={styles.settingsSectionTitle}>搜索</h3>
-              <ToggleRow
-                label="显示搜索框"
-                description="关闭后首页仅保留时间和导航区。"
-                checked={config.openType.searchStatus}
-                onChange={(value) => updateOpenType("searchStatus", value)}
-              />
-              <ToggleRow
-                label="搜索结果新标签页打开"
-                description="旧版 searchOpen 配置。"
-                checked={config.openType.searchOpen}
-                onChange={(value) => updateOpenType("searchOpen", value)}
-              />
-              <ToggleRow
-                label="导航链接新标签页打开"
-                description="旧版 linkOpen 配置。"
-                checked={config.openType.linkOpen}
-                onChange={(value) => updateOpenType("linkOpen", value)}
-              />
-              <ToggleRow
-                label="自动聚焦搜索框"
-                description="旧版 autofocus 配置。"
-                checked={config.openType.autofocus}
-                onChange={(value) => updateOpenType("autofocus", value)}
-              />
-              <ToggleRow
-                label="显示搜索联想"
-                description="旧版 searchRecommend 配置。当前新版先保留开关，后续补推荐内容。"
-                checked={config.openType.searchRecommend}
-                onChange={(value) => updateOpenType("searchRecommend", value)}
-              />
-              </section>
+            {activeSection === "theme" ? (
+              <div className={styles.controlSectionStack}>
+                <section className={styles.controlSectionCard}>
+                  <h3 className={styles.controlSectionTitle}>主题外观</h3>
+                  <RangeRow
+                    label="背景模糊"
+                    description="对应旧版 blur。"
+                    min={0}
+                    max={40}
+                    value={config.theme.blur}
+                    suffix="px"
+                    onChange={(value) => updateThemeNumber("blur", value)}
+                  />
+                  <RangeRow
+                    label="图标尺寸"
+                    description="对应旧版 iconWidth。"
+                    min={48}
+                    max={96}
+                    value={config.theme.iconWidth}
+                    suffix="px"
+                    onChange={(value) => updateThemeNumber("iconWidth", value)}
+                  />
+                  <RangeRow
+                    label="图标圆角"
+                    description="对应旧版 iconRadius。"
+                    min={4}
+                    max={28}
+                    value={config.theme.iconRadius}
+                    suffix="px"
+                    onChange={(value) => updateThemeNumber("iconRadius", value)}
+                  />
+                  <ToggleRow
+                    label="显示分页栏"
+                    description="控制侧边分页是否展示。"
+                    checked={config.theme.pageGroup}
+                    onChange={(value) => updateThemeBoolean("pageGroup", value)}
+                  />
+                  <ToggleRow
+                    label="自动隐藏分页栏"
+                    description="桌面端启用边缘唤出效果。"
+                    checked={config.theme.pageGroupStatus}
+                    onChange={(value) => updateThemeBoolean("pageGroupStatus", value)}
+                  />
+                  <ToggleRow
+                    label="恢复上次页面"
+                    description="开启后优先恢复上次停留的页面。"
+                    checked={config.theme.latestPageGroup}
+                    onChange={(value) => updateThemeBoolean("latestPageGroup", value)}
+                  />
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>页面栏位置</p>
+                      <p className={styles.settingRowDescription}>控制页面栏靠左或靠右停靠。</p>
+                    </div>
+                    <div className={styles.segmented}>
+                      <button
+                        className={
+                          config.theme.pageGroupPosition === "left"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("pageGroupPosition", "left")}
+                      >
+                        左侧
+                      </button>
+                      <button
+                        className={
+                          config.theme.pageGroupPosition === "right"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("pageGroupPosition", "right")}
+                      >
+                        右侧
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>控制中心位置</p>
+                      <p className={styles.settingRowDescription}>控制设置中心从左下角还是右下角弹出。</p>
+                    </div>
+                    <div className={styles.segmented}>
+                      <button
+                        className={
+                          config.theme.userCenterPosition === "left"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("userCenterPosition", "left")}
+                      >
+                        左下
+                      </button>
+                      <button
+                        className={
+                          config.theme.userCenterPosition === "right"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("userCenterPosition", "right")}
+                      >
+                        右下
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </div>
             ) : null}
 
-            {activeSection === "time" ? (
-              <section className={styles.settingsSection}>
-              <h3 className={styles.settingsSectionTitle}>时间</h3>
-              <ToggleRow
-                label="显示时间面板"
-                description="对应旧版 timeView。"
-                checked={config.theme.timeView}
-                onChange={(value) => updateThemeBoolean("timeView", value)}
-              />
-              <ToggleRow
-                label="24 小时制"
-                description="对应旧版 time24。"
-                checked={config.theme.time24}
-                onChange={(value) => updateThemeBoolean("time24", value)}
-              />
-              <ToggleRow
-                label="显示秒数"
-                description="对应旧版 timeSecond。"
-                checked={config.theme.timeSecond}
-                onChange={(value) => updateThemeBoolean("timeSecond", value)}
-              />
-              <ToggleRow
-                label="显示月日"
-                description="对应旧版 timeMonthDay。"
-                checked={config.theme.timeMonthDay}
-                onChange={(value) => updateThemeBoolean("timeMonthDay", value)}
-              />
-              <ToggleRow
-                label="显示星期"
-                description="对应旧版 timeWeek。"
-                checked={config.theme.timeWeek}
-                onChange={(value) => updateThemeBoolean("timeWeek", value)}
-              />
-              <ToggleRow
-                label="显示农历"
-                description="对应旧版 timeLunar。"
-                checked={config.theme.timeLunar}
-                onChange={(value) => updateThemeBoolean("timeLunar", value)}
-              />
-              <ToggleRow
-                label="显示干支"
-                description="对应旧版 timeGanZhi。"
-                checked={config.theme.timeGanZhi}
-                onChange={(value) => updateThemeBoolean("timeGanZhi", value)}
-              />
-              </section>
+            {activeSection === "open" ? (
+              <div className={styles.controlSectionStack}>
+                <section className={styles.controlSectionCard}>
+                  <h3 className={styles.controlSectionTitle}>打开方式</h3>
+                  <ToggleRow
+                    label="搜索结果新标签页打开"
+                    description="对应旧版 searchOpen。"
+                    checked={config.openType.searchOpen}
+                    onChange={(value) => updateOpenType("searchOpen", value)}
+                  />
+                  <ToggleRow
+                    label="导航链接新标签页打开"
+                    description="对应旧版 linkOpen。"
+                    checked={config.openType.linkOpen}
+                    onChange={(value) => updateOpenType("linkOpen", value)}
+                  />
+                  <ToggleRow
+                    label="自动聚焦搜索框"
+                    description="对应旧版 autofocus。"
+                    checked={config.openType.autofocus}
+                    onChange={(value) => updateOpenType("autofocus", value)}
+                  />
+                  <ToggleRow
+                    label="显示搜索框"
+                    description="关闭后首页只保留时间与导航区域。"
+                    checked={config.openType.searchStatus}
+                    onChange={(value) => updateOpenType("searchStatus", value)}
+                  />
+                  <ToggleRow
+                    label="显示搜索推荐"
+                    description="控制搜索面板中的推荐词与快捷搜索。"
+                    checked={config.openType.searchRecommend}
+                    onChange={(value) => updateOpenType("searchRecommend", value)}
+                  />
+                  <ToggleRow
+                    label="显示图标搜索结果"
+                    description="控制搜索面板中的本地图标搜索结果。"
+                    checked={config.openType.searchLink}
+                    onChange={(value) => updateOpenType("searchLink", value)}
+                  />
+                  <ToggleRow
+                    label="显示底部 Dock"
+                    description="保留旧版底部快捷栏。"
+                    checked={config.theme.tabbar}
+                    onChange={(value) => updateThemeBoolean("tabbar", value)}
+                  />
+                  <ToggleRow
+                    label="简洁模式显示 Dock"
+                    description="对应旧版 tabbarMode。"
+                    checked={config.theme.tabbarMode}
+                    onChange={(value) => updateThemeBoolean("tabbarMode", value)}
+                  />
+                  <ToggleRow
+                    label="显示垃圾桶"
+                    description="编辑模式下显示底部移除区域。"
+                    checked={config.theme.trash}
+                    onChange={(value) => updateThemeBoolean("trash", value)}
+                  />
+                </section>
+              </div>
             ) : null}
 
-            {activeSection === "appearance" ? (
-              <section className={styles.settingsSection}>
-              <h3 className={styles.settingsSectionTitle}>外观</h3>
-              <RangeRow
-                label="背景模糊"
-                description="对应旧版 blur。"
-                min={0}
-                max={40}
-                value={config.theme.blur}
-                suffix="px"
-                onChange={(value) => updateThemeNumber("blur", value)}
-              />
-              <RangeRow
-                label="图标尺寸"
-                description="对应旧版 iconWidth。"
-                min={48}
-                max={96}
-                value={config.theme.iconWidth}
-                suffix="px"
-                onChange={(value) => updateThemeNumber("iconWidth", value)}
-              />
-              <RangeRow
-                label="图标圆角"
-                description="对应旧版 iconRadius。"
-                min={4}
-                max={28}
-                value={config.theme.iconRadius}
-                suffix="px"
-                onChange={(value) => updateThemeNumber("iconRadius", value)}
-              />
-              </section>
+            {activeSection === "about" ? (
+              <div className={styles.controlSectionStack}>
+                <section className={styles.controlSectionCard}>
+                  <h3 className={styles.controlSectionTitle}>关于</h3>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>站点标题</p>
+                      <p className={styles.settingRowDescription}>{site.title}</p>
+                    </div>
+                  </div>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>描述</p>
+                      <p className={styles.settingRowDescription}>{site.description || "未配置"}</p>
+                    </div>
+                  </div>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>关键词</p>
+                      <p className={styles.settingRowDescription}>{site.keywords || "未配置"}</p>
+                    </div>
+                  </div>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>ICP备案</p>
+                      <p className={styles.settingRowDescription}>{site.recordNumber || "未配置"}</p>
+                    </div>
+                  </div>
+                </section>
+              </div>
             ) : null}
           </div>
-        </div>
 
-        <div className={styles.settingsFooter}>
-          <button className={styles.settingsFooterSecondary} type="button" onClick={onClose}>
-            取消
-          </button>
-          <button className={styles.settingsFooterPrimary} type="button" onClick={onSave} disabled={saving}>
-            {saving ? "保存中..." : loggedIn ? "保存到当前账户" : "保存到本地浏览器"}
-          </button>
-        </div>
+          <div className={styles.controlFooter}>
+            <button className={styles.controlFooterSecondary} type="button" onClick={onClose}>
+              取消
+            </button>
+            <button className={styles.controlFooterPrimary} type="button" onClick={onSave} disabled={saving}>
+              {saving ? "保存中..." : loggedIn ? "保存到当前账户" : "保存到本地浏览器"}
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );

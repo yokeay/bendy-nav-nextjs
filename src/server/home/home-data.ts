@@ -16,7 +16,7 @@ import type {
   HomeUser
 } from "./types";
 
-const APP_VERSION = "2.4.11";
+const APP_VERSION = "2.4.20";
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_BRAND_ICON = "/brand/logo-192.png";

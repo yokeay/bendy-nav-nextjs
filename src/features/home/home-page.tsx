@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
-import { AddLinkDialog, BackgroundDialog, PageGroupManagerDialog, buildActionLink } from "./home-actions";
+import { AddLinkDialog, BackgroundDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
 import {
   buildFolderChildren as buildFolderChildrenModel,
@@ -24,8 +24,10 @@ import {
   resolveHomeGroupId as resolveHomeGroupIdModel
 } from "./home-card-model";
 import { requestLegacy } from "./home-client";
+import { PageManagerDialog } from "./home-page-manager";
 import { HomeSettingsDialog } from "./home-settings";
 import { HomeToastViewport, type HomeToastItem, type HomeToastTone } from "./home-toast";
+import { usePressAndHold } from "./use-press-and-hold";
 import styles from "./home-page.module.css";
 
 const LOCAL_HOME_CONFIG_STORAGE_KEY = "config";
@@ -436,7 +438,6 @@ function Sidebar({
   pageGroups,
   activeGroupId,
   editMode,
-  legacyUrl,
   user,
   onOpenAuth,
   onSelectGroup,
@@ -450,7 +451,6 @@ function Sidebar({
   pageGroups: HomeLink[];
   activeGroupId: string;
   editMode: boolean;
-  legacyUrl: string;
   user: HomeData["user"];
   onOpenAuth: () => void;
   onSelectGroup: (groupId: string) => void;
@@ -460,6 +460,7 @@ function Sidebar({
   onDeleteGroup: (groupId: string) => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
+  const legacyUrl = "";
   const sidebarLinks = buildSidebarLinks({
     ...data,
     pageGroups
@@ -470,7 +471,7 @@ function Sidebar({
       <div className={styles.sidebarGroup}>
         <div className={styles.sidebarProfile}>
           {user ? (
-            <UserMenu user={user} legacyUrl={legacyUrl} onNotify={onNotify} />
+            <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
           ) : (
             <button
               className={styles.userButton}
@@ -526,7 +527,29 @@ function Sidebar({
             </div>
           );
         })}
-        {editMode ? (
+        {false ? (
+          <button
+            className={styles.sidebarLink}
+            type="button"
+            onClick={onOpenGroupManager}
+            title="新增页面"
+            aria-label="新增页面"
+          >
+            <img className={styles.sidebarIcon} src="/dist/assets/add.c36dce54.1766672520393.svg" alt="" />
+            <span className={styles.sidebarText}>页面</span>
+          </button>
+        ) : null}
+        <button
+          className={styles.sidebarLink}
+          type="button"
+          onClick={onOpenGroupManager}
+          title={editMode ? "页面管理" : "新增页面"}
+          aria-label={editMode ? "页面管理" : "新增页面"}
+        >
+          <img className={styles.sidebarIcon} src="/dist/assets/add.c36dce54.1766672520393.svg" alt="" />
+          <span className={styles.sidebarText}>{editMode ? "页面" : "新增"}</span>
+        </button>
+        {false ? (
           <button
             className={styles.sidebarLink}
             type="button"
@@ -540,12 +563,19 @@ function Sidebar({
         ) : null}
       </div>
       <div className={`${styles.sidebarGroup} ${styles.sidebarFooter}`}>
-        <Link className={styles.sidebarFooterButton} href={legacyUrl} title="打开兼容模式" aria-label="打开兼容模式">
+        <Link
+          className={styles.sidebarFooterButton}
+          href={legacyUrl}
+          title="打开兼容模式"
+          aria-label="打开兼容模式"
+          style={{ display: "none" }}
+        >
           <img className={styles.sidebarFooterIcon} src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
         </Link>
         <button
           className={styles.sidebarFooterButton}
           type="button"
+          onMouseDown={onOpenSettings}
           onClick={onOpenSettings}
           title="打开设置中心"
           aria-label="打开设置中心"
@@ -561,7 +591,6 @@ function Toolbar({
   compactMode,
   editMode,
   onToggleCompact,
-  legacyUrl,
   user,
   onOpenAuth,
   onOpenSettings,
@@ -571,18 +600,26 @@ function Toolbar({
   compactMode: boolean;
   editMode: boolean;
   onToggleCompact: () => void;
-  legacyUrl: string;
   user: HomeData["user"];
   onOpenAuth: () => void;
   onOpenSettings: () => void;
   onToggleEditMode: () => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
+  const legacyUrl = "";
   return (
-    <div className={styles.toolbar}>
+    <div
+      className={[
+        styles.toolbar,
+        compactMode ? styles.toolbarCompact : "",
+        editMode ? styles.toolbarEditing : styles.toolbarIdle
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {compactMode ? (
         user ? (
-          <UserMenu user={user} legacyUrl={legacyUrl} onNotify={onNotify} />
+          <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
         ) : (
           <button
             className={styles.userButton}
@@ -596,16 +633,17 @@ function Toolbar({
           </button>
         )
       ) : null}
-      {compactMode ? (
-        <Link className={styles.toolbarButton} href={legacyUrl} title="打开兼容模式">
+      {false ? (
+        <Link className={styles.toolbarButton} href={legacyUrl} title="打开兼容模式" style={{ display: "none" }}>
           <img src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
         </Link>
       ) : null}
-      {compactMode ? (
+      {false ? (
         <button className={styles.toolbarButton} type="button" onClick={onOpenSettings} title="打开设置中心">
           <img src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
         </button>
       ) : null}
+        {false ? (
       <button
         className={styles.toolbarButton}
         type="button"
@@ -614,6 +652,7 @@ function Toolbar({
       >
         <img src="/dist/assets/edit.619ba3d7.1766672520393.svg" alt="" />
       </button>
+      ) : null}
       <button
         className={styles.toolbarButton}
         type="button"
@@ -669,13 +708,15 @@ function SearchBar({
   searchOpen,
   searchRecommend,
   searchLink,
-  quickLinks
+  quickLinks,
+  compactMode
 }: {
   engines: HomeSearchEngine[];
   searchOpen: boolean;
   searchRecommend: boolean;
   searchLink: boolean;
   quickLinks: HomeLink[];
+  compactMode: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
@@ -717,7 +758,6 @@ function SearchBar({
   useEffect(() => {
     const storedKey = window.localStorage.getItem(SEARCH_ENGINE_STORAGE_KEY);
     if (!storedKey) {
-      return;
     }
 
     const nextIndex = availableEngines.findIndex((engine) => engine.key === storedKey);
@@ -736,7 +776,6 @@ function SearchBar({
   useEffect(() => {
     const raw = window.localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
     if (!raw) {
-      return;
     }
 
     try {
@@ -751,7 +790,6 @@ function SearchBar({
 
   useEffect(() => {
     if (!panelOpen) {
-      return;
     }
 
     function handlePointerDown(event: MouseEvent) {
@@ -805,7 +843,6 @@ function SearchBar({
   function rememberKeyword(keyword: string) {
     const normalized = keyword.trim();
     if (!normalized) {
-      return;
     }
 
     const nextHistory = [normalized, ...history.filter((item) => item !== normalized)].slice(0, 10);
@@ -815,7 +852,6 @@ function SearchBar({
   function searchKeyword(keyword: string) {
     const normalized = keyword.trim();
     if (!normalized) {
-      return;
     }
 
     rememberKeyword(normalized);
@@ -833,6 +869,118 @@ function SearchBar({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     searchKeyword(query);
+  }
+
+  if (compactMode) {
+    return (
+      <div className={styles.searchBox} ref={rootRef}>
+        <form className={styles.searchShell} onSubmit={handleSubmit}>
+          <label className={styles.searchEngineSelectWrap} aria-label="搜索引擎">
+            <select
+              className={styles.searchEngineSelect}
+              value={currentEngine.key}
+              onChange={(event) => {
+                const nextIndex = availableEngines.findIndex((engine) => engine.key === event.target.value);
+                if (nextIndex >= 0) {
+                  setEngineIndex(nextIndex);
+                }
+              }}
+            >
+              {availableEngines.map((engine) => (
+                <option key={engine.key} value={engine.key}>
+                  {engine.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            className={styles.searchInput}
+            name="keyword"
+            value={query}
+            onFocus={() => setPanelOpen(true)}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="输入并搜索..."
+          />
+          <button className={styles.searchSubmit} type="submit" aria-label="开始搜索">
+            <img src="/dist/assets/search.e0864ada.1766672520393.svg" alt="" />
+          </button>
+        </form>
+        {panelOpen ? (
+          <div className={styles.searchPanel}>
+            {query.trim() && searchRecommend ? (
+              <div className={styles.searchPanelSection}>
+                <div className={styles.searchPanelTitle}>快捷搜索</div>
+                <button className={styles.searchPanelItem} type="button" onClick={() => searchKeyword(query)}>
+                  使用 {currentEngine.name} 搜索 “{query.trim()}”
+                </button>
+              </div>
+            ) : null}
+            {iconResults.length > 0 ? (
+              <div className={styles.searchPanelSection}>
+                <div className={styles.searchPanelTitle}>图标搜索结果</div>
+                <div className={styles.searchIconResultList}>
+                  {iconResults.map((link) => (
+                    <button
+                      key={link.id}
+                      className={styles.searchIconResultItem}
+                      type="button"
+                      onClick={() => openQuickLink(link)}
+                    >
+                      {isTextIcon(link) ? (
+                        <span className={styles.searchIconResultText}>{link.src.replace(/^txt:/, "")}</span>
+                      ) : (
+                        <img src={link.src} alt="" />
+                      )}
+                      <span>{resolveTileLabel(link)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {recommendWords.length > 0 ? (
+              <div className={styles.searchPanelSection}>
+                <div className={styles.searchPanelTitle}>推荐词</div>
+                <div className={styles.searchHistoryList}>
+                  {recommendWords.map((item) => (
+                    <button
+                      key={item}
+                      className={styles.searchPanelItem}
+                      type="button"
+                      onClick={() => {
+                        setQuery(item);
+                        searchKeyword(item);
+                      }}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {history.length > 0 ? (
+              <div className={styles.searchPanelSection}>
+                <div className={styles.searchPanelTitle}>搜索历史</div>
+                <div className={styles.searchHistoryList}>
+                  {history.map((item) => (
+                    <button
+                      key={item}
+                      className={styles.searchPanelItem}
+                      type="button"
+                      onClick={() => {
+                        setQuery(item);
+                        searchKeyword(item);
+                      }}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -1030,6 +1178,7 @@ function IconTile({
   onEdit,
   onDelete,
   onPin,
+  onLongPress,
   onDragStart,
   onDragEnter,
   onDrop,
@@ -1044,6 +1193,7 @@ function IconTile({
   onEdit?: () => void;
   onDelete?: () => void;
   onPin?: () => void;
+  onLongPress?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
   onDrop?: () => void;
@@ -1059,6 +1209,12 @@ function IconTile({
   ]
     .filter(Boolean)
     .join(" ");
+  const hold = usePressAndHold({
+    enabled: !editMode && Boolean(onLongPress),
+    onLongPress: () => {
+      onLongPress?.();
+    }
+  });
 
   return (
     <div
@@ -1066,6 +1222,12 @@ function IconTile({
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
+      onMouseDown={editMode ? undefined : (event) => hold.start(event.button)}
+      onMouseUp={editMode ? undefined : hold.clear}
+      onMouseLeave={editMode ? undefined : hold.clear}
+      onTouchStart={editMode ? undefined : () => hold.start(0)}
+      onTouchEnd={editMode ? undefined : hold.clear}
+      onTouchCancel={editMode ? undefined : hold.clear}
       onContextMenu={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -1086,7 +1248,16 @@ function IconTile({
         title={link.tips || label}
         target={target}
         rel={rel}
-        onClick={editMode ? (event) => event.preventDefault() : undefined}
+        onClick={(event) => {
+          if (hold.consumeClick()) {
+            event.preventDefault();
+            return;
+          }
+
+          if (editMode) {
+            event.preventDefault();
+          }
+        }}
         style={getLinkSurfaceStyle(link)}
       >
         {isAppLink(link) ? (
@@ -1112,6 +1283,7 @@ function ActionTile({
   isDropTarget,
   onContextMenu,
   onClick,
+  onLongPress,
   onDragStart,
   onDragEnter,
   onDrop,
@@ -1123,6 +1295,7 @@ function ActionTile({
   isDropTarget: boolean;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onClick: () => void;
+  onLongPress?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
   onDrop?: () => void;
@@ -1136,6 +1309,12 @@ function ActionTile({
   ]
     .filter(Boolean)
     .join(" ");
+  const hold = usePressAndHold({
+    enabled: !editMode && Boolean(onLongPress),
+    onLongPress: () => {
+      onLongPress?.();
+    }
+  });
 
   return (
     <div
@@ -1143,6 +1322,12 @@ function ActionTile({
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
+      onMouseDown={editMode ? undefined : (event) => hold.start(event.button)}
+      onMouseUp={editMode ? undefined : hold.clear}
+      onMouseLeave={editMode ? undefined : hold.clear}
+      onTouchStart={editMode ? undefined : () => hold.start(0)}
+      onTouchEnd={editMode ? undefined : hold.clear}
+      onTouchCancel={editMode ? undefined : hold.clear}
       onContextMenu={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -1158,7 +1343,12 @@ function ActionTile({
         className={styles.tileAction}
         type="button"
         title={link.tips || label}
-        onClick={onClick}
+        onClick={() => {
+          if (hold.consumeClick()) {
+            return;
+          }
+          onClick();
+        }}
         style={getLinkSurfaceStyle(link)}
       >
         {isTextIcon(link) ? (
@@ -1180,6 +1370,7 @@ function FolderTile({
   isDragging,
   isDropTarget,
   onContextMenu,
+  onLongPress,
   onDragStart,
   onDragEnter,
   onDrop,
@@ -1192,6 +1383,7 @@ function FolderTile({
   isDragging: boolean;
   isDropTarget: boolean;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onLongPress?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
   onDrop?: () => void;
@@ -1207,6 +1399,12 @@ function FolderTile({
   ]
     .filter(Boolean)
     .join(" ");
+  const hold = usePressAndHold({
+    enabled: !editMode && Boolean(onLongPress),
+    onLongPress: () => {
+      onLongPress?.();
+    }
+  });
 
   return (
     <div
@@ -1214,6 +1412,12 @@ function FolderTile({
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
+      onMouseDown={editMode ? undefined : (event) => hold.start(event.button)}
+      onMouseUp={editMode ? undefined : hold.clear}
+      onMouseLeave={editMode ? undefined : hold.clear}
+      onTouchStart={editMode ? undefined : () => hold.start(0)}
+      onTouchEnd={editMode ? undefined : hold.clear}
+      onTouchCancel={editMode ? undefined : hold.clear}
       onContextMenu={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -1228,7 +1432,12 @@ function FolderTile({
       <button
         className={`${styles.tileAction} ${getFolderCardClassName(link.size)}`}
         type="button"
-        onClick={onOpen}
+        onClick={() => {
+          if (hold.consumeClick()) {
+            return;
+          }
+          onOpen();
+        }}
         title={link.tips || resolveTileLabel(link)}
       >
         <div className={getFolderGridClassName(link.size)}>
@@ -1316,6 +1525,7 @@ function FolderModal({
               isDragging={draggingId === item.id}
               isDropTarget={dropTargetId === item.id && draggingId !== item.id}
               onContextMenu={(event) => onContextMenu(item.id, event)}
+              onLongPress={() => {}}
               onEdit={() => onEdit(item)}
               onDelete={() => onDelete(item)}
               onPin={() => onPin(item)}
@@ -1939,9 +2149,21 @@ export function HomePage({ data }: HomePageProps) {
     setTileMenu(CLOSED_TILE_CONTEXT_MENU);
   }, []);
 
+  const enterGlobalEditMode = useCallback(() => {
+    setEditMode(true);
+    setCurrentConfig((config) =>
+      config.theme.CompactMode
+        ? mergeHomeConfig(config, {
+            theme: {
+              CompactMode: false
+            }
+          })
+        : config
+    );
+  }, []);
+
   useEffect(() => {
     if (data.user) {
-      return;
     }
 
     const localConfigRaw = window.localStorage.getItem(LOCAL_HOME_CONFIG_STORAGE_KEY);
@@ -1992,7 +2214,6 @@ export function HomePage({ data }: HomePageProps) {
       if (homeGroupId) {
         setActiveGroupId(homeGroupId);
       }
-      return;
     }
 
     if (storedGroupId === "") {
@@ -2267,8 +2488,8 @@ export function HomePage({ data }: HomePageProps) {
           : item
       );
       await persistLinks(nextLinks);
-      notify("分组已更新。", "success");
-      return;
+      notify("页面已更新。", "success");
+      return payload.id;
     }
 
     const groupId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -2292,11 +2513,13 @@ export function HomePage({ data }: HomePageProps) {
     });
 
     await persistLinks([...currentLinks, nextGroup, nextAddTile]);
-    notify("分组已创建。", "success");
+    setActiveGroupId(groupId);
+    notify("页面已创建。", "success");
+    return groupId;
   }
 
   async function handleDeleteGroup(groupId: string) {
-    if (!window.confirm("确认删除这个分组吗？分组内标签会回到首页。")) {
+    if (!window.confirm("确认删除这个页面吗？该页面内标签会回到首页。")) {
       return;
     }
 
@@ -2314,9 +2537,9 @@ export function HomePage({ data }: HomePageProps) {
 
     await persistLinks(nextLinks);
     if (activeGroupId === groupId) {
-      setActiveGroupId("");
+      setActiveGroupId(resolveHomeGroupId(nextLinks) || "");
     }
-    notify("分组已删除。", "success");
+    notify("页面已删除。", "success");
   }
 
   async function handleReorderVisibleTiles(sourceId: string, targetId: string) {
@@ -2639,7 +2862,6 @@ export function HomePage({ data }: HomePageProps) {
             pageGroups={currentPageGroups}
             activeGroupId={activeGroupId}
             editMode={editMode}
-            legacyUrl={data.legacyUrl}
             user={data.user}
             onOpenAuth={() => setAuthOpen(true)}
             onSelectGroup={setActiveGroupId}
@@ -2668,7 +2890,6 @@ export function HomePage({ data }: HomePageProps) {
               })
             )
           }
-          legacyUrl={data.legacyUrl}
           user={data.user}
           onOpenAuth={() => setAuthOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
@@ -2809,6 +3030,7 @@ export function HomePage({ data }: HomePageProps) {
                 searchRecommend={currentConfig.openType.searchRecommend}
                 searchLink={currentConfig.openType.searchLink}
                 quickLinks={tiles.filter((item) => item.type !== "pageGroup" && !item.pid)}
+                compactMode={compactMode}
               />
             ) : null}
           </section>
@@ -2916,6 +3138,7 @@ export function HomePage({ data }: HomePageProps) {
                           isDragging={isDragging}
                           isDropTarget={isDropTarget}
                           onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
+                          onLongPress={enterGlobalEditMode}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
                           onDrop={dragHandlers.onDrop}
@@ -2934,6 +3157,7 @@ export function HomePage({ data }: HomePageProps) {
                           isDropTarget={isDropTarget}
                           onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                           onClick={() => handleActionTileClick(item)}
+                          onLongPress={enterGlobalEditMode}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
                           onDrop={dragHandlers.onDrop}
@@ -2951,6 +3175,7 @@ export function HomePage({ data }: HomePageProps) {
                         isDragging={isDragging}
                         isDropTarget={isDropTarget}
                         onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
+                        onLongPress={enterGlobalEditMode}
                         onEdit={
                           canEditTile(item)
                             ? () => {
@@ -3107,8 +3332,14 @@ export function HomePage({ data }: HomePageProps) {
           site={data.site}
           saving={settingsSaving}
           loggedIn={Boolean(data.user)}
+          pageCount={Math.max(1, currentPageGroups.length + 1)}
           onClose={() => setSettingsOpen(false)}
           onSave={handleSaveSettings}
+          onOpenPageManager={() => {
+            setSettingsOpen(false);
+            setGroupManagerInitialId("");
+            setGroupManagerOpen(true);
+          }}
           onConfigChange={setCurrentConfig}
         />
         <AddLinkDialog
@@ -3129,16 +3360,21 @@ export function HomePage({ data }: HomePageProps) {
           onClose={() => setBackgroundOpen(false)}
           onApply={handleApplyBackground}
         />
-        <PageGroupManagerDialog
+        <PageManagerDialog
           open={groupManagerOpen}
           pageGroups={currentPageGroups}
-          initialGroupId={groupManagerInitialId}
+          activePageId={activeGroupId}
+          homePageId={homeGroupId}
+          initialPageId={groupManagerInitialId}
           onClose={() => {
             setGroupManagerOpen(false);
             setGroupManagerInitialId("");
           }}
           onSave={handleSaveGroup}
           onDelete={handleDeleteGroup}
+          onSelectPage={(pageId) => {
+            setActiveGroupId(pageId);
+          }}
         />
       </div>
     </div>

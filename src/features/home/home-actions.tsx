@@ -47,6 +47,9 @@ type ClassFolderIcon = {
 type CardImageItem = {
   thumbor: string;
   url: string;
+  name?: string;
+  fileName?: string;
+  isDefault?: boolean;
 };
 
 function normalizeUrl(value: string): string {
@@ -351,8 +354,13 @@ export function BackgroundDialog({
                   }
                   type="button"
                   onClick={() => applyBackground(item.url)}
+                  title={item.name || item.fileName || "壁纸"}
                 >
                   <img src={item.thumbor || item.url} alt="" />
+                  <span className={styles.actionGalleryMeta}>
+                    <span>{item.name || item.fileName || "壁纸"}</span>
+                    {item.isDefault ? <strong>默认</strong> : null}
+                  </span>
                 </button>
               ))}
             </div>
@@ -478,6 +486,17 @@ export function PageGroupManagerDialog({
               <button className={styles.actionPrimary} type="button" onClick={beginCreate}>
                 新建分组
               </button>
+            </div>
+            <div className={styles.groupManagerItem}>
+              <div className={styles.groupManagerMeta}>
+                <img src="/static/pageGroup/home.svg" alt="首页" />
+                <span>首页</span>
+              </div>
+              <div className={styles.groupManagerActions}>
+                <button className={styles.actionSecondary} type="button" disabled>
+                  默认页
+                </button>
+              </div>
             </div>
             {pageGroups.map((group) => (
               <div className={styles.groupManagerItem} key={group.id}>
