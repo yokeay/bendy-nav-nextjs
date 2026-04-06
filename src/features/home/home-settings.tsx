@@ -44,6 +44,13 @@ type RangeRowProps = {
   onChange: (value: number) => void;
 };
 
+type ColorRowProps = {
+  label: string;
+  description: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
 function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
   return (
     <div className={styles.settingRow}>
@@ -94,6 +101,25 @@ function RangeRow({
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
       />
+    </div>
+  );
+}
+
+function ColorRow({ label, description, value, onChange }: ColorRowProps) {
+  return (
+    <div className={styles.settingRow}>
+      <div className={styles.settingRowText}>
+        <p className={styles.settingRowTitle}>{label}</p>
+        <p className={styles.settingRowDescription}>{description}</p>
+      </div>
+      <label className={styles.settingColorField}>
+        <input
+          className={styles.settingColorInput}
+          type="color"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
     </div>
   );
 }
@@ -243,6 +269,32 @@ export function HomeSettingsDialog({
                     suffix="px"
                     onChange={(value) => updateThemeNumber("iconRadius", value)}
                   />
+                  <RangeRow
+                    label="卡片透明度"
+                    description="对应旧版 opacity。"
+                    min={20}
+                    max={100}
+                    value={config.theme.opacity}
+                    suffix="%"
+                    onChange={(value) => updateThemeNumber("opacity", value)}
+                  />
+                  <RangeRow
+                    label="列间距"
+                    description="对应旧版 colsGap。"
+                    min={8}
+                    max={56}
+                    value={config.theme.colsGap}
+                    suffix="px"
+                    onChange={(value) => updateThemeNumber("colsGap", value)}
+                  />
+                  <RangeRow
+                    label="最大列数"
+                    description="控制首页网格最大列数。"
+                    min={3}
+                    max={12}
+                    value={config.theme.maxColumn}
+                    onChange={(value) => updateThemeNumber("maxColumn", value)}
+                  />
                   <div className={styles.settingRowBlock}>
                     <div className={styles.settingRowText}>
                       <p className={styles.settingRowTitle}>主题模式</p>
@@ -284,6 +336,30 @@ export function HomeSettingsDialog({
                       </button>
                     </div>
                   </div>
+                  <ColorRow
+                    label="标签文字颜色"
+                    description="对应旧版 nameColor。"
+                    value={config.theme.nameColor}
+                    onChange={(value) => updateThemeString("nameColor", value)}
+                  />
+                  <ColorRow
+                    label="时间文字颜色"
+                    description="对应旧版 timeColor。"
+                    value={config.theme.timeColor}
+                    onChange={(value) => updateThemeString("timeColor", value)}
+                  />
+                  <ToggleRow
+                    label="显示图标底板"
+                    description="对应旧版 iconBg。"
+                    checked={config.theme.iconBg}
+                    onChange={(value) => updateThemeBoolean("iconBg", value)}
+                  />
+                  <ToggleRow
+                    label="显示标签名称"
+                    description="对应旧版 LinkTitle。"
+                    checked={config.theme.LinkTitle}
+                    onChange={(value) => updateThemeBoolean("LinkTitle", value)}
+                  />
                   <ToggleRow
                     label="显示分页栏"
                     description="控制侧边分页是否展示。"
@@ -295,6 +371,12 @@ export function HomeSettingsDialog({
                     description="桌面端启用边缘唤出效果。"
                     checked={config.theme.pageGroupStatus}
                     onChange={(value) => updateThemeBoolean("pageGroupStatus", value)}
+                  />
+                  <ToggleRow
+                    label="底部优先布局"
+                    description="对应旧版 bottom2top。"
+                    checked={config.theme.bottom2top}
+                    onChange={(value) => updateThemeBoolean("bottom2top", value)}
                   />
                   <ToggleRow
                     label="恢复上次页面"
@@ -423,6 +505,51 @@ export function HomeSettingsDialog({
                     description="编辑模式下显示底部移除区域。"
                     checked={config.theme.trash}
                     onChange={(value) => updateThemeBoolean("trash", value)}
+                  />
+                </section>
+                <section className={styles.controlSectionCard}>
+                  <h3 className={styles.controlSectionTitle}>时间组件</h3>
+                  <ToggleRow
+                    label="显示时间"
+                    description="对应旧版 timeView。"
+                    checked={config.theme.timeView}
+                    onChange={(value) => updateThemeBoolean("timeView", value)}
+                  />
+                  <ToggleRow
+                    label="24 小时制"
+                    description="对应旧版 time24。"
+                    checked={config.theme.time24}
+                    onChange={(value) => updateThemeBoolean("time24", value)}
+                  />
+                  <ToggleRow
+                    label="显示秒钟"
+                    description="对应旧版 timeSecond。"
+                    checked={config.theme.timeSecond}
+                    onChange={(value) => updateThemeBoolean("timeSecond", value)}
+                  />
+                  <ToggleRow
+                    label="显示月日"
+                    description="对应旧版 timeMonthDay。"
+                    checked={config.theme.timeMonthDay}
+                    onChange={(value) => updateThemeBoolean("timeMonthDay", value)}
+                  />
+                  <ToggleRow
+                    label="显示星期"
+                    description="对应旧版 timeWeek。"
+                    checked={config.theme.timeWeek}
+                    onChange={(value) => updateThemeBoolean("timeWeek", value)}
+                  />
+                  <ToggleRow
+                    label="显示农历"
+                    description="对应旧版 timeLunar。"
+                    checked={config.theme.timeLunar}
+                    onChange={(value) => updateThemeBoolean("timeLunar", value)}
+                  />
+                  <ToggleRow
+                    label="显示干支"
+                    description="对应旧版 timeGanZhi。"
+                    checked={config.theme.timeGanZhi}
+                    onChange={(value) => updateThemeBoolean("timeGanZhi", value)}
                   />
                 </section>
               </div>

@@ -69,6 +69,20 @@ function normalizeUrl(value: string): string {
   return `https://${trimmed}`;
 }
 
+function resolveSiteIconUrl(value: string) {
+  const normalized = normalizeUrl(value);
+  if (!normalized) {
+    return "";
+  }
+
+  try {
+    const target = new URL(normalized);
+    return `${target.origin}/favicon.ico`;
+  } catch {
+    return "";
+  }
+}
+
 function useFolderIcons(open: boolean) {
   const [folderIcons, setFolderIcons] = useState<ClassFolderIcon[]>([]);
 
@@ -102,6 +116,7 @@ export function AddLinkDialog({
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [icon, setIcon] = useState("");
+  const [customIconUrl, setCustomIconUrl] = useState("");
   const [bgColor, setBgColor] = useState("#ffffff");
   const [pageGroup, setPageGroup] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -111,6 +126,7 @@ export function AddLinkDialog({
       setName("");
       setUrl("");
       setIcon("");
+      setCustomIconUrl("");
       setBgColor("#ffffff");
       setPageGroup("");
       setSubmitting(false);
@@ -120,9 +136,19 @@ export function AddLinkDialog({
     setName(initialLink?.name ?? "");
     setUrl(initialLink?.url ?? "");
     setIcon(initialLink?.src ?? folderIcons[0]?.src ?? "");
+    setCustomIconUrl(initialLink?.src ?? "");
     setBgColor(initialLink?.bgColor ?? "#ffffff");
     setPageGroup(initialLink?.pageGroup ?? activeGroupId);
   }, [activeGroupId, folderIcons, initialLink, open]);
+
+  const resolvedIcon = useMemo(() => {
+    const normalizedCustomIcon = normalizeUrl(customIconUrl);
+    if (normalizedCustomIcon) {
+      return normalizedCustomIcon;
+    }
+
+    return icon || folderIcons[0]?.src || "/static/addIco.png";
+  }, [customIconUrl, folderIcons, icon]);
 
   async function handleSubmit() {
     if (submitting) {
@@ -141,7 +167,7 @@ export function AddLinkDialog({
         id: initialLink?.id,
         name: normalizedName,
         url: normalizedUrl,
-        src: icon || folderIcons[0]?.src || "/static/addIco.png",
+        src: resolvedIcon,
         bgColor,
         pageGroup
       });
@@ -189,6 +215,19 @@ export function AddLinkDialog({
             />
           </label>
 
+          <div className={styles.actionPreview}>
+            <span className={styles.actionPreviewLabel}>预览</span>
+            <div className={styles.actionPreviewCard}>
+              <span className={styles.actionPreviewSurface} style={{ backgroundColor: bgColor }}>
+                <img src={resolvedIcon} alt="" />
+              </span>
+              <div className={styles.actionPreviewMeta}>
+                <strong>{name.trim() || "未命名标签"}</strong>
+                <span>{normalizeUrl(url) || "未设置跳转地址"}</span>
+              </div>
+            </div>
+          </div>
+
           <label className={styles.actionLabel}>
             <span>归属分组</span>
             <select
@@ -215,6 +254,26 @@ export function AddLinkDialog({
             />
           </label>
 
+          <label className={styles.actionLabel}>
+            <span>图标地址</span>
+            <div className={styles.actionInline}>
+              <input
+                className={styles.actionInput}
+                value={customIconUrl}
+                onChange={(event) => setCustomIconUrl(event.target.value)}
+                placeholder="https://example.com/favicon.ico"
+              />
+              <button
+                className={styles.actionSecondary}
+                type="button"
+                onClick={() => setCustomIconUrl(resolveSiteIconUrl(url))}
+                disabled={!normalizeUrl(url)}
+              >
+                使用站点图标
+              </button>
+            </div>
+          </label>
+
           {folderIcons.length > 0 ? (
             <div className={styles.actionLabel}>
               <span>选择图标</span>
@@ -223,13 +282,16 @@ export function AddLinkDialog({
                   <button
                     key={item.src}
                     className={
-                      icon === item.src
+                      !normalizeUrl(customIconUrl) && icon === item.src
                         ? `${styles.actionIcon} ${styles.actionIconActive}`
                         : styles.actionIcon
                     }
                     type="button"
                     title={item.name}
-                    onClick={() => setIcon(item.src)}
+                    onClick={() => {
+                      setIcon(item.src);
+                      setCustomIconUrl("");
+                    }}
                   >
                     <img src={item.src} alt={item.name} />
                   </button>
