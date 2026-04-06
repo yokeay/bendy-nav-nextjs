@@ -1,5 +1,32 @@
 # Plan
 
+## 2.4.37 Focus
+
+- [x] Reconnect `pageGroupPosition` to the Next.js home sidebar so the side rail can actually switch left/right.
+- [x] Reorder settings fields toward the legacy home controller, especially `Dock / 侧栏`, wallpaper opacity, and time field order.
+- [x] Restore `opacity` to the wallpaper mask semantics instead of the broken 0-100 pseudo card opacity slider.
+- [x] Reconnect `sideBackground` to the sidebar style and settings entry.
+- [ ] Continue closing the remaining gaps around `LinkTitle` and exact per-field parity with `latest/mtab`.
+
+## 2.4.36 Focus
+
+- [x] 清理 `home-actions.tsx` 中遗留的旧添加/编辑弹层实现，确保 `home-link-editor-dialog.tsx` 成为唯一生效入口。
+- [x] 给壁纸库和页面图标选择器的旧接口读取补上数组兜底，避免异常响应直接打断弹层渲染。
+- [ ] 继续对齐设置页字段顺序，与 `latest/mtab` 逐项收口。
+
+## 2.4.35 Focus
+
+- [x] Tighten add/edit dialog tab bar, form gaps, and select styling toward `mtab custom`.
+- [x] Continue refining settings center control textures and row density.
+- [ ] Keep closing the gap on exact settings field order and removal of legacy add-dialog implementation.
+
+## 2.4.34 Focus
+
+- [x] Reset settings center to `个人中心` each time it opens.
+- [x] Compress settings rows into `mtab`-like white 45px control rows with lighter hierarchy.
+- [x] Tighten menu/user card hover, switch, range, and action-row details toward the `mtab` / macOS feel.
+- [ ] Continue closing the gap on settings field order and add/edit dialog pixel parity.
+
 ## 2.4.33 Focus
 
 - [x] Merge `添加标签 / 推荐标签 / 添加卡片` into one dialog.
@@ -7,7 +34,7 @@
 - [x] Reconnect add-tag flow to `LinkStore/list`, `LinkStore/getIcon`, and `LinkStore/push`.
 - [ ] Keep tightening add/edit dialog density, icon picker spacing, and settings-page parity with `latest/mtab`.
 
-当前版本：`2.4.32`
+当前版本：`2.4.37`
 
 ## 总目标
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HomeConfig, HomeSiteInfo } from "@/server/home/types";
 import iconStyles from "./home-settings-icons.module.css";
 import styles from "./home-page.module.css";
@@ -37,6 +37,7 @@ type ToggleRowProps = {
   description: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  showDescription?: boolean;
 };
 
 type RangeRowProps = {
@@ -47,7 +48,9 @@ type RangeRowProps = {
   step?: number;
   value: number;
   suffix?: string;
+  displayValue?: string;
   onChange: (value: number) => void;
+  showDescription?: boolean;
 };
 
 type ColorRowProps = {
@@ -55,6 +58,7 @@ type ColorRowProps = {
   description: string;
   value: string;
   onChange: (value: string) => void;
+  showDescription?: boolean;
 };
 
 type ActionRowProps = {
@@ -64,6 +68,7 @@ type ActionRowProps = {
   onClick: () => void;
   danger?: boolean;
   iconClassName?: string;
+  showDescription?: boolean;
 };
 
 const SECTION_OPTIONS: Array<{ id: SettingsSection; label: string; iconClassName: string }> = [
@@ -75,12 +80,12 @@ const SECTION_OPTIONS: Array<{ id: SettingsSection; label: string; iconClassName
   { id: "about", label: "关于我们", iconClassName: iconStyles.glyphAbout }
 ];
 
-function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
+function ToggleRow({ label, description, checked, onChange, showDescription = false }: ToggleRowProps) {
   return (
     <div className={styles.settingRow}>
       <div className={styles.settingRowText}>
         <p className={styles.settingRowTitle}>{label}</p>
-        <p className={styles.settingRowDescription}>{description}</p>
+        {showDescription ? <p className={styles.settingRowDescription}>{description}</p> : null}
       </div>
       <button
         className={checked ? `${styles.settingSwitch} ${styles.settingSwitchOn}` : styles.settingSwitch}
@@ -102,19 +107,18 @@ function RangeRow({
   step = 1,
   value,
   suffix = "",
-  onChange
+  displayValue,
+  onChange,
+  showDescription = false
 }: RangeRowProps) {
   return (
     <div className={styles.settingRowBlock}>
       <div className={styles.settingRowText}>
         <p className={styles.settingRowTitle}>{label}</p>
-        <p className={styles.settingRowDescription}>{description}</p>
+        {showDescription ? <p className={styles.settingRowDescription}>{description}</p> : null}
       </div>
       <div className={styles.settingRangeMeta}>
-        <span>
-          {value}
-          {suffix}
-        </span>
+        <span>{displayValue ?? `${value}${suffix}`}</span>
       </div>
       <input
         className={styles.settingRange}
@@ -129,12 +133,12 @@ function RangeRow({
   );
 }
 
-function ColorRow({ label, description, value, onChange }: ColorRowProps) {
+function ColorRow({ label, description, value, onChange, showDescription = false }: ColorRowProps) {
   return (
     <div className={styles.settingRow}>
       <div className={styles.settingRowText}>
         <p className={styles.settingRowTitle}>{label}</p>
-        <p className={styles.settingRowDescription}>{description}</p>
+        {showDescription ? <p className={styles.settingRowDescription}>{description}</p> : null}
       </div>
       <label className={styles.settingColorField}>
         <input
@@ -148,7 +152,15 @@ function ColorRow({ label, description, value, onChange }: ColorRowProps) {
   );
 }
 
-function ActionRow({ label, description, actionLabel, onClick, danger = false, iconClassName }: ActionRowProps) {
+function ActionRow({
+  label,
+  description,
+  actionLabel,
+  onClick,
+  danger = false,
+  iconClassName,
+  showDescription = false
+}: ActionRowProps) {
   return (
     <div className={styles.controlActionRow}>
       <div className={styles.controlActionMeta}>
@@ -156,7 +168,7 @@ function ActionRow({ label, description, actionLabel, onClick, danger = false, i
           {iconClassName ? <span className={`${iconStyles.glyph} ${iconClassName} ${styles.controlActionGlyph}`} /> : null}
           {label}
         </p>
-        <p className={styles.settingRowDescription}>{description}</p>
+        {showDescription ? <p className={styles.settingRowDescription}>{description}</p> : null}
       </div>
       <button
         className={danger ? `${styles.controlActionButton} ${styles.controlActionButtonDanger}` : styles.controlActionButton}
@@ -208,6 +220,12 @@ export function HomeSettingsDialog({
 }: HomeSettingsDialogProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("profile");
 
+  useEffect(() => {
+    if (open) {
+      setActiveSection("profile");
+    }
+  }, [open]);
+
   const sideClassName = useMemo(
     () =>
       config.theme.userCenterPosition === "right"
@@ -234,6 +252,19 @@ export function HomeSettingsDialog({
 
   const updateThemeString = (key: keyof HomeConfig["theme"], value: string) => {
     onConfigChange(mergeSectionValue(config, "theme", key, value));
+  };
+
+  const dockMode = !config.theme.tabbar ? "off" : config.theme.tabbarMode ? "independent" : "linked";
+
+  const setDockMode = (mode: "off" | "linked" | "independent") => {
+    onConfigChange({
+      ...config,
+      theme: {
+        ...config.theme,
+        tabbar: mode !== "off",
+        tabbarMode: mode === "independent"
+      }
+    });
   };
 
   return (
@@ -353,6 +384,12 @@ export function HomeSettingsDialog({
                     onChange={(value) => updateOpenType("searchRecommend", value)}
                   />
                   <ToggleRow
+                    label="图标快捷搜索展示"
+                    description="控制搜索面板中的本地图标搜索结果。"
+                    checked={config.openType.searchLink}
+                    onChange={(value) => updateOpenType("searchLink", value)}
+                  />
+                  <ToggleRow
                     label="搜索功能"
                     description="控制首页搜索框显隐。"
                     checked={config.openType.searchStatus}
@@ -364,12 +401,6 @@ export function HomeSettingsDialog({
                     checked={searchHistoryEnabled}
                     onChange={onSearchHistoryChange}
                   />
-                  <ToggleRow
-                    label="图标快捷搜索展示"
-                    description="控制搜索面板中的本地图标搜索结果。"
-                    checked={config.openType.searchLink}
-                    onChange={(value) => updateOpenType("searchLink", value)}
-                  />
                 </section>
               </div>
             ) : null}
@@ -377,12 +408,146 @@ export function HomeSettingsDialog({
             {activeSection === "tags" ? (
               <div className={styles.controlSectionStack}>
                 <section className={styles.controlSectionCard}>
-                  <h3 className={styles.controlSectionTitle}>主题标签</h3>
+                  <h3 className={styles.controlSectionTitle}>Dock / 侧栏</h3>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>开启 Dock 栏</p>
+                    </div>
+                    <div className={styles.segmented}>
+                      <button
+                        className={dockMode === "off" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
+                        type="button"
+                        onClick={() => setDockMode("off")}
+                      >
+                        关闭
+                      </button>
+                      <button
+                        className={dockMode === "linked" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
+                        type="button"
+                        onClick={() => setDockMode("linked")}
+                      >
+                        联动
+                      </button>
+                      <button
+                        className={
+                          dockMode === "independent" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => setDockMode("independent")}
+                      >
+                        独立
+                      </button>
+                    </div>
+                  </div>
+                  <ColorRow
+                    label="Dock / 侧边背景色"
+                    description="对应旧版 sideBackground。"
+                    value={config.theme.sideBackground}
+                    onChange={(value) => updateThemeString("sideBackground", value)}
+                  />
+                  <ToggleRow
+                    label="侧栏开关"
+                    description="控制页面侧栏是否展示。"
+                    checked={config.theme.pageGroup}
+                    onChange={(value) => updateThemeBoolean("pageGroup", value)}
+                  />
+                  <ToggleRow
+                    label="侧栏自动隐藏"
+                    description="桌面端启用边缘唤出效果。"
+                    checked={config.theme.pageGroupStatus}
+                    onChange={(value) => updateThemeBoolean("pageGroupStatus", value)}
+                  />
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>侧栏位置</p>
+                    </div>
+                    <div className={styles.segmented}>
+                      <button
+                        className={
+                          config.theme.pageGroupPosition === "left"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("pageGroupPosition", "left")}
+                      >
+                        左侧
+                      </button>
+                      <button
+                        className={
+                          config.theme.pageGroupPosition === "right"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("pageGroupPosition", "right")}
+                      >
+                        右侧
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>个人中心位置</p>
+                    </div>
+                    <div className={styles.segmented}>
+                      <button
+                        className={
+                          config.theme.userCenterPosition === "left"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("userCenterPosition", "left")}
+                      >
+                        左侧
+                      </button>
+                      <button
+                        className={
+                          config.theme.userCenterPosition === "right"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("userCenterPosition", "right")}
+                      >
+                        右侧
+                      </button>
+                    </div>
+                  </div>
+                  <ToggleRow
+                    label="进入时恢复上次页面"
+                    description="开启后优先恢复上次停留的页面。"
+                    checked={config.theme.latestPageGroup}
+                    onChange={(value) => updateThemeBoolean("latestPageGroup", value)}
+                  />
+                  <ToggleRow
+                    label="最后一页继续滚动回到首页"
+                    description="对应旧版 bottom2top。"
+                    checked={config.theme.bottom2top}
+                    onChange={(value) => updateThemeBoolean("bottom2top", value)}
+                  />
+                </section>
+
+                <section className={styles.controlSectionCard}>
+                  <h3 className={styles.controlSectionTitle}>图标和字体</h3>
+                  <ColorRow
+                    label="图标字体颜色"
+                    description="对应旧版 nameColor。"
+                    value={config.theme.nameColor}
+                    onChange={(value) => updateThemeString("nameColor", value)}
+                  />
+                  <ToggleRow
+                    label="图标背景"
+                    description="对应旧版 iconBg。"
+                    checked={config.theme.iconBg}
+                    onChange={(value) => updateThemeBoolean("iconBg", value)}
+                  />
                   <RangeRow
-                    label="图标尺寸"
+                    label="图标大小"
                     description="对应旧版 iconWidth。"
-                    min={48}
-                    max={96}
+                    min={60}
+                    max={80}
                     value={config.theme.iconWidth}
                     suffix="px"
                     onChange={(value) => updateThemeNumber("iconWidth", value)}
@@ -390,67 +555,35 @@ export function HomeSettingsDialog({
                   <RangeRow
                     label="图标圆角"
                     description="对应旧版 iconRadius。"
-                    min={4}
-                    max={28}
+                    min={6}
+                    max={20}
                     value={config.theme.iconRadius}
                     suffix="px"
                     onChange={(value) => updateThemeNumber("iconRadius", value)}
                   />
                   <RangeRow
-                    label="卡片透明度"
-                    description="对应旧版 opacity。"
-                    min={0}
-                    max={100}
-                    value={config.theme.opacity}
-                    suffix="%"
-                    onChange={(value) => updateThemeNumber("opacity", value)}
-                  />
-                  <RangeRow
-                    label="列间距"
+                    label="图标列距"
                     description="对应旧版 colsGap。"
-                    min={8}
-                    max={56}
+                    min={25}
+                    max={40}
                     value={config.theme.colsGap}
                     suffix="px"
                     onChange={(value) => updateThemeNumber("colsGap", value)}
                   />
                   <RangeRow
-                    label="最大列数"
+                    label="图标最大列数"
                     description="控制首页网格最大列数。"
-                    min={3}
-                    max={12}
+                    min={4}
+                    max={16}
+                    step={2}
                     value={config.theme.maxColumn}
                     onChange={(value) => updateThemeNumber("maxColumn", value)}
-                  />
-                  <ColorRow
-                    label="标签文字颜色"
-                    description="对应旧版 nameColor。"
-                    value={config.theme.nameColor}
-                    onChange={(value) => updateThemeString("nameColor", value)}
-                  />
-                  <ToggleRow
-                    label="显示图标底板"
-                    description="对应旧版 iconBg。"
-                    checked={config.theme.iconBg}
-                    onChange={(value) => updateThemeBoolean("iconBg", value)}
                   />
                   <ToggleRow
                     label="显示标签名称"
                     description="对应旧版 LinkTitle。"
                     checked={config.theme.LinkTitle}
                     onChange={(value) => updateThemeBoolean("LinkTitle", value)}
-                  />
-                  <ToggleRow
-                    label="显示分页栏"
-                    description="控制侧边分页是否展示。"
-                    checked={config.theme.pageGroup}
-                    onChange={(value) => updateThemeBoolean("pageGroup", value)}
-                  />
-                  <ToggleRow
-                    label="自动隐藏分页栏"
-                    description="桌面端启用边缘唤出效果。"
-                    checked={config.theme.pageGroupStatus}
-                    onChange={(value) => updateThemeBoolean("pageGroupStatus", value)}
                   />
                 </section>
               </div>
@@ -467,13 +600,23 @@ export function HomeSettingsDialog({
                     onClick={onOpenBackground}
                   />
                   <RangeRow
-                    label="背景模糊"
+                    label="背景模糊值"
                     description="对应旧版 blur。"
                     min={0}
-                    max={40}
+                    max={20}
                     value={config.theme.blur}
                     suffix="px"
                     onChange={(value) => updateThemeNumber("blur", value)}
+                  />
+                  <RangeRow
+                    label="遮罩透明度"
+                    description="对应旧版 opacity。"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={config.theme.opacity}
+                    displayValue={`${Math.round(config.theme.opacity * 100)}%`}
+                    onChange={(value) => updateThemeNumber("opacity", value)}
                   />
                   <div className={styles.settingRowBlock}>
                     <div className={styles.settingRowText}>
@@ -516,42 +659,6 @@ export function HomeSettingsDialog({
                       </button>
                     </div>
                   </div>
-                  <div className={styles.settingRowBlock}>
-                    <div className={styles.settingRowText}>
-                      <p className={styles.settingRowTitle}>控制中心位置</p>
-                      <p className={styles.settingRowDescription}>控制设置中心从左下角还是右下角弹出。</p>
-                    </div>
-                    <div className={styles.segmented}>
-                      <button
-                        className={
-                          config.theme.userCenterPosition === "left"
-                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
-                            : styles.segmentedItem
-                        }
-                        type="button"
-                        onClick={() => updateThemeString("userCenterPosition", "left")}
-                      >
-                        左下
-                      </button>
-                      <button
-                        className={
-                          config.theme.userCenterPosition === "right"
-                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
-                            : styles.segmentedItem
-                        }
-                        type="button"
-                        onClick={() => updateThemeString("userCenterPosition", "right")}
-                      >
-                        右下
-                      </button>
-                    </div>
-                  </div>
-                  <ToggleRow
-                    label="底部优先布局"
-                    description="对应旧版 bottom2top。"
-                    checked={config.theme.bottom2top}
-                    onChange={(value) => updateThemeBoolean("bottom2top", value)}
-                  />
                 </section>
               </div>
             ) : null}
@@ -560,12 +667,6 @@ export function HomeSettingsDialog({
               <div className={styles.controlSectionStack}>
                 <section className={styles.controlSectionCard}>
                   <h3 className={styles.controlSectionTitle}>时间日期</h3>
-                  <ColorRow
-                    label="时间文字颜色"
-                    description="对应旧版 timeColor。"
-                    value={config.theme.timeColor}
-                    onChange={(value) => updateThemeString("timeColor", value)}
-                  />
                   <ToggleRow
                     label="显示时间"
                     description="对应旧版 timeView。"
@@ -573,19 +674,7 @@ export function HomeSettingsDialog({
                     onChange={(value) => updateThemeBoolean("timeView", value)}
                   />
                   <ToggleRow
-                    label="24 小时制"
-                    description="对应旧版 time24。"
-                    checked={config.theme.time24}
-                    onChange={(value) => updateThemeBoolean("time24", value)}
-                  />
-                  <ToggleRow
-                    label="显示秒钟"
-                    description="对应旧版 timeSecond。"
-                    checked={config.theme.timeSecond}
-                    onChange={(value) => updateThemeBoolean("timeSecond", value)}
-                  />
-                  <ToggleRow
-                    label="显示月日"
+                    label="显示年月"
                     description="对应旧版 timeMonthDay。"
                     checked={config.theme.timeMonthDay}
                     onChange={(value) => updateThemeBoolean("timeMonthDay", value)}
@@ -603,10 +692,28 @@ export function HomeSettingsDialog({
                     onChange={(value) => updateThemeBoolean("timeLunar", value)}
                   />
                   <ToggleRow
+                    label="24 小时制"
+                    description="对应旧版 time24。"
+                    checked={config.theme.time24}
+                    onChange={(value) => updateThemeBoolean("time24", value)}
+                  />
+                  <ToggleRow
+                    label="显示秒钟"
+                    description="对应旧版 timeSecond。"
+                    checked={config.theme.timeSecond}
+                    onChange={(value) => updateThemeBoolean("timeSecond", value)}
+                  />
+                  <ToggleRow
                     label="显示干支"
                     description="对应旧版 timeGanZhi。"
                     checked={config.theme.timeGanZhi}
                     onChange={(value) => updateThemeBoolean("timeGanZhi", value)}
+                  />
+                  <ColorRow
+                    label="日期字体颜色"
+                    description="对应旧版 timeColor。"
+                    value={config.theme.timeColor}
+                    onChange={(value) => updateThemeString("timeColor", value)}
                   />
                 </section>
               </div>
@@ -621,24 +728,6 @@ export function HomeSettingsDialog({
                     description={`当前已有 ${pageCount} 个页面，可继续新增和调整排序。`}
                     actionLabel="打开"
                     onClick={onOpenPageManager}
-                  />
-                  <ToggleRow
-                    label="恢复上次页面"
-                    description="开启后优先恢复上次停留的页面。"
-                    checked={config.theme.latestPageGroup}
-                    onChange={(value) => updateThemeBoolean("latestPageGroup", value)}
-                  />
-                  <ToggleRow
-                    label="显示底部 Dock"
-                    description="保留旧版底部快捷栏。"
-                    checked={config.theme.tabbar}
-                    onChange={(value) => updateThemeBoolean("tabbar", value)}
-                  />
-                  <ToggleRow
-                    label="简洁模式显示 Dock"
-                    description="对应旧版 tabbarMode。"
-                    checked={config.theme.tabbarMode}
-                    onChange={(value) => updateThemeBoolean("tabbarMode", value)}
                   />
                   <ToggleRow
                     label="显示垃圾桶"

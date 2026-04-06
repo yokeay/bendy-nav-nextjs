@@ -43,6 +43,7 @@ export type HomeTheme = {
   iconRadius: number;
   CompactMode: boolean;
   nameColor: string;
+  sideBackground: string;
   opacity: number;
   colsGap: number;
   pageGroup: boolean;

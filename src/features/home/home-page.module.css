@@ -7,6 +7,7 @@
   --icon-size: 60px;
   --icon-radius: 10px;
   --name-color: #fff;
+  --sidebar-background: rgba(46, 46, 46, 0.4);
 }
 
 .pageThemeAuto {
@@ -46,9 +47,30 @@
   color: rgba(244, 247, 251, 0.74);
 }
 
+.pageThemeDark .controlMenuItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
 .pageThemeDark .controlMenuItemActive {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+
+.pageThemeDark .controlUserCard {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pageThemeDark .controlUserCard:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pageThemeDark .controlUserCardMeta strong {
+  color: #f4f7fb;
+}
+
+.pageThemeDark .controlUserCardMeta span {
+  color: rgba(244, 247, 251, 0.68);
 }
 
 .pageThemeDark .controlBox,
@@ -69,6 +91,29 @@
 
 .pageThemeDark .settingRowDescription {
   color: rgba(244, 247, 251, 0.68);
+}
+
+.pageThemeDark .settingRow,
+.pageThemeDark .settingRowBlock,
+.pageThemeDark .controlActionRow,
+.pageThemeDark .settingHistoryItem,
+.pageThemeDark .settingHistoryEmpty {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pageThemeDark .settingRow:hover,
+.pageThemeDark .controlActionRow:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pageThemeDark .settingSwitch,
+.pageThemeDark .settingColorField {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pageThemeDark .controlActionButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
 }
 
 .pageThemeDark .controlFooterSecondary {
@@ -112,9 +157,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, rgba(22, 30, 42, 0.48), rgba(22, 30, 42, 0.28));
+  background: linear-gradient(180deg, var(--sidebar-background), rgba(22, 30, 42, 0.22));
   backdrop-filter: blur(18px);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebarRight {
+  left: auto;
+  right: 0;
+  border-right: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .sidebarGroup {
@@ -182,6 +234,11 @@
   display: flex;
   gap: 6px;
   z-index: 2;
+}
+
+.sidebarRight .sidebarRowControls {
+  right: auto;
+  left: 4px;
 }
 
 .sidebarRowButton,
@@ -263,6 +320,10 @@
   align-items: center;
   gap: 10px;
   z-index: 30;
+}
+
+.toolbarWithSidebarRight {
+  right: 70px;
 }
 
 .toolbar > a {
@@ -447,6 +508,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.mainSidebarRight {
+  margin-left: 0;
+  margin-right: 55px;
 }
 
 .hero {
@@ -1778,11 +1844,11 @@
 
 .actionModeCard,
 .actionModeCardActive {
-  width: 74px;
-  height: 74px;
+  width: 64px;
+  height: 64px;
   padding: 0;
   border: none;
-  border-radius: 16px;
+  border-radius: 14px;
   background: transparent;
   cursor: pointer;
 }
@@ -1796,7 +1862,7 @@
   height: 100%;
   display: grid;
   place-items: center;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   font-size: 20px;
   font-weight: 700;
@@ -1891,6 +1957,10 @@
   margin-top: 16px;
   display: inline-flex;
   gap: 8px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .addCardList {
@@ -2095,7 +2165,7 @@
 .linkEditorDialog {
   width: min(980px, calc(100vw - 32px));
   max-height: min(820px, calc(100vh - 32px));
-  padding: 24px;
+  padding: 22px;
   border-radius: 28px;
   background: rgba(17, 26, 40, 0.94);
   box-shadow:
@@ -2108,13 +2178,13 @@
   margin-top: 18px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 24px;
+  gap: 20px;
   align-items: start;
 }
 
 .linkEditorForm {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .linkEditorSidebar {
@@ -2186,12 +2256,12 @@
 .editorRow {
   display: grid;
   grid-template-columns: 88px minmax(0, 1fr);
-  gap: 16px;
+  gap: 14px;
   align-items: start;
 }
 
 .editorLabel {
-  padding-top: 12px;
+  padding-top: 11px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.7);
 }
@@ -2229,6 +2299,16 @@
   color: #fff;
   outline: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.68) 50%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.68) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) calc(50% - 2px),
+    calc(100% - 14px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
 }
 
 .actionInputLight::placeholder {
@@ -2321,7 +2401,7 @@
 .recommendItem {
   display: grid;
   gap: 14px;
-  padding: 16px;
+  padding: 15px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.05);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -2521,7 +2601,7 @@
   align-items: center;
   gap: 10px;
   margin: 16px 15px 8px;
-  padding: 12px;
+  padding: 10px 12px;
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 0 10px rgba(172, 172, 172, 0.08);
@@ -2529,6 +2609,16 @@
   width: calc(100% - 30px);
   cursor: pointer;
   text-align: left;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.controlUserCard:hover {
+  background: #fffdfb;
+  box-shadow: 0 10px 18px rgba(172, 172, 172, 0.12);
+  transform: translateY(-1px);
 }
 
 .controlUserCardActive {
@@ -2543,10 +2633,11 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: #111;
+  background: linear-gradient(135deg, #ffb04d, #ff7f18 68%, #ff6412);
   color: #fff;
   font-size: 18px;
   font-weight: 700;
+  box-shadow: 0 10px 20px rgba(255, 136, 36, 0.24);
 }
 
 .controlUserCardMeta {
@@ -2622,6 +2713,11 @@
   color: #6c6c6c;
 }
 
+.controlMenuItem:hover {
+  background: rgba(255, 255, 255, 0.72);
+  color: #1f2328;
+}
+
 .controlMenuItemActive {
   background: #fff;
   color: #000;
@@ -2660,13 +2756,13 @@
 
 .controlSectionStack {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   padding-right: 10px;
 }
 
 .controlSectionCard {
   position: relative;
-  padding: 20px;
+  padding: 16px;
   border-radius: 10px;
   background: #fff;
   color: #3a3a3c;
@@ -2676,7 +2772,7 @@
   display: grid;
   justify-items: center;
   gap: 14px;
-  padding: 18px 0 24px;
+  padding: 20px 0 18px;
 }
 
 .controlHeroLogo {
@@ -2707,6 +2803,7 @@
   background: #4f9df7;
   color: #fff;
   cursor: pointer;
+  box-shadow: 0 12px 24px rgba(79, 157, 247, 0.24);
 }
 
 .controlActionRow {
@@ -2714,8 +2811,20 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 0;
-  border-top: 1px solid #ececec;
+  min-height: 45px;
+  padding: 0 12px;
+  border-top: none;
+  border-radius: 8px;
+  background: #fff;
+  transition: background-color 180ms ease;
+}
+
+.controlActionRow:hover {
+  background: #f8f8f8;
+}
+
+.controlActionRow + .controlActionRow {
+  margin-top: 10px;
 }
 
 .controlActionMeta {
@@ -2723,26 +2832,39 @@
 }
 
 .controlActionButton {
-  min-width: 120px;
-  min-height: 38px;
-  padding: 0 14px;
+  min-width: 84px;
+  min-height: 30px;
+  padding: 0 8px;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  background: #f1f1f1;
-  color: #3a3a3c;
+  gap: 8px;
+  background: transparent;
+  color: #70757f;
   cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.controlActionButton:hover {
+  background: rgba(79, 157, 247, 0.1);
+  color: #2f3542;
 }
 
 .controlActionButtonDanger {
-  background: rgba(164, 33, 55, 0.12);
+  background: transparent;
   color: #a42137;
 }
 
 .controlActionArrow {
+  font-size: 0;
+}
+
+.controlActionArrow::before {
+  content: "›";
   font-size: 18px;
   line-height: 1;
 }
@@ -2788,8 +2910,8 @@
 }
 
 .controlSectionTitle {
-  margin: 0 0 12px;
-  font-size: 16px;
+  margin: 0 0 10px;
+  font-size: 15px;
   font-weight: 600;
   color: #373737;
 }
@@ -2978,25 +3100,33 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 45px;
+  padding: 0 12px;
+  border-top: none;
+  border-radius: 8px;
+  background: #fff;
+  transition: background-color 180ms ease;
+}
+
+.settingRow:hover {
+  background: #f8f8f8;
 }
 
 .settingRow:first-of-type {
-  border-top: none;
   padding-top: 0;
 }
 
 .settingRowBlock {
   display: grid;
   gap: 10px;
-  padding: 14px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px;
+  border-top: none;
+  border-radius: 8px;
+  background: #fff;
 }
 
 .settingRowBlock:first-of-type {
-  border-top: none;
-  padding-top: 0;
+  padding-top: 12px;
 }
 
 .settingRowText {
@@ -3023,7 +3153,7 @@
   padding: 3px;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: #e4e6eb;
   cursor: pointer;
 }
 
@@ -3049,11 +3179,13 @@
   display: flex;
   justify-content: flex-end;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+  color: #8e8e94;
 }
 
 .settingRange {
   width: 100%;
+  accent-color: #007aff;
+  cursor: pointer;
 }
 
 .settingColorField {
@@ -3061,7 +3193,7 @@
   height: 30px;
   padding: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: #e4e6eb;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3154,6 +3286,11 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
+  .sidebarRight {
+    left: auto;
+    right: 12px;
+  }
+
   .sidebarGroup {
     width: auto;
     flex-direction: row;
@@ -3168,6 +3305,14 @@
   .main {
     margin-left: 0;
     padding: 92px 18px 154px;
+  }
+
+  .mainSidebarRight {
+    margin-right: 0;
+  }
+
+  .toolbarWithSidebarRight {
+    right: 15px;
   }
 
   .recordBar {

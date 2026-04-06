@@ -570,6 +570,7 @@ function Sidebar({
   data,
   pageGroups,
   activeGroupId,
+  position,
   editMode,
   user,
   onOpenAuth,
@@ -583,6 +584,7 @@ function Sidebar({
   data: HomeData;
   pageGroups: HomeLink[];
   activeGroupId: string;
+  position: "left" | "right";
   editMode: boolean;
   user: HomeData["user"];
   onOpenAuth: () => void;
@@ -599,7 +601,7 @@ function Sidebar({
   });
 
   return (
-    <aside className={styles.sidebar}>
+    <aside className={position === "right" ? `${styles.sidebar} ${styles.sidebarRight}` : styles.sidebar}>
       <div className={styles.sidebarGroup}>
         <div className={styles.sidebarProfile}>
           {user ? (
@@ -689,6 +691,7 @@ function Sidebar({
 function Toolbar({
   compactMode,
   editMode,
+  sidebarOnRight,
   onToggleCompact,
   user,
   onOpenAuth,
@@ -698,6 +701,7 @@ function Toolbar({
 }: {
   compactMode: boolean;
   editMode: boolean;
+  sidebarOnRight: boolean;
   onToggleCompact: () => void;
   user: HomeData["user"];
   onOpenAuth: () => void;
@@ -724,6 +728,7 @@ function Toolbar({
     <div
       className={[
         styles.toolbar,
+        sidebarOnRight ? styles.toolbarWithSidebarRight : "",
         compactMode ? styles.toolbarCompact : "",
         editMode ? styles.toolbarEditing : styles.toolbarIdle
       ]
@@ -3304,6 +3309,7 @@ export function HomePage({ data }: HomePageProps) {
     "--icon-size": `${currentConfig.theme.iconWidth}px`,
     "--icon-radius": `${currentConfig.theme.iconRadius}px`,
     "--name-color": currentConfig.theme.nameColor,
+    "--sidebar-background": currentConfig.theme.sideBackground,
     "--grid-gap": `${currentConfig.theme.colsGap}px`
   } as CSSProperties;
   const themeModeClassName =
@@ -3312,6 +3318,9 @@ export function HomePage({ data }: HomePageProps) {
       : currentConfig.theme.themeMode === "light"
         ? styles.pageThemeLight
         : styles.pageThemeAuto;
+  const sidebarVisible = !compactMode && currentConfig.theme.pageGroup;
+  const sidebarOnRight = sidebarVisible && currentConfig.theme.pageGroupPosition === "right";
+  const mainClassName = sidebarOnRight ? `${styles.main} ${styles.mainSidebarRight}` : styles.main;
 
   return (
     <div className={`${styles.page} ${themeModeClassName}`} style={cssVariables}>
@@ -3322,6 +3331,7 @@ export function HomePage({ data }: HomePageProps) {
           filter: `blur(${currentConfig.theme.blur}px)`
         }}
       />
+      <div className={styles.scrim} style={{ backgroundColor: `rgba(4, 9, 18, ${currentConfig.theme.opacity})` }} />
       <input
         ref={importBackupInputRef}
         type="file"
@@ -3336,15 +3346,14 @@ export function HomePage({ data }: HomePageProps) {
           event.currentTarget.value = "";
         }}
       />
-      <div className={styles.scrim} />
-
       <div className={styles.shell}>
         <HomeToastViewport items={toasts} onDismiss={dismissToast} />
-        {!compactMode ? (
+        {sidebarVisible ? (
           <Sidebar
             data={{ ...data, pageGroups: currentPageGroups }}
             pageGroups={currentPageGroups}
             activeGroupId={activeGroupId}
+            position={currentConfig.theme.pageGroupPosition}
             editMode={editMode}
             user={data.user}
             onOpenAuth={() => setAuthOpen(true)}
@@ -3365,6 +3374,7 @@ export function HomePage({ data }: HomePageProps) {
         <Toolbar
           compactMode={compactMode}
           editMode={editMode}
+          sidebarOnRight={sidebarOnRight}
           onToggleCompact={() =>
             setCurrentConfig((config) =>
               mergeHomeConfig(config, {
@@ -3497,7 +3507,7 @@ export function HomePage({ data }: HomePageProps) {
           }
         />
 
-        <main className={styles.main} onContextMenu={handleMainContextMenu}>
+        <main className={mainClassName} onContextMenu={handleMainContextMenu}>
           <section className={compactMode ? `${styles.hero} ${styles.heroCompact}` : styles.hero}>
             {noticeOpen && data.notice ? (
               <NoticeBanner

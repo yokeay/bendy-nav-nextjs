@@ -16,7 +16,7 @@ import type {
   HomeUser
 } from "./types";
 
-const APP_VERSION = "2.4.33";
+const APP_VERSION = "2.4.37";
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_BRAND_ICON = "/brand/logo-192.png";
@@ -493,6 +493,7 @@ function normalizeTheme(input: Record<string, unknown>): HomeTheme {
     iconRadius: Math.max(6, toNumberValue(input.iconRadius, 10)),
     CompactMode: toBooleanValue(input.CompactMode, false),
     nameColor: toStringValue(input.nameColor, "#fff"),
+    sideBackground: toStringValue(input.sideBackground, "rgba(46, 46, 46, 0.4)"),
     opacity: Math.min(1, Math.max(0, Number(input.opacity ?? 0.1))),
     colsGap: Math.max(8, toNumberValue(input.colsGap, 35)),
     pageGroup: toBooleanValue(input.pageGroup, true),
