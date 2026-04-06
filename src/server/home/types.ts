@@ -81,6 +81,9 @@ export type HomeSiteInfo = {
   authCheckMode: "email_code" | "old_password";
   qqLoginEnabled: boolean;
   wxLoginEnabled: boolean;
+  isPushLinkStore: boolean;
+  isPushLinkStatus: boolean;
+  isPushLinkStoreTips: string;
 };
 
 export type HomeUser = {

@@ -15,6 +15,7 @@ import {
   isActionHomeCard,
   isAppHomeCard,
   isFolderHomeCard,
+  isPluginHomeCard,
   isRenderableHomeCard,
   isSpecialHomeCardLink,
   isTextHomeCard,
@@ -32,9 +33,11 @@ import styles from "./home-page.module.css";
 const LOCAL_HOME_CONFIG_STORAGE_KEY = "config";
 const SEARCH_ENGINE_STORAGE_KEY = "SearchEngineLocal";
 const SEARCH_HISTORY_STORAGE_KEY = "bendy.home.search-history";
+const SEARCH_HISTORY_ENABLED_STORAGE_KEY = "searchHistory";
 const LOCAL_HOME_LINK_STORAGE_KEY = "link";
 const LOCAL_HOME_TABBAR_STORAGE_KEY = "tabbar";
 const PAGE_GROUP_STORAGE_KEY = "bendy.home.page-group";
+const HOME_SNAPSHOT_STORAGE_KEY = "bendy.home.snapshots";
 
 type HomePageProps = {
   data: HomeData;
@@ -53,6 +56,15 @@ type ContextMenuState = {
 
 type TileContextMenuState = ContextMenuState & {
   linkId: string;
+};
+
+type HomeSnapshot = {
+  id: string;
+  createdAt: string;
+  config: HomeConfig;
+  links: HomeLink[];
+  tabbar: HomeLink[];
+  activeGroupId: string;
 };
 
 type LegacySearchEngineRow = {
@@ -284,12 +296,49 @@ function isFolderLink(link: HomeLink): boolean {
   return isFolderHomeCard(link);
 }
 
+function isPluginCard(link: HomeLink): boolean {
+  return isPluginHomeCard(link);
+}
+
 function isRenderableTile(link: HomeLink): boolean {
   return isRenderableHomeCard(link);
 }
 
 function stripHtmlTags(input: string): string {
   return input.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function maybeParseJson<T>(input: unknown, fallback: T): T {
+  if (input === null || input === undefined) {
+    return fallback;
+  }
+
+  if (typeof input === "object") {
+    return input as T;
+  }
+
+  if (typeof input !== "string") {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(input) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function toStringValue(input: unknown, fallback = ""): string {
+  if (input === null || input === undefined) {
+    return fallback;
+  }
+
+  return String(input);
+}
+
+function normalizeLinksInput(input: unknown): HomeLink[] {
+  const list = Array.isArray(input) ? input : [];
+  return list.filter((item): item is HomeLink => Boolean(item && typeof item === "object" && "id" in item));
 }
 
 function resolveTileLabel(link: HomeLink): string {
@@ -757,6 +806,7 @@ function SearchBar({
   searchOpen,
   searchRecommend,
   searchLink,
+  historyEnabled,
   quickLinks,
   compactMode
 }: {
@@ -764,6 +814,7 @@ function SearchBar({
   searchOpen: boolean;
   searchRecommend: boolean;
   searchLink: boolean;
+  historyEnabled: boolean;
   quickLinks: HomeLink[];
   compactMode: boolean;
 }) {
@@ -823,8 +874,15 @@ function SearchBar({
   }, [availableEngines, engineIndex]);
 
   useEffect(() => {
+    if (!historyEnabled) {
+      setHistory([]);
+      return;
+    }
+
     const raw = window.localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
     if (!raw) {
+      setHistory([]);
+      return;
     }
 
     try {
@@ -835,7 +893,7 @@ function SearchBar({
     } catch {
       // ignore invalid local history
     }
-  }, []);
+  }, [historyEnabled]);
 
   useEffect(() => {
     if (!panelOpen) {
@@ -885,6 +943,12 @@ function SearchBar({
       : [];
 
   function persistHistory(nextHistory: string[]) {
+    if (!historyEnabled) {
+      window.localStorage.removeItem(SEARCH_HISTORY_STORAGE_KEY);
+      setHistory([]);
+      return;
+    }
+
     setHistory(nextHistory);
     window.localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
   }
@@ -994,7 +1058,7 @@ function SearchBar({
           </div>
         </div>
       ) : null}
-      {history.length > 0 ? (
+      {historyEnabled && history.length > 0 ? (
         <div className={styles.searchPanelSection}>
           <div className={styles.searchPanelTitle}>搜索历史</div>
           <div className={styles.searchHistoryList}>
@@ -1328,6 +1392,95 @@ function ActionTile({
         )}
       </button>
       <span className={styles.tileLabel}>{label}</span>
+    </div>
+  );
+}
+
+function ComponentTile({
+  link,
+  editMode,
+  isDragging,
+  isDropTarget,
+  onContextMenu,
+  onLongPress,
+  onDragStart,
+  onDragEnter,
+  onDrop,
+  onDragEnd
+}: {
+  link: HomeLink;
+  editMode: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
+  onLongPress?: () => void;
+  onDragStart?: () => void;
+  onDragEnter?: () => void;
+  onDrop?: () => void;
+  onDragEnd?: () => void;
+}) {
+  const tileClassName = [
+    styles.tile,
+    isDragging ? styles.tileDragging : "",
+    isDropTarget ? styles.tileDropTarget : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const hold = usePressAndHold({
+    enabled: !editMode && Boolean(onLongPress),
+    onLongPress: () => {
+      onLongPress?.();
+    }
+  });
+  const windowUrl =
+    typeof link.custom?.window === "string" && link.custom.window.trim() ? link.custom.window.trim() : link.url;
+
+  return (
+    <div
+      data-home-tile="true"
+      data-flip-key={link.id}
+      className={tileClassName}
+      style={getTileStyle(link)}
+      draggable={editMode}
+      onMouseDown={editMode ? undefined : (event) => hold.start(event.button)}
+      onMouseUp={editMode ? undefined : hold.clear}
+      onMouseLeave={editMode ? undefined : hold.clear}
+      onTouchStart={editMode ? undefined : () => hold.start(0)}
+      onTouchEnd={editMode ? undefined : hold.clear}
+      onTouchCancel={editMode ? undefined : hold.clear}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onContextMenu?.(event);
+      }}
+      onDragStart={editMode ? onDragStart : undefined}
+      onDragEnter={editMode ? onDragEnter : undefined}
+      onDragOver={editMode ? (event) => event.preventDefault() : undefined}
+      onDrop={editMode ? onDrop : undefined}
+      onDragEnd={editMode ? onDragEnd : undefined}
+    >
+      <button
+        className={`${styles.tileAction} ${styles.componentTileAction}`}
+        type="button"
+        title={resolveTileLabel(link)}
+        onClick={() => {
+          if (hold.consumeClick()) {
+            return;
+          }
+          if (!editMode) {
+            window.open(windowUrl, "_blank", "noopener,noreferrer");
+          }
+        }}
+      >
+        <iframe
+          className={styles.componentTileFrame}
+          src={link.url}
+          title={resolveTileLabel(link)}
+          loading="lazy"
+          tabIndex={-1}
+        />
+      </button>
+      <span className={styles.tileLabel}>{resolveTileLabel(link)}</span>
     </div>
   );
 }
@@ -2082,6 +2235,8 @@ export function HomePage({ data }: HomePageProps) {
   const [currentConfig, setCurrentConfig] = useState<HomeConfig>(data.config);
   const [currentLinks, setCurrentLinks] = useState<HomeLink[]>(data.links);
   const [currentTabbar, setCurrentTabbar] = useState<HomeLink[]>(normalizeTabbarOrder(data.tabbar));
+  const [searchHistoryEnabled, setSearchHistoryEnabled] = useState(true);
+  const [snapshots, setSnapshots] = useState<HomeSnapshot[]>([]);
   const [editMode, setEditMode] = useState(false);
   const [openFolderId, setOpenFolderId] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
@@ -2107,6 +2262,9 @@ export function HomePage({ data }: HomePageProps) {
   const [viewportWidth, setViewportWidth] = useState(1440);
   const [desktopMenu, setDesktopMenu] = useState<ContextMenuState>(CLOSED_CONTEXT_MENU);
   const [tileMenu, setTileMenu] = useState<TileContextMenuState>(CLOSED_TILE_CONTEXT_MENU);
+  const [snapshotTrackingReady, setSnapshotTrackingReady] = useState(false);
+  const snapshotSignatureRef = useRef("");
+  const importBackupInputRef = useRef<HTMLInputElement | null>(null);
 
   const notify = useCallback((message: string, tone: HomeToastTone = "info") => {
     setToasts((current) => [
@@ -2142,6 +2300,8 @@ export function HomePage({ data }: HomePageProps) {
   }, []);
 
   useEffect(() => {
+    setSnapshotTrackingReady(false);
+
     if (data.user) {
     }
 
@@ -2184,7 +2344,95 @@ export function HomePage({ data }: HomePageProps) {
     } else {
       setCurrentTabbar(normalizeTabbarOrder(data.tabbar));
     }
+
+    const historyFlag = window.localStorage.getItem(SEARCH_HISTORY_ENABLED_STORAGE_KEY);
+    setSearchHistoryEnabled(historyFlag === null ? true : historyFlag === "1");
+
+    const snapshotsRaw = window.localStorage.getItem(HOME_SNAPSHOT_STORAGE_KEY);
+    if (snapshotsRaw) {
+      try {
+        const parsed = JSON.parse(snapshotsRaw) as unknown[];
+        if (Array.isArray(parsed)) {
+          const normalized = parsed
+            .map((item) => {
+              if (!item || typeof item !== "object") {
+                return null;
+              }
+
+              const source = item as Record<string, unknown>;
+              const id = toStringValue(source.id, "").trim();
+              const createdAt = toStringValue(source.createdAt, "").trim();
+              if (!id || !createdAt) {
+                return null;
+              }
+
+              return {
+                id,
+                createdAt,
+                config: mergeHomeConfig(data.config, maybeParseJson(source.config, data.config)),
+                links: normalizeLinksOrder(normalizeLinksInput(maybeParseJson(source.links, []))),
+                tabbar: normalizeTabbarOrder(normalizeLinksInput(maybeParseJson(source.tabbar, []))),
+                activeGroupId: toStringValue(source.activeGroupId, "").trim()
+              } satisfies HomeSnapshot;
+            })
+            .filter((item): item is HomeSnapshot => Boolean(item))
+            .slice(0, 20);
+
+          setSnapshots(normalized);
+        }
+      } catch {
+        setSnapshots([]);
+      }
+    } else {
+      setSnapshots([]);
+    }
+
+    const timer = window.setTimeout(() => {
+      setSnapshotTrackingReady(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [data.config, data.links, data.tabbar, data.user]);
+
+  useEffect(() => {
+    if (!snapshotTrackingReady) {
+      return;
+    }
+
+    const signature = JSON.stringify({
+      config: currentConfig,
+      links: currentLinks,
+      tabbar: currentTabbar,
+      activeGroupId
+    });
+
+    if (!snapshotSignatureRef.current) {
+      snapshotSignatureRef.current = signature;
+      return;
+    }
+
+    if (snapshotSignatureRef.current === signature) {
+      return;
+    }
+
+    snapshotSignatureRef.current = signature;
+
+    setSnapshots((current) => {
+      const nextSnapshot: HomeSnapshot = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
+        config: currentConfig,
+        links: currentLinks,
+        tabbar: currentTabbar,
+        activeGroupId
+      };
+      const nextSnapshots = [nextSnapshot, ...current].slice(0, 20);
+      window.localStorage.setItem(HOME_SNAPSHOT_STORAGE_KEY, JSON.stringify(nextSnapshots));
+      return nextSnapshots;
+    });
+  }, [activeGroupId, currentConfig, currentLinks, currentTabbar, snapshotTrackingReady]);
 
   useEffect(() => {
     const homeGroupId = resolveHomeGroupId(currentLinks);
@@ -2290,6 +2538,115 @@ export function HomePage({ data }: HomePageProps) {
     }
   }
 
+  function handleExportBackup() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      config: currentConfig,
+      links: currentLinks,
+      tabbar: currentTabbar
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8"
+    });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `mtab-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
+    notify("书签备份已导出。", "success");
+  }
+
+  async function handleImportBackup(file: File) {
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text) as Record<string, unknown>;
+      const nextConfig = mergeHomeConfig(data.config, maybeParseJson(payload.config, data.config));
+      const nextLinks = normalizeLinksOrder(normalizeLinksInput(maybeParseJson(payload.links ?? payload.link, [])));
+      const nextTabbar = normalizeTabbarOrder(normalizeLinksInput(maybeParseJson(payload.tabbar, [])));
+
+      if (nextLinks.length === 0) {
+        notify("备份文件中没有可导入的标签数据。", "error");
+        return;
+      }
+
+      setCurrentConfig(nextConfig);
+      setCurrentLinks(nextLinks);
+      setCurrentTabbar(nextTabbar);
+      setActiveGroupId(resolveHomeGroupId(nextLinks) || "");
+
+      if (data.user) {
+        await requestLegacy<unknown>("/config/update", {
+          method: "POST",
+          data: { config: nextConfig }
+        });
+        await requestLegacy<unknown>("/link/update", {
+          method: "POST",
+          data: { link: nextLinks }
+        });
+        await requestLegacy<unknown>("/tabbar/update", {
+          method: "POST",
+          data: { tabbar: nextTabbar }
+        });
+      } else {
+        window.localStorage.setItem(LOCAL_HOME_CONFIG_STORAGE_KEY, JSON.stringify(nextConfig));
+        window.localStorage.setItem(LOCAL_HOME_LINK_STORAGE_KEY, JSON.stringify(nextLinks));
+        window.localStorage.setItem(LOCAL_HOME_TABBAR_STORAGE_KEY, JSON.stringify(nextTabbar));
+      }
+
+      notify("书签备份已导入。", "success");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "备份导入失败。", "error");
+    }
+  }
+
+  async function handleResetHome() {
+    if (!window.confirm("确认重置当前首页标签和设置吗？")) {
+      return;
+    }
+
+    const defaultConfig = mergeHomeConfig(data.config, null);
+    const defaultLinks = normalizeLinksOrder(data.links);
+    const defaultTabbar = normalizeTabbarOrder(data.tabbar);
+
+    setCurrentConfig(defaultConfig);
+    setCurrentLinks(defaultLinks);
+    setCurrentTabbar(defaultTabbar);
+    setActiveGroupId(resolveHomeGroupId(defaultLinks) || "");
+    setOpenFolderId("");
+    setGroupManagerOpen(false);
+    setLinkEditorOpen(false);
+    setEditingLink(null);
+
+    try {
+      if (data.user) {
+        await requestLegacy<unknown>("/config/update", {
+          method: "POST",
+          data: { config: defaultConfig }
+        });
+        await requestLegacy<unknown>("/link/update", {
+          method: "POST",
+          data: { link: defaultLinks }
+        });
+        await requestLegacy<unknown>("/tabbar/update", {
+          method: "POST",
+          data: { tabbar: defaultTabbar }
+        });
+      } else {
+        window.localStorage.setItem(LOCAL_HOME_CONFIG_STORAGE_KEY, JSON.stringify(defaultConfig));
+        window.localStorage.setItem(LOCAL_HOME_LINK_STORAGE_KEY, JSON.stringify(defaultLinks));
+        window.localStorage.setItem(LOCAL_HOME_TABBAR_STORAGE_KEY, JSON.stringify(defaultTabbar));
+      }
+
+      notify("首页标签和设置已重置。", "success");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "重置失败。", "error");
+    }
+  }
+
   async function persistLinks(nextLinks: HomeLink[]) {
     const normalizedLinks = normalizeLinksOrder(nextLinks);
     if (data.user) {
@@ -2328,6 +2685,8 @@ export function HomePage({ data }: HomePageProps) {
     src: string;
     bgColor: string;
     pageGroup: string;
+    tips: string;
+    app: number;
   }) {
     if (payload.id) {
       const nextLinks = currentLinks.map((item) =>
@@ -2338,7 +2697,10 @@ export function HomePage({ data }: HomePageProps) {
               url: payload.url,
               src: payload.src,
               bgColor: payload.bgColor,
-              pageGroup: payload.pageGroup
+              pageGroup: payload.pageGroup,
+              pid: item.pageGroup !== payload.pageGroup && item.pid ? "" : item.pid,
+              tips: payload.tips,
+              app: payload.app
             }
           : item
       );
@@ -2349,7 +2711,9 @@ export function HomePage({ data }: HomePageProps) {
               name: payload.name,
               url: payload.url,
               src: payload.src,
-              bgColor: payload.bgColor
+              bgColor: payload.bgColor,
+              tips: payload.tips,
+              app: payload.app
             }
           : item
       );
@@ -2368,11 +2732,57 @@ export function HomePage({ data }: HomePageProps) {
       url: payload.url,
       bgColor: payload.bgColor,
       pageGroup: payload.pageGroup,
-      sort: currentLinks.length + 1
+      tips: payload.tips,
+      app: payload.app,
+      sort: getNextRootSort(currentLinks, payload.pageGroup, homeGroupId)
     });
 
     await persistLinks([...currentLinks, nextLink]);
     notify("标签已添加。", "success");
+  }
+
+  async function handleAddCard(payload: {
+    id: number;
+    name: string;
+    name_en: string;
+    tips: string;
+    src: string;
+    url: string;
+    window: string;
+    version: number;
+    pageGroup: string;
+  }) {
+    const cardId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const nextLink = buildActionLink({
+      id: cardId,
+      name: payload.name,
+      src: payload.src,
+      url: payload.url,
+      type: "component",
+      component: "plugins",
+      app: 1,
+      size: "2x4",
+      sort: getNextRootSort(currentLinks, payload.pageGroup, homeGroupId),
+      pageGroup: payload.pageGroup,
+      tips: payload.tips,
+      originId: payload.id,
+      custom: {
+        name_en: payload.name_en,
+        window: payload.window,
+        version: payload.version
+      }
+    });
+
+    await persistLinks([...currentLinks, nextLink]);
+    try {
+      await requestLegacy<unknown>("/card/install_num", {
+        method: "POST",
+        data: { id: payload.id }
+      });
+    } catch {
+      // ignore install count failures for local UX
+    }
+    notify("卡片已添加。", "success");
   }
 
   async function handleDeleteLink(linkId: string) {
@@ -2912,6 +3322,20 @@ export function HomePage({ data }: HomePageProps) {
           filter: `blur(${currentConfig.theme.blur}px)`
         }}
       />
+      <input
+        ref={importBackupInputRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (!file) {
+            return;
+          }
+          void handleImportBackup(file);
+          event.currentTarget.value = "";
+        }}
+      />
       <div className={styles.scrim} />
 
       <div className={styles.shell}>
@@ -3089,6 +3513,7 @@ export function HomePage({ data }: HomePageProps) {
                 searchOpen={currentConfig.openType.searchOpen}
                 searchRecommend={currentConfig.openType.searchRecommend}
                 searchLink={currentConfig.openType.searchLink}
+                historyEnabled={searchHistoryEnabled}
                 quickLinks={tiles.filter((item) => item.type !== "pageGroup" && !item.pid)}
                 compactMode={compactMode}
               />
@@ -3210,6 +3635,24 @@ export function HomePage({ data }: HomePageProps) {
                           link={item}
                           children={buildFolderChildren(currentLinks, item.id)}
                           onOpen={() => setOpenFolderId(item.id)}
+                          editMode={editMode}
+                          isDragging={isDragging}
+                          isDropTarget={isDropTarget}
+                          onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
+                          onLongPress={enterGlobalEditMode}
+                          onDragStart={dragHandlers.onDragStart}
+                          onDragEnter={dragHandlers.onDragEnter}
+                          onDrop={dragHandlers.onDrop}
+                          onDragEnd={dragHandlers.onDragEnd}
+                        />
+                      );
+                    }
+
+                    if (isPluginCard(item)) {
+                      return (
+                        <ComponentTile
+                          key={item.id}
+                          link={item}
                           editMode={editMode}
                           isDragging={isDragging}
                           isDropTarget={isDropTarget}
@@ -3445,10 +3888,72 @@ export function HomePage({ data }: HomePageProps) {
           pageCount={Math.max(1, currentPageGroups.length + 1)}
           onClose={() => setSettingsOpen(false)}
           onSave={handleSaveSettings}
+          onOpenAuth={() => {
+            setSettingsOpen(false);
+            setAuthOpen(true);
+          }}
+          onOpenBackground={() => {
+            setSettingsOpen(false);
+            setBackgroundOpen(true);
+          }}
+          onImportBackup={() => {
+            importBackupInputRef.current?.click();
+          }}
           onOpenPageManager={() => {
             setSettingsOpen(false);
             setGroupManagerInitialId("");
             setGroupManagerOpen(true);
+          }}
+          onExportBackup={handleExportBackup}
+          onResetHome={() => {
+            setSettingsOpen(false);
+            void handleResetHome();
+          }}
+          searchHistoryEnabled={searchHistoryEnabled}
+          onSearchHistoryChange={(enabled) => {
+            setSearchHistoryEnabled(enabled);
+            window.localStorage.setItem(SEARCH_HISTORY_ENABLED_STORAGE_KEY, enabled ? "1" : "0");
+            if (!enabled) {
+              window.localStorage.removeItem(SEARCH_HISTORY_STORAGE_KEY);
+            }
+          }}
+          snapshots={snapshots}
+          onRestoreSnapshot={async (snapshotId) => {
+            const snapshot = snapshots.find((item) => item.id === snapshotId);
+            if (!snapshot) {
+              return;
+            }
+
+            setCurrentConfig(snapshot.config);
+            setCurrentLinks(snapshot.links);
+            setCurrentTabbar(snapshot.tabbar);
+            setActiveGroupId(snapshot.activeGroupId);
+            setSettingsOpen(false);
+
+            try {
+              if (data.user) {
+                await requestLegacy<unknown>("/config/update", {
+                  method: "POST",
+                  data: { config: snapshot.config }
+                });
+                await requestLegacy<unknown>("/link/update", {
+                  method: "POST",
+                  data: { link: snapshot.links }
+                });
+                await requestLegacy<unknown>("/tabbar/update", {
+                  method: "POST",
+                  data: { tabbar: snapshot.tabbar }
+                });
+              } else {
+                window.localStorage.setItem(LOCAL_HOME_CONFIG_STORAGE_KEY, JSON.stringify(snapshot.config));
+                window.localStorage.setItem(LOCAL_HOME_LINK_STORAGE_KEY, JSON.stringify(snapshot.links));
+                window.localStorage.setItem(LOCAL_HOME_TABBAR_STORAGE_KEY, JSON.stringify(snapshot.tabbar));
+              }
+
+              notify("已恢复到选中的历史快照。", "success");
+            } catch (error) {
+              notify(error instanceof Error ? error.message : "恢复失败。", "error");
+            }
           }}
           onConfigChange={setCurrentConfig}
         />
@@ -3457,12 +3962,14 @@ export function HomePage({ data }: HomePageProps) {
           mode={editingLink ? "edit" : "create"}
           activeGroupId={activeGroupId}
           pageGroups={currentPageGroups}
+          site={data.site}
           initialLink={editingLink}
           onClose={() => {
             setLinkEditorOpen(false);
             setEditingLink(null);
           }}
           onSave={handleSaveLink}
+          onAddCard={handleAddCard}
         />
         <BackgroundDialog
           open={backgroundOpen}

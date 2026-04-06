@@ -5,13 +5,6 @@ import type { HomeLink, HomeSiteInfo } from "@/server/home/types";
 import { requestLegacy } from "./home-client";
 import styles from "./home-page.module.css";
 
-export { AddLinkDialog } from "./home-link-editor-dialog";
-
-type ActionDialogProps = {
-  open: boolean;
-  onClose: () => void;
-};
-
 type LinkEditorPayload = {
   id?: string;
   name: string;
@@ -23,64 +16,33 @@ type LinkEditorPayload = {
   app: number;
 };
 
-type LinkEditorDialogProps = ActionDialogProps & {
+type AddCardPayload = {
+  id: number;
+  name: string;
+  name_en: string;
+  tips: string;
+  src: string;
+  url: string;
+  window: string;
+  version: number;
+  pageGroup: string;
+};
+
+type AddLinkDialogProps = {
+  open: boolean;
   mode: "create" | "edit";
   activeGroupId: string;
   pageGroups: HomeLink[];
   site: Pick<HomeSiteInfo, "isPushLinkStore" | "isPushLinkStatus" | "isPushLinkStoreTips">;
   initialLink?: HomeLink | null;
+  onClose: () => void;
   onSave: (payload: LinkEditorPayload) => Promise<void>;
-  onAddCard?: (payload: {
-    id: number;
-    name: string;
-    name_en: string;
-    tips: string;
-    src: string;
-    url: string;
-    window: string;
-    version: number;
-    pageGroup: string;
-  }) => Promise<void>;
+  onAddCard?: (payload: AddCardPayload) => Promise<void>;
 };
 
-type BackgroundDialogProps = ActionDialogProps & {
-  currentBackground: string;
-  onApply: (backgroundUrl: string) => Promise<void>;
-};
-
-type PageGroupManagerDialogProps = ActionDialogProps & {
-  pageGroups: HomeLink[];
-  initialGroupId?: string;
-  onSave: (payload: { id?: string; name: string; src: string }) => Promise<void>;
-  onDelete: (groupId: string) => Promise<void>;
-};
-
-function EditorFieldRow({
-  label,
-  children
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className={styles.editorRow}>
-      <div className={styles.editorLabel}>{label}</div>
-      <div className={styles.editorControl}>{children}</div>
-    </div>
-  );
-}
-
-type ClassFolderIcon = {
+type FolderIcon = {
   src: string;
   name: string;
-};
-
-type CardImageItem = {
-  thumbor: string;
-  url: string;
-  name?: string;
-  fileName?: string;
-  isDefault?: boolean;
 };
 
 type CardCatalogItem = {
@@ -145,16 +107,16 @@ function resolvePageGroupLabel(group: HomeLink) {
 }
 
 function useFolderIcons(open: boolean) {
-  const [folderIcons, setFolderIcons] = useState<ClassFolderIcon[]>([]);
+  const [folderIcons, setFolderIcons] = useState<FolderIcon[]>([]);
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    requestLegacy<ClassFolderIcon[]>("/index/classFolderIcons")
+    requestLegacy<FolderIcon[]>("/index/classFolderIcons")
       .then((response) => {
-        setFolderIcons(response.data);
+        setFolderIcons(Array.isArray(response.data) ? response.data : []);
       })
       .catch(() => {
         setFolderIcons([]);
@@ -164,7 +126,22 @@ function useFolderIcons(open: boolean) {
   return folderIcons;
 }
 
-function LegacyAddLinkDialog({
+function EditorFieldRow({
+  label,
+  children
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={styles.editorRow}>
+      <div className={styles.editorLabel}>{label}</div>
+      <div className={styles.editorControl}>{children}</div>
+    </div>
+  );
+}
+
+export function AddLinkDialog({
   open,
   mode,
   activeGroupId,
@@ -174,7 +151,7 @@ function LegacyAddLinkDialog({
   onClose,
   onSave,
   onAddCard
-}: LinkEditorDialogProps) {
+}: AddLinkDialogProps) {
   const folderIcons = useFolderIcons(open);
   const [editorTab, setEditorTab] = useState<"link" | "recommend" | "card">("link");
   const [cards, setCards] = useState<CardCatalogItem[]>([]);
@@ -187,8 +164,8 @@ function LegacyAddLinkDialog({
   const [tips, setTips] = useState("");
   const [textIcon, setTextIcon] = useState("");
   const [imageIcon, setImageIcon] = useState("");
-  const [iconMode, setIconMode] = useState<1 | 2 | 3>(2);
   const [customIconUrl, setCustomIconUrl] = useState("");
+  const [iconMode, setIconMode] = useState<1 | 2 | 3>(2);
   const [bgColor, setBgColor] = useState("#ffffff");
   const [app, setApp] = useState(0);
   const [pushToStore, setPushToStore] = useState(site.isPushLinkStatus);
@@ -199,7 +176,10 @@ function LegacyAddLinkDialog({
 
   const pageGroupOptions = useMemo(() => {
     if (pageGroups.length > 0) {
-      return pageGroups;
+      return pageGroups.map((group) => ({
+        id: group.id,
+        label: resolvePageGroupLabel(group)
+      }));
     }
 
     if (!activeGroupId) {
@@ -209,23 +189,9 @@ function LegacyAddLinkDialog({
     return [
       {
         id: activeGroupId,
-        app: 0,
-        pid: null,
-        src: "/static/pageGroup/home.svg",
-        url: "",
-        name: "首页",
-        size: "1x1",
-        sort: 0,
-        type: "pageGroup",
-        bgColor: null,
-        pageGroup: "",
-        form: "",
-        component: null,
-        tips: "",
-        custom: null,
-        originId: null
+        label: "首页"
       }
-    ] satisfies HomeLink[];
+    ];
   }, [activeGroupId, pageGroups]);
 
   useEffect(() => {
@@ -233,6 +199,7 @@ function LegacyAddLinkDialog({
       setEditorTab("link");
       setCards([]);
       setRecommendedLinks([]);
+      setCardsLoading(false);
       setRecommendLoading(false);
       setCatalogQuery("");
       setName("");
@@ -240,8 +207,8 @@ function LegacyAddLinkDialog({
       setTips("");
       setTextIcon("");
       setImageIcon("");
-      setIconMode(2);
       setCustomIconUrl("");
+      setIconMode(2);
       setBgColor("#ffffff");
       setApp(0);
       setPushToStore(site.isPushLinkStatus);
@@ -252,9 +219,10 @@ function LegacyAddLinkDialog({
       return;
     }
 
-    const defaultPageGroup = initialLink?.pageGroup || activeGroupId || pageGroupOptions[0]?.id || "";
-    setSelectedPageGroup(defaultPageGroup);
+    const defaultGroupId = initialLink?.pageGroup || activeGroupId || pageGroupOptions[0]?.id || "";
+    setSelectedPageGroup(defaultGroupId);
     setPushToStore(site.isPushLinkStatus);
+    setCatalogQuery("");
 
     if (mode === "create" && onAddCard) {
       setCardsLoading(true);
@@ -541,7 +509,7 @@ function LegacyAddLinkDialog({
         >
           {pageGroupOptions.map((group) => (
             <option key={group.id} value={group.id}>
-              {resolvePageGroupLabel(group)}
+              {group.label}
             </option>
           ))}
         </select>
@@ -570,7 +538,7 @@ function LegacyAddLinkDialog({
     return null;
   }
 
-  const showTabbedCreate = mode === "create" && onAddCard;
+  const showTabbedCreate = mode === "create" && Boolean(onAddCard);
   const pushTips = site.isPushLinkStoreTips?.trim() || "将当前标签提交到推荐标签库，供后台审核后推荐。";
   const recommendEmptyLabel = catalogQuery.trim()
     ? "没有找到匹配的推荐标签。"
@@ -590,7 +558,7 @@ function LegacyAddLinkDialog({
           </button>
         </div>
 
-        {mode === "create" && onAddCard ? (
+        {showTabbedCreate ? (
           <div className={styles.actionTabs}>
             <button
               className={editorTab === "link" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
@@ -598,6 +566,15 @@ function LegacyAddLinkDialog({
               onClick={() => setEditorTab("link")}
             >
               添加标签
+            </button>
+            <button
+              className={
+                editorTab === "recommend" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem
+              }
+              type="button"
+              onClick={() => setEditorTab("recommend")}
+            >
+              推荐标签
             </button>
             <button
               className={editorTab === "card" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
@@ -612,16 +589,18 @@ function LegacyAddLinkDialog({
         {editorTab === "link" ? (
           <div className={styles.linkEditorBody}>
             <div className={styles.linkEditorForm}>
+              <EditorFieldRow label="归属页面">{renderPageGroupSelect()}</EditorFieldRow>
+
               <EditorFieldRow label="网络地址">
                 <div className={styles.actionInline}>
                   <input
                     className={styles.actionInputLight}
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
-                    placeholder="请输入带http开头的网址"
+                    placeholder="请输入带 http 开头的网址"
                   />
                   <button className={styles.actionPrimarySoft} type="button" onClick={handleFetchIcon} disabled={fetchingIcon}>
-                    {fetchingIcon ? "获取中" : "获取图标"}
+                    {fetchingIcon ? "获取中..." : "获取图标"}
                   </button>
                 </div>
               </EditorFieldRow>
@@ -649,7 +628,7 @@ function LegacyAddLinkDialog({
                   className={styles.actionInputLight}
                   value={textIcon}
                   onChange={(event) => setTextIcon(event.target.value)}
-                  placeholder="请输入1-5个字符的图标内容（可选）"
+                  placeholder="请输入 1-5 个字符的图标内容（可选）"
                 />
               </EditorFieldRow>
 
@@ -659,7 +638,7 @@ function LegacyAddLinkDialog({
                     className={styles.actionInputLight}
                     value={customIconUrl}
                     onChange={(event) => setCustomIconUrl(event.target.value)}
-                    placeholder="请上传或粘贴标签图标地址，支持png/jpg/ico/svg/webp格式"
+                    placeholder="请上传或粘贴标签图标地址，支持 png/jpg/ico/svg/webp"
                   />
                   <label className={styles.actionSecondarySoft}>
                     <input
@@ -675,7 +654,7 @@ function LegacyAddLinkDialog({
                         event.currentTarget.value = "";
                       }}
                     />
-                    {uploadingIcon ? "上传中" : "手动上传"}
+                    {uploadingIcon ? "上传中..." : "手动上传"}
                   </label>
                 </div>
               </EditorFieldRow>
@@ -742,6 +721,20 @@ function LegacyAddLinkDialog({
                   <span className={styles.editorHint}>内嵌窗口形式打开，第三方可能不兼容</span>
                 </div>
               </EditorFieldRow>
+
+              {mode === "create" && site.isPushLinkStore ? (
+                <EditorFieldRow label="推送标签">
+                  <label className={styles.pushStoreRow}>
+                    <input
+                      className={styles.pushStoreCheckbox}
+                      type="checkbox"
+                      checked={pushToStore}
+                      onChange={(event) => setPushToStore(event.target.checked)}
+                    />
+                    <span className={styles.pushStoreText}>{pushTips}</span>
+                  </label>
+                </EditorFieldRow>
+              ) : null}
             </div>
 
             <div className={styles.linkEditorSidebar}>
@@ -761,7 +754,7 @@ function LegacyAddLinkDialog({
 
               {folderIcons.length > 0 ? (
                 <div className={styles.linkIconLibrary}>
-                  <div className={styles.linkIconLibraryTitle}>图标库</div>
+                  <div className={styles.linkIconLibraryTitle}>选择图标</div>
                   <div className={styles.actionGrid}>
                     {folderIcons.slice(0, 24).map((item) => (
                       <button
@@ -787,38 +780,81 @@ function LegacyAddLinkDialog({
               ) : null}
             </div>
           </div>
-        ) : (
-          <div className={styles.addCardWindow}>
-            <div className={styles.addCardList}>
-            {cardsLoading ? (
-              <div className={styles.addCardEmpty}>正在加载卡片列表...</div>
-            ) : cards.length > 0 ? (
-              cards.map((card) => (
-                <div className={styles.addCardItem} key={`${card.name_en}-${card.id}`}>
-                  <h3 className={styles.addCardTitle}>{card.name}</h3>
-                  <p className={styles.addCardTips}>{card.tips}</p>
-                  <div className={styles.addCardPreview}>
-                    <iframe
-                      className={styles.addCardPreviewFrame}
-                      src={card.url}
-                      title={card.name}
-                      loading="lazy"
-                    />
+        ) : null}
+
+        {editorTab === "recommend" ? (
+          <div className={styles.catalogPanel}>
+            {renderCatalogToolbar("推荐标签")}
+            <div className={styles.recommendList}>
+              {recommendLoading ? (
+                <div className={styles.addCardEmpty}>正在加载推荐标签...</div>
+              ) : filteredRecommendedLinks.length > 0 ? (
+                filteredRecommendedLinks.map((item) => (
+                  <div className={styles.recommendItem} key={`recommended-${item.id}`}>
+                    <div className={styles.recommendHeader}>
+                      <div className={styles.recommendIcon} style={{ backgroundColor: item.bgColor || "#ffffff" }}>
+                        {item.src ? <img src={item.src} alt={item.name} /> : <span>{item.name.slice(0, 1)}</span>}
+                      </div>
+                      <div className={styles.recommendMeta}>
+                        <h3>{item.name}</h3>
+                        <p>{item.tips || item.url}</p>
+                      </div>
+                    </div>
+                    <div className={styles.recommendFooter}>
+                      <span className={styles.recommendUrl}>{item.url}</span>
+                      <button
+                        className={styles.actionPrimary}
+                        type="button"
+                        onClick={() => void handleAddRecommended(item)}
+                        disabled={submitting}
+                      >
+                        添加标签
+                      </button>
+                    </div>
                   </div>
-                  <div className={styles.addCardFooter}>
-                    <span className={styles.addCardMeta}>安装量 {card.install_num}</span>
-                    <button className={styles.actionPrimary} type="button" onClick={() => void handleAddCard(card)}>
-                      添加
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className={styles.addCardEmpty}>目前还没有卡片应用哟！</div>
-            )}
+                ))
+              ) : (
+                <div className={styles.addCardEmpty}>{recommendEmptyLabel}</div>
+              )}
             </div>
           </div>
-        )}
+        ) : null}
+
+        {editorTab === "card" ? (
+          <div className={styles.catalogPanel}>
+            {renderCatalogToolbar("卡片应用")}
+            <div className={styles.addCardWindow}>
+              <div className={styles.addCardList}>
+                {cardsLoading ? (
+                  <div className={styles.addCardEmpty}>正在加载卡片列表...</div>
+                ) : filteredCards.length > 0 ? (
+                  filteredCards.map((card) => (
+                    <div className={styles.addCardItem} key={`${card.name_en}-${card.id}`}>
+                      <h3 className={styles.addCardTitle}>{card.name}</h3>
+                      <p className={styles.addCardTips}>{card.tips}</p>
+                      <div className={styles.addCardPreview}>
+                        <iframe
+                          className={styles.addCardPreviewFrame}
+                          src={card.url}
+                          title={card.name}
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className={styles.addCardFooter}>
+                        <span className={styles.addCardMeta}>安装量 {card.install_num}</span>
+                        <button className={styles.actionPrimary} type="button" onClick={() => void handleAddCard(card)}>
+                          添加
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.addCardEmpty}>{cardEmptyLabel}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className={styles.actionFooter}>
           <button className={styles.actionSecondary} type="button" onClick={onClose}>
@@ -831,352 +867,11 @@ function LegacyAddLinkDialog({
           ) : null}
           {editorTab === "link" ? (
             <button className={styles.actionPrimary} type="button" onClick={() => void handleSubmit(true)} disabled={submitting}>
-            {submitting ? "保存中..." : "保存"}
+              {submitting ? "保存中..." : "保存"}
             </button>
           ) : null}
         </div>
       </div>
     </div>
   );
-}
-
-export function BackgroundDialog({
-  open,
-  currentBackground,
-  onClose,
-  onApply
-}: BackgroundDialogProps) {
-  const [gallery, setGallery] = useState<CardImageItem[]>([]);
-  const [customUrl, setCustomUrl] = useState(currentBackground);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setCustomUrl(currentBackground);
-    requestLegacy<CardImageItem[]>("/api/cardImages")
-      .then((response) => {
-        setGallery(response.data);
-      })
-      .catch(() => {
-        setGallery([]);
-      });
-  }, [open, currentBackground]);
-
-  async function applyBackground(url: string) {
-    if (saving) {
-      return;
-    }
-
-    const normalized = normalizeUrl(url) || "/static/background.jpeg";
-    setSaving(true);
-    try {
-      await onApply(normalized);
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <div className={styles.actionBackdrop} onClick={onClose}>
-      <div className={styles.actionDialogWide} onClick={(event) => event.stopPropagation()}>
-        <div className={styles.actionHeader}>
-          <div>
-            <p className={styles.actionEyebrow}>快捷操作</p>
-            <h2 className={styles.actionTitle}>切换壁纸</h2>
-          </div>
-          <button className={styles.actionClose} type="button" onClick={onClose} aria-label="关闭">
-            ×
-          </button>
-        </div>
-
-        <div className={styles.actionForm}>
-          <label className={styles.actionLabel}>
-            <span>自定义壁纸地址</span>
-            <div className={styles.actionInline}>
-              <input
-                className={styles.actionInput}
-                value={customUrl}
-                onChange={(event) => setCustomUrl(event.target.value)}
-                placeholder="https://example.com/background.jpg"
-              />
-              <button
-                className={styles.actionPrimary}
-                type="button"
-                onClick={() => applyBackground(customUrl)}
-                disabled={saving}
-              >
-                应用
-              </button>
-            </div>
-          </label>
-
-          <div className={styles.actionLabel}>
-            <span>内置背景库</span>
-            <div className={styles.actionGallery}>
-              <button
-                className={
-                  currentBackground === "/static/background.jpeg"
-                    ? `${styles.actionGalleryItem} ${styles.actionGalleryItemActive}`
-                    : styles.actionGalleryItem
-                }
-                type="button"
-                onClick={() => applyBackground("/static/background.jpeg")}
-              >
-                <img src="/static/background.jpeg" alt="默认背景" />
-              </button>
-              {gallery.map((item) => (
-                <button
-                  key={item.url}
-                  className={
-                    currentBackground === item.url
-                      ? `${styles.actionGalleryItem} ${styles.actionGalleryItemActive}`
-                      : styles.actionGalleryItem
-                  }
-                  type="button"
-                  onClick={() => applyBackground(item.url)}
-                  title={item.name || item.fileName || "壁纸"}
-                >
-                  <img src={item.thumbor || item.url} alt="" />
-                  <span className={styles.actionGalleryMeta}>
-                    <span>{item.name || item.fileName || "壁纸"}</span>
-                    {item.isDefault ? <strong>默认</strong> : null}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function PageGroupManagerDialog({
-  open,
-  pageGroups,
-  initialGroupId,
-  onClose,
-  onSave,
-  onDelete
-}: PageGroupManagerDialogProps) {
-  const folderIcons = useFolderIcons(open);
-  const [editingId, setEditingId] = useState("");
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState("");
-
-  useEffect(() => {
-    if (!open) {
-      setEditingId("");
-      setName("");
-      setIcon("");
-      setSaving(false);
-      setDeletingId("");
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || !initialGroupId) {
-      return;
-    }
-
-    const matchedGroup = pageGroups.find((group) => group.id === initialGroupId);
-    if (!matchedGroup) {
-      return;
-    }
-
-    setEditingId(matchedGroup.id);
-    setName(matchedGroup.name);
-    setIcon(matchedGroup.src);
-  }, [initialGroupId, open, pageGroups]);
-
-  function beginCreate() {
-    setEditingId("");
-    setName("");
-    setIcon(folderIcons[0]?.src ?? "/static/pageGroup/home.svg");
-  }
-
-  function beginEdit(group: HomeLink) {
-    setEditingId(group.id);
-    setName(group.name);
-    setIcon(group.src);
-  }
-
-  async function handleSubmit() {
-    if (saving || !name.trim() || !icon) {
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await onSave({
-        id: editingId || undefined,
-        name: name.trim(),
-        src: icon
-      });
-      setEditingId("");
-      setName("");
-      setIcon(folderIcons[0]?.src ?? "/static/pageGroup/home.svg");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete(groupId: string) {
-    if (deletingId) {
-      return;
-    }
-
-    setDeletingId(groupId);
-    try {
-      await onDelete(groupId);
-      if (editingId === groupId) {
-        setEditingId("");
-        setName("");
-        setIcon("");
-      }
-    } finally {
-      setDeletingId("");
-    }
-  }
-
-  const hasFormValue = name.trim().length > 0 || icon.length > 0 || editingId.length > 0;
-
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <div className={styles.actionBackdrop} onClick={onClose}>
-      <div className={styles.actionDialogWide} onClick={(event) => event.stopPropagation()}>
-        <div className={styles.actionHeader}>
-          <div>
-            <p className={styles.actionEyebrow}>桌面编辑</p>
-            <h2 className={styles.actionTitle}>分组管理</h2>
-          </div>
-          <button className={styles.actionClose} type="button" onClick={onClose} aria-label="关闭">
-            ×
-          </button>
-        </div>
-
-        <div className={styles.groupManagerLayout}>
-          <div className={styles.groupManagerList}>
-            <div className={styles.groupManagerToolbar}>
-              <button className={styles.actionPrimary} type="button" onClick={beginCreate}>
-                新建分组
-              </button>
-            </div>
-            <div className={styles.groupManagerItem}>
-              <div className={styles.groupManagerMeta}>
-                <img src="/static/pageGroup/home.svg" alt="首页" />
-                <span>首页</span>
-              </div>
-              <div className={styles.groupManagerActions}>
-                <button className={styles.actionSecondary} type="button" disabled>
-                  默认页
-                </button>
-              </div>
-            </div>
-            {pageGroups.map((group) => (
-              <div className={styles.groupManagerItem} key={group.id}>
-                <div className={styles.groupManagerMeta}>
-                  <img src={group.src} alt={group.name} />
-                  <span>{group.name}</span>
-                </div>
-                <div className={styles.groupManagerActions}>
-                  <button className={styles.actionSecondary} type="button" onClick={() => beginEdit(group)}>
-                    编辑
-                  </button>
-                  <button
-                    className={styles.actionDanger}
-                    type="button"
-                    onClick={() => handleDelete(group.id)}
-                    disabled={deletingId === group.id}
-                  >
-                    {deletingId === group.id ? "删除中..." : "删除"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.groupManagerEditor}>
-            <div className={styles.actionLabel}>
-              <span>分组名称</span>
-              <input
-                className={styles.actionInput}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="例如：工作"
-              />
-            </div>
-
-            {folderIcons.length > 0 ? (
-              <div className={styles.actionLabel}>
-                <span>分组图标</span>
-                <div className={styles.actionGrid}>
-                  {folderIcons.slice(0, 24).map((item) => (
-                    <button
-                      key={item.src}
-                      className={
-                        icon === item.src
-                          ? `${styles.actionIcon} ${styles.actionIconActive}`
-                          : styles.actionIcon
-                      }
-                      type="button"
-                      title={item.name}
-                      onClick={() => setIcon(item.src)}
-                    >
-                      <img src={item.src} alt={item.name} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className={styles.actionFooter}>
-              {hasFormValue ? (
-                <button className={styles.actionSecondary} type="button" onClick={beginCreate}>
-                  清空
-                </button>
-              ) : null}
-              <button className={styles.actionPrimary} type="button" onClick={handleSubmit} disabled={saving}>
-                {saving ? "保存中..." : editingId ? "保存分组" : "创建分组"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function buildActionLink(base: Partial<HomeLink> & Pick<HomeLink, "id" | "name" | "src" | "url">): HomeLink {
-  return {
-    id: base.id,
-    app: base.app ?? 0,
-    pid: base.pid ?? null,
-    src: base.src,
-    url: base.url,
-    name: base.name,
-    size: base.size ?? "1x1",
-    sort: base.sort ?? 0,
-    type: base.type ?? "icon",
-    bgColor: base.bgColor ?? "rgba(255, 255, 255, 1)",
-    pageGroup: base.pageGroup ?? "",
-    form: base.form ?? "link",
-    component: base.component ?? null,
-    tips: base.tips ?? "",
-    custom: base.custom ?? null,
-    originId: base.originId ?? null
-  };
 }

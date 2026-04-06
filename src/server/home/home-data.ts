@@ -16,7 +16,7 @@ import type {
   HomeUser
 } from "./types";
 
-const APP_VERSION = "2.4.26";
+const APP_VERSION = "2.4.33";
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_BRAND_ICON = "/brand/logo-192.png";
@@ -560,7 +560,10 @@ function buildSiteInfo(settings: Record<string, string>): HomeSiteInfo {
         ? "old_password"
         : "email_code",
     qqLoginEnabled: settingValue(settings, "qq_login", "0") === "1",
-    wxLoginEnabled: settingValue(settings, "wx_login", "0") === "1"
+    wxLoginEnabled: settingValue(settings, "wx_login", "0") === "1",
+    isPushLinkStore: settingValue(settings, "is_push_link_store", "0") === "1",
+    isPushLinkStatus: settingValue(settings, "is_push_link_status", "0") === "1",
+    isPushLinkStoreTips: settingValue(settings, "is_push_link_store_tips", "", true)
   };
 }
 

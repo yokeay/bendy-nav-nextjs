@@ -1,6 +1,13 @@
 # Plan
 
-当前版本：`2.4.26`
+## 2.4.33 Focus
+
+- [x] Merge `添加标签 / 推荐标签 / 添加卡片` into one dialog.
+- [x] Support choosing the target page before adding a tag or card.
+- [x] Reconnect add-tag flow to `LinkStore/list`, `LinkStore/getIcon`, and `LinkStore/push`.
+- [ ] Keep tightening add/edit dialog density, icon picker spacing, and settings-page parity with `latest/mtab`.
+
+当前版本：`2.4.32`
 
 ## 总目标
 

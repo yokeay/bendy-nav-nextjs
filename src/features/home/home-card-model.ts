@@ -35,6 +35,10 @@ export function isFolderHomeCard(link: HomeLink): boolean {
   return link.type === "component" && link.component === "iconGroup";
 }
 
+export function isPluginHomeCard(link: HomeLink): boolean {
+  return link.type === "component" && link.component === "plugins";
+}
+
 export function isPageGroupHomeCard(link: HomeLink): boolean {
   return link.type === "pageGroup";
 }
@@ -56,6 +60,10 @@ export function getHomeCardKind(link: HomeLink): HomeCardKind {
     return "folder";
   }
 
+  if (isPluginHomeCard(link)) {
+    return "app";
+  }
+
   if (isActionHomeCard(link)) {
     return "action";
   }
@@ -68,7 +76,7 @@ export function getHomeCardKind(link: HomeLink): HomeCardKind {
 }
 
 export function isRenderableHomeCard(link: HomeLink): boolean {
-  return isFolderHomeCard(link) || (link.type === "icon" && !isSpecialHomeCardLink(link));
+  return isFolderHomeCard(link) || isPluginHomeCard(link) || (link.type === "icon" && !isSpecialHomeCardLink(link));
 }
 
 export function canEditHomeCard(link: HomeLink): boolean {
