@@ -15,6 +15,7 @@ type PageManagerDialogProps = {
   onSave: (payload: { id?: string; name: string; src: string }) => Promise<string | void>;
   onDelete: (pageId: string) => Promise<void>;
   onSelectPage: (pageId: string) => void;
+  onMovePage: (pageId: string, direction: "up" | "down") => Promise<void>;
 };
 
 type ClassFolderIcon = {
@@ -51,7 +52,8 @@ export function PageManagerDialog({
   onClose,
   onSave,
   onDelete,
-  onSelectPage
+  onSelectPage,
+  onMovePage
 }: PageManagerDialogProps) {
   const pageIcons = usePageIcons(open);
   const [editingId, setEditingId] = useState("");
@@ -191,10 +193,16 @@ export function PageManagerDialog({
                 <img src="/static/pageGroup/home.svg" alt="首页" />
                 <span>首页</span>
               </div>
-              <div className={styles.groupManagerActions}>
-                <button className={styles.actionSecondary} type="button" onClick={() => handleSelectPage(homePageId)}>
-                  打开
-                </button>
+                <div className={styles.groupManagerActions}>
+                  <button className={styles.actionSecondary} type="button" disabled>
+                    上移
+                  </button>
+                  <button className={styles.actionSecondary} type="button" disabled>
+                    下移
+                  </button>
+                  <button className={styles.actionSecondary} type="button" onClick={() => handleSelectPage(homePageId)}>
+                    打开
+                  </button>
                 <button className={styles.actionSecondary} type="button" disabled>
                   默认页
                 </button>
@@ -211,6 +219,12 @@ export function PageManagerDialog({
                   <span>{page.name}</span>
                 </div>
                 <div className={styles.groupManagerActions}>
+                  <button className={styles.actionSecondary} type="button" onClick={() => void onMovePage(page.id, "up")}>
+                    上移
+                  </button>
+                  <button className={styles.actionSecondary} type="button" onClick={() => void onMovePage(page.id, "down")}>
+                    下移
+                  </button>
                   <button className={styles.actionSecondary} type="button" onClick={() => handleSelectPage(page.id)}>
                     打开
                   </button>

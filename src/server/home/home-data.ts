@@ -16,7 +16,7 @@ import type {
   HomeUser
 } from "./types";
 
-const APP_VERSION = "2.4.20";
+const APP_VERSION = "2.4.24";
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_BRAND_ICON = "/brand/logo-192.png";
@@ -473,6 +473,12 @@ function normalizeOpenType(input: Record<string, unknown>): HomeOpenType {
 
 function normalizeTheme(input: Record<string, unknown>): HomeTheme {
   return {
+    themeMode:
+      toStringValue(input.themeMode, "auto") === "dark"
+        ? "dark"
+        : toStringValue(input.themeMode, "auto") === "light"
+          ? "light"
+          : "auto",
     backgroundImage: normalizeAssetPath(
       toStringValue(input.backgroundImage, "/static/background.jpeg")
     ),

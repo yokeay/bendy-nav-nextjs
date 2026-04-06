@@ -9,6 +9,73 @@
   --name-color: #fff;
 }
 
+.pageThemeAuto {
+  color-scheme: light dark;
+}
+
+.pageThemeLight {
+  color-scheme: light;
+}
+
+.pageThemeDark {
+  color-scheme: dark;
+}
+
+.pageThemeLight .controlMenu,
+.pageThemeLight .controlBox,
+.pageThemeLight .controlSectionCard,
+.pageThemeLight .controlFooter {
+  background: #fff;
+}
+
+.pageThemeDark .controlMenu {
+  background: #181c24;
+  border-right-color: rgba(255, 255, 255, 0.08);
+  color: #f4f7fb;
+}
+
+.pageThemeDark .controlUserMeta strong {
+  color: #f4f7fb;
+}
+
+.pageThemeDark .controlUserMeta span {
+  color: rgba(244, 247, 251, 0.68);
+}
+
+.pageThemeDark .controlMenuItem {
+  color: rgba(244, 247, 251, 0.74);
+}
+
+.pageThemeDark .controlMenuItemActive {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.pageThemeDark .controlBox,
+.pageThemeDark .controlSectionCard,
+.pageThemeDark .controlFooter {
+  background: #10151d;
+  color: #f4f7fb;
+}
+
+.pageThemeDark .controlFooter {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.pageThemeDark .settingRowTitle,
+.pageThemeDark .controlSectionTitle {
+  color: #f4f7fb;
+}
+
+.pageThemeDark .settingRowDescription {
+  color: rgba(244, 247, 251, 0.68);
+}
+
+.pageThemeDark .controlFooterSecondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f4f7fb;
+}
+
 .background {
   position: fixed;
   inset: 0;
@@ -202,23 +269,11 @@
   display: none !important;
 }
 
-.toolbarIdle:not(.toolbarCompact) > button:first-of-type {
-  display: none;
-}
-
 .toolbar > a[href=""] {
   display: none;
 }
 
-.toolbarIdle > button:nth-last-child(2) {
-  display: none;
-}
-
 .toolbarCompact > :not(:first-child):not(:last-child) {
-  display: none;
-}
-
-.toolbarCompact > button:nth-of-type(1) {
   display: none;
 }
 
@@ -465,39 +520,32 @@
   margin-right: 10px;
 }
 
-.searchEngineSelectWrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  width: 108px;
-  margin-right: 10px;
+.searchShellCompact {
+  padding-left: 12px;
 }
 
-.searchEngineSelect {
-  width: 100%;
-  height: 30px;
-  padding: 0 26px 0 10px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #4c586b;
-  font-size: 13px;
-  outline: none;
-  appearance: none;
-  cursor: pointer;
+.searchEngineButtonCompact {
+  width: auto;
+  height: 24px;
+  gap: 5px;
+  margin-right: 8px;
+  color: #5d6471;
 }
 
-.searchEngineSelectWrap::after {
-  content: "";
-  position: absolute;
-  right: 10px;
-  width: 8px;
-  height: 8px;
-  border-right: 1.5px solid rgba(76, 88, 107, 0.8);
-  border-bottom: 1.5px solid rgba(76, 88, 107, 0.8);
-  transform: translateY(-2px) rotate(45deg);
-  pointer-events: none;
+.searchEngineButtonCompact img {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.searchEngineCompactCaret {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
 }
 
 .searchEngineButton img {
@@ -1916,6 +1964,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #f4f7fb;
 }
 
 .groupManagerActions {
@@ -1982,6 +2031,7 @@
   height: 100%;
   border-right: 1px solid #ececec;
   background: #f8f8f8;
+  color: #3a3a3c;
 }
 
 .controlUserHeader {
@@ -2060,6 +2110,7 @@
   height: 100%;
   padding: 10px 5px 10px 15px;
   background: #fff;
+  color: #3a3a3c;
   overflow: auto;
 }
 
@@ -2074,6 +2125,7 @@
   padding: 20px;
   border-radius: 10px;
   background: #fff;
+  color: #3a3a3c;
 }
 
 .controlSectionTitle {
@@ -2296,13 +2348,14 @@
   margin: 0;
   font-size: 14px;
   font-weight: 600;
+  color: #2f3542;
 }
 
 .settingRowDescription {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.68);
+  color: #6c7583;
 }
 
 .settingSwitch {

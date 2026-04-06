@@ -243,6 +243,47 @@ export function HomeSettingsDialog({
                     suffix="px"
                     onChange={(value) => updateThemeNumber("iconRadius", value)}
                   />
+                  <div className={styles.settingRowBlock}>
+                    <div className={styles.settingRowText}>
+                      <p className={styles.settingRowTitle}>主题模式</p>
+                      <p className={styles.settingRowDescription}>控制新版首页与控制中心使用浅色、深色或跟随系统。</p>
+                    </div>
+                    <div className={styles.segmented}>
+                      <button
+                        className={
+                          (config.theme.themeMode ?? "auto") === "auto"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("themeMode", "auto")}
+                      >
+                        跟随系统
+                      </button>
+                      <button
+                        className={
+                          config.theme.themeMode === "light"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("themeMode", "light")}
+                      >
+                        浅色
+                      </button>
+                      <button
+                        className={
+                          config.theme.themeMode === "dark"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("themeMode", "dark")}
+                      >
+                        深色
+                      </button>
+                    </div>
+                  </div>
                   <ToggleRow
                     label="显示分页栏"
                     description="控制侧边分页是否展示。"

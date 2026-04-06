@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
@@ -460,7 +459,6 @@ function Sidebar({
   onDeleteGroup: (groupId: string) => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
-  const legacyUrl = "";
   const sidebarLinks = buildSidebarLinks({
     ...data,
     pageGroups
@@ -527,18 +525,6 @@ function Sidebar({
             </div>
           );
         })}
-        {false ? (
-          <button
-            className={styles.sidebarLink}
-            type="button"
-            onClick={onOpenGroupManager}
-            title="新增页面"
-            aria-label="新增页面"
-          >
-            <img className={styles.sidebarIcon} src="/dist/assets/add.c36dce54.1766672520393.svg" alt="" />
-            <span className={styles.sidebarText}>页面</span>
-          </button>
-        ) : null}
         <button
           className={styles.sidebarLink}
           type="button"
@@ -547,31 +533,10 @@ function Sidebar({
           aria-label={editMode ? "页面管理" : "新增页面"}
         >
           <img className={styles.sidebarIcon} src="/dist/assets/add.c36dce54.1766672520393.svg" alt="" />
-          <span className={styles.sidebarText}>{editMode ? "页面" : "新增"}</span>
+          <span className={styles.sidebarText}>页面</span>
         </button>
-        {false ? (
-          <button
-            className={styles.sidebarLink}
-            type="button"
-            onClick={onOpenGroupManager}
-            title="分组管理"
-            aria-label="分组管理"
-          >
-            <img className={styles.sidebarIcon} src="/dist/assets/add.c36dce54.1766672520393.svg" alt="" />
-            <span className={styles.sidebarText}>分组</span>
-          </button>
-        ) : null}
       </div>
       <div className={`${styles.sidebarGroup} ${styles.sidebarFooter}`}>
-        <Link
-          className={styles.sidebarFooterButton}
-          href={legacyUrl}
-          title="打开兼容模式"
-          aria-label="打开兼容模式"
-          style={{ display: "none" }}
-        >
-          <img className={styles.sidebarFooterIcon} src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
-        </Link>
         <button
           className={styles.sidebarFooterButton}
           type="button"
@@ -606,7 +571,21 @@ function Toolbar({
   onToggleEditMode: () => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
-  const legacyUrl = "";
+  const accountButton = user ? (
+    <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
+  ) : (
+    <button
+      className={styles.userButton}
+      type="button"
+      onClick={onOpenAuth}
+      title="登录"
+      aria-label="登录"
+    >
+      <img className={styles.userAvatar} src="/brand/logo-192.png" alt="" />
+      <span className={styles.userButtonText}>登录</span>
+    </button>
+  );
+
   return (
     <div
       className={[
@@ -617,41 +596,26 @@ function Toolbar({
         .filter(Boolean)
         .join(" ")}
     >
-      {compactMode ? (
-        user ? (
-          <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
-        ) : (
-          <button
-            className={styles.userButton}
-            type="button"
-            onClick={onOpenAuth}
-            title="登录"
-            aria-label="登录"
-          >
-            <img className={styles.userAvatar} src="/brand/logo-192.png" alt="" />
-            <span className={styles.userButtonText}>登录</span>
-          </button>
-        )
-      ) : null}
-      {false ? (
-        <Link className={styles.toolbarButton} href={legacyUrl} title="打开兼容模式" style={{ display: "none" }}>
-          <img src="/dist/assets/kongzhi.23e322eb.1766672520393.svg" alt="" />
-        </Link>
-      ) : null}
-      {false ? (
-        <button className={styles.toolbarButton} type="button" onClick={onOpenSettings} title="打开设置中心">
-          <img src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
-        </button>
-      ) : null}
-        {false ? (
+      {accountButton}
       <button
         className={styles.toolbarButton}
         type="button"
-        onClick={onToggleEditMode}
-        title={editMode ? "退出编辑模式" : "进入编辑模式"}
+        onClick={onOpenSettings}
+        title="打开设置中心"
+        aria-label="打开设置中心"
       >
-        <img src="/dist/assets/edit.619ba3d7.1766672520393.svg" alt="" />
+        <img src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
       </button>
+      {editMode ? (
+        <button
+          className={styles.toolbarButton}
+          type="button"
+          onClick={onToggleEditMode}
+          title="退出编辑模式"
+          aria-label="退出编辑模式"
+        >
+          <img src="/dist/assets/edit.619ba3d7.1766672520393.svg" alt="" />
+        </button>
       ) : null}
       <button
         className={styles.toolbarButton}
@@ -871,28 +835,117 @@ function SearchBar({
     searchKeyword(query);
   }
 
+  const searchPanelContent = panelOpen ? (
+    <div className={styles.searchPanel}>
+      {availableEngines.length > 1 ? (
+        <div className={styles.searchPanelSection}>
+          <div className={styles.searchPanelTitle}>搜索引擎</div>
+          <div className={styles.searchEngineGrid}>
+            {availableEngines.map((engine, index) => (
+              <button
+                key={engine.key}
+                className={
+                  index === engineIndex
+                    ? `${styles.searchEngineGridItem} ${styles.searchEngineGridItemActive}`
+                    : styles.searchEngineGridItem
+                }
+                type="button"
+                onClick={() => setEngineIndex(index)}
+              >
+                <img src={engine.icon} alt="" />
+                <span>{engine.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {query.trim() && searchRecommend ? (
+        <div className={styles.searchPanelSection}>
+          <div className={styles.searchPanelTitle}>快捷搜索</div>
+          <button className={styles.searchPanelItem} type="button" onClick={() => searchKeyword(query)}>
+            使用 {currentEngine.name} 搜索 “{query.trim()}”
+          </button>
+        </div>
+      ) : null}
+      {iconResults.length > 0 ? (
+        <div className={styles.searchPanelSection}>
+          <div className={styles.searchPanelTitle}>图标搜索结果</div>
+          <div className={styles.searchIconResultList}>
+            {iconResults.map((link) => (
+              <button
+                key={link.id}
+                className={styles.searchIconResultItem}
+                type="button"
+                onClick={() => openQuickLink(link)}
+              >
+                {isTextIcon(link) ? (
+                  <span className={styles.searchIconResultText}>{link.src.replace(/^txt:/, "")}</span>
+                ) : (
+                  <img src={link.src} alt="" />
+                )}
+                <span>{resolveTileLabel(link)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {recommendWords.length > 0 ? (
+        <div className={styles.searchPanelSection}>
+          <div className={styles.searchPanelTitle}>推荐词</div>
+          <div className={styles.searchHistoryList}>
+            {recommendWords.map((item) => (
+              <button
+                key={item}
+                className={styles.searchPanelItem}
+                type="button"
+                onClick={() => {
+                  setQuery(item);
+                  searchKeyword(item);
+                }}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {history.length > 0 ? (
+        <div className={styles.searchPanelSection}>
+          <div className={styles.searchPanelTitle}>搜索历史</div>
+          <div className={styles.searchHistoryList}>
+            {history.map((item) => (
+              <button
+                key={item}
+                className={styles.searchPanelItem}
+                type="button"
+                onClick={() => {
+                  setQuery(item);
+                  searchKeyword(item);
+                }}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  ) : null;
+
   if (compactMode) {
     return (
       <div className={styles.searchBox} ref={rootRef}>
-        <form className={styles.searchShell} onSubmit={handleSubmit}>
-          <label className={styles.searchEngineSelectWrap} aria-label="搜索引擎">
-            <select
-              className={styles.searchEngineSelect}
-              value={currentEngine.key}
-              onChange={(event) => {
-                const nextIndex = availableEngines.findIndex((engine) => engine.key === event.target.value);
-                if (nextIndex >= 0) {
-                  setEngineIndex(nextIndex);
-                }
-              }}
-            >
-              {availableEngines.map((engine) => (
-                <option key={engine.key} value={engine.key}>
-                  {engine.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <form className={`${styles.searchShell} ${styles.searchShellCompact}`} onSubmit={handleSubmit}>
+          <button
+            className={`${styles.searchEngineButton} ${styles.searchEngineButtonCompact}`}
+            type="button"
+            onClick={() => setPanelOpen((open) => !open)}
+            title={`选择搜索引擎，当前为 ${currentEngine.name}`}
+            aria-label={`选择搜索引擎，当前为 ${currentEngine.name}`}
+          >
+            <img src={currentEngine.icon} alt="" />
+            <span className={styles.searchEngineCompactCaret} aria-hidden="true" />
+          </button>
           <input
             className={styles.searchInput}
             name="keyword"
@@ -902,83 +955,10 @@ function SearchBar({
             placeholder="输入并搜索..."
           />
           <button className={styles.searchSubmit} type="submit" aria-label="开始搜索">
-            <img src="/dist/assets/search.e0864ada.1766672520393.svg" alt="" />
+            <img src="/dist/assets/search.95fa887a.1766672520393.svg" alt="" />
           </button>
         </form>
-        {panelOpen ? (
-          <div className={styles.searchPanel}>
-            {query.trim() && searchRecommend ? (
-              <div className={styles.searchPanelSection}>
-                <div className={styles.searchPanelTitle}>快捷搜索</div>
-                <button className={styles.searchPanelItem} type="button" onClick={() => searchKeyword(query)}>
-                  使用 {currentEngine.name} 搜索 “{query.trim()}”
-                </button>
-              </div>
-            ) : null}
-            {iconResults.length > 0 ? (
-              <div className={styles.searchPanelSection}>
-                <div className={styles.searchPanelTitle}>图标搜索结果</div>
-                <div className={styles.searchIconResultList}>
-                  {iconResults.map((link) => (
-                    <button
-                      key={link.id}
-                      className={styles.searchIconResultItem}
-                      type="button"
-                      onClick={() => openQuickLink(link)}
-                    >
-                      {isTextIcon(link) ? (
-                        <span className={styles.searchIconResultText}>{link.src.replace(/^txt:/, "")}</span>
-                      ) : (
-                        <img src={link.src} alt="" />
-                      )}
-                      <span>{resolveTileLabel(link)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {recommendWords.length > 0 ? (
-              <div className={styles.searchPanelSection}>
-                <div className={styles.searchPanelTitle}>推荐词</div>
-                <div className={styles.searchHistoryList}>
-                  {recommendWords.map((item) => (
-                    <button
-                      key={item}
-                      className={styles.searchPanelItem}
-                      type="button"
-                      onClick={() => {
-                        setQuery(item);
-                        searchKeyword(item);
-                      }}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {history.length > 0 ? (
-              <div className={styles.searchPanelSection}>
-                <div className={styles.searchPanelTitle}>搜索历史</div>
-                <div className={styles.searchHistoryList}>
-                  {history.map((item) => (
-                    <button
-                      key={item}
-                      className={styles.searchPanelItem}
-                      type="button"
-                      onClick={() => {
-                        setQuery(item);
-                        searchKeyword(item);
-                      }}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+        {searchPanelContent}
       </div>
     );
   }
@@ -1010,107 +990,10 @@ function SearchBar({
           placeholder="输入并搜索..."
         />
         <button className={styles.searchSubmit} type="submit" aria-label="开始搜索">
-          <img src="/dist/assets/search.e0864ada.1766672520393.svg" alt="" />
+          <img src="/dist/assets/search.95fa887a.1766672520393.svg" alt="" />
         </button>
       </form>
-      {panelOpen ? (
-        <div className={styles.searchPanel}>
-          <div className={styles.searchPanelSection}>
-            <div className={styles.searchPanelTitle}>搜索引擎</div>
-            <div className={styles.searchEngineGrid}>
-              {availableEngines.map((engine, index) => (
-                <button
-                  key={engine.key}
-                  className={
-                    index === engineIndex
-                      ? `${styles.searchEngineGridItem} ${styles.searchEngineGridItemActive}`
-                      : styles.searchEngineGridItem
-                  }
-                  type="button"
-                  onClick={() => setEngineIndex(index)}
-                >
-                  <img src={engine.icon} alt="" />
-                  <span>{engine.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          {query.trim() && searchRecommend ? (
-            <div className={styles.searchPanelSection}>
-              <div className={styles.searchPanelTitle}>快捷搜索</div>
-              <button
-                className={styles.searchPanelItem}
-                type="button"
-                onClick={() => searchKeyword(query)}
-              >
-                使用 {currentEngine.name} 搜索 “{query.trim()}”
-              </button>
-            </div>
-          ) : null}
-          {iconResults.length > 0 ? (
-            <div className={styles.searchPanelSection}>
-              <div className={styles.searchPanelTitle}>图标搜索结果</div>
-              <div className={styles.searchIconResultList}>
-                {iconResults.map((link) => (
-                  <button
-                    key={link.id}
-                    className={styles.searchIconResultItem}
-                    type="button"
-                    onClick={() => openQuickLink(link)}
-                  >
-                    {isTextIcon(link) ? (
-                      <span className={styles.searchIconResultText}>{link.src.replace(/^txt:/, "")}</span>
-                    ) : (
-                      <img src={link.src} alt="" />
-                    )}
-                    <span>{resolveTileLabel(link)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {recommendWords.length > 0 ? (
-            <div className={styles.searchPanelSection}>
-              <div className={styles.searchPanelTitle}>推荐词</div>
-              <div className={styles.searchHistoryList}>
-                {recommendWords.map((item) => (
-                  <button
-                    key={item}
-                    className={styles.searchPanelItem}
-                    type="button"
-                    onClick={() => {
-                      setQuery(item);
-                      searchKeyword(item);
-                    }}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {history.length > 0 ? (
-            <div className={styles.searchPanelSection}>
-              <div className={styles.searchPanelTitle}>搜索历史</div>
-              <div className={styles.searchHistoryList}>
-                {history.map((item) => (
-                  <button
-                    key={item}
-                    className={styles.searchPanelItem}
-                    type="button"
-                    onClick={() => {
-                      setQuery(item);
-                      searchKeyword(item);
-                    }}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      {searchPanelContent}
     </div>
   );
 }
@@ -2542,6 +2425,36 @@ export function HomePage({ data }: HomePageProps) {
     notify("页面已删除。", "success");
   }
 
+  async function handleMoveGroup(groupId: string, direction: "up" | "down") {
+    const orderedPages = normalizeLinksOrder(currentLinks.filter((item) => item.type === "pageGroup"));
+    const pageIndex = orderedPages.findIndex((item) => item.id === groupId);
+    if (pageIndex < 0) {
+      return;
+    }
+
+    const targetIndex = direction === "up" ? pageIndex - 1 : pageIndex + 1;
+    if (targetIndex < 0 || targetIndex >= orderedPages.length) {
+      return;
+    }
+
+    const nextOrderedPages = [...orderedPages];
+    const [source] = nextOrderedPages.splice(pageIndex, 1);
+    nextOrderedPages.splice(targetIndex, 0, source);
+
+    const sortMap = new Map(nextOrderedPages.map((item, index) => [item.id, index]));
+    const nextLinks = currentLinks.map((item) =>
+      item.type === "pageGroup" && sortMap.has(item.id)
+        ? {
+            ...item,
+            sort: sortMap.get(item.id) ?? item.sort
+          }
+        : item
+    );
+
+    await persistLinks(nextLinks);
+    notify("页面顺序已更新。", "success");
+  }
+
   async function handleReorderVisibleTiles(sourceId: string, targetId: string) {
     if (!sourceId || !targetId || sourceId === targetId) {
       return;
@@ -2842,9 +2755,15 @@ export function HomePage({ data }: HomePageProps) {
     "--name-color": currentConfig.theme.nameColor,
     "--grid-gap": `${currentConfig.theme.colsGap}px`
   } as CSSProperties;
+  const themeModeClassName =
+    currentConfig.theme.themeMode === "dark"
+      ? styles.pageThemeDark
+      : currentConfig.theme.themeMode === "light"
+        ? styles.pageThemeLight
+        : styles.pageThemeAuto;
 
   return (
-    <div className={styles.page} style={cssVariables}>
+    <div className={`${styles.page} ${themeModeClassName}`} style={cssVariables}>
       <div
         className={styles.background}
         style={{
@@ -3375,6 +3294,7 @@ export function HomePage({ data }: HomePageProps) {
           onSelectPage={(pageId) => {
             setActiveGroupId(pageId);
           }}
+          onMovePage={(pageId, direction) => handleMoveGroup(pageId, direction)}
         />
       </div>
     </div>

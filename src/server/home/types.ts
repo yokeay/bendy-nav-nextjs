@@ -30,6 +30,7 @@ export type HomeOpenType = {
 };
 
 export type HomeTheme = {
+  themeMode?: "auto" | "light" | "dark";
   backgroundImage: string;
   backgroundMime: number;
   blur: number;
