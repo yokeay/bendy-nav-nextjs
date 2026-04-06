@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AddLinkDialog, BackgroundDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
@@ -181,6 +181,91 @@ function getGridColumnCount(
   const availableWidth = Math.max(320, viewportWidth - horizontalPadding);
   const columns = Math.floor((availableWidth + gap) / (iconSize + gap));
   return Math.max(3, Math.min(maxColumns, columns));
+}
+
+function reorderIdList(order: string[], sourceId: string, targetId: string) {
+  if (!sourceId || !targetId || sourceId === targetId) {
+    return order;
+  }
+
+  const sourceIndex = order.indexOf(sourceId);
+  const targetIndex = order.indexOf(targetId);
+  if (sourceIndex < 0 || targetIndex < 0) {
+    return order;
+  }
+
+  const nextOrder = [...order];
+  const [source] = nextOrder.splice(sourceIndex, 1);
+  nextOrder.splice(targetIndex, 0, source);
+  return nextOrder;
+}
+
+function buildOrderedItems<T extends { id: string }>(items: T[], previewIds: string[] | null) {
+  if (!previewIds || previewIds.length === 0) {
+    return items;
+  }
+
+  const itemMap = new Map(items.map((item) => [item.id, item] as const));
+  const orderedItems = previewIds
+    .map((id) => itemMap.get(id))
+    .filter((item): item is T => Boolean(item));
+
+  return orderedItems.length === items.length ? orderedItems : items;
+}
+
+function useFlipLayout(keys: string[]) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const previousRectsRef = useRef<Map<string, DOMRect>>(new Map());
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const nextRects = new Map<string, DOMRect>();
+    const elementMap = new Map<string, HTMLElement>();
+    const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-flip-key]"));
+
+    for (const element of elements) {
+      const key = element.dataset.flipKey;
+      if (!key) {
+        continue;
+      }
+
+      nextRects.set(key, element.getBoundingClientRect());
+      elementMap.set(key, element);
+    }
+
+    for (const [key, nextRect] of nextRects) {
+      const previousRect = previousRectsRef.current.get(key);
+      const element = elementMap.get(key);
+      if (!previousRect || !element) {
+        continue;
+      }
+
+      const deltaX = previousRect.left - nextRect.left;
+      const deltaY = previousRect.top - nextRect.top;
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
+        continue;
+      }
+
+      element.animate(
+        [
+          { transform: `translate(${deltaX}px, ${deltaY}px)` },
+          { transform: "translate(0, 0)" }
+        ],
+        {
+          duration: 220,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)"
+        }
+      );
+    }
+
+    previousRectsRef.current = nextRects;
+  }, [keys]);
+
+  return rootRef;
 }
 
 function isSpecialLegacyLink(link: HomeLink): boolean {
@@ -1102,6 +1187,7 @@ function IconTile({
   return (
     <div
       data-home-tile="true"
+      data-flip-key={link.id}
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
@@ -1202,6 +1288,7 @@ function ActionTile({
   return (
     <div
       data-home-tile="true"
+      data-flip-key={link.id}
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
@@ -1292,6 +1379,7 @@ function FolderTile({
   return (
     <div
       data-home-tile="true"
+      data-flip-key={link.id}
       className={tileClassName}
       style={getTileStyle(link)}
       draggable={editMode}
@@ -1376,6 +1464,8 @@ function FolderModal({
   onDrop: (linkId: string) => void;
   onDragEnd: () => void;
 }) {
+  const gridRef = useFlipLayout(items.map((item) => item.id));
+
   useEffect(() => {
     function handleKeydown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -1398,7 +1488,7 @@ function FolderModal({
             ×
           </button>
         </div>
-        <div className={styles.folderPanelGrid}>
+        <div className={styles.folderPanelGrid} ref={gridRef}>
           {items.map((item) => (
             <IconTile
               key={item.id}
@@ -1466,6 +1556,7 @@ function Dock({
   onTrashDrop: () => void;
 }) {
   const draggingLinkId = draggingTileId || draggingFolderTileId;
+  const listRef = useFlipLayout(links.map((item) => item.id));
 
   if (links.length === 0 && !editMode) {
     return null;
@@ -1474,6 +1565,7 @@ function Dock({
   return (
     <div className={styles.dock}>
       <div
+        ref={listRef}
         className={[
           styles.dockList,
           draggingLinkId ? styles.dockListDropTarget : ""
@@ -1515,6 +1607,7 @@ function Dock({
             <a
               key={item.id}
               data-dock-item="true"
+              data-flip-key={item.id}
               className={dockItemClassName}
               href={item.url}
               target={target}
@@ -2005,6 +2098,9 @@ export function HomePage({ data }: HomePageProps) {
   const [folderDropTargetId, setFolderDropTargetId] = useState("");
   const [draggingDockId, setDraggingDockId] = useState("");
   const [dockDropTargetId, setDockDropTargetId] = useState("");
+  const [gridPreviewIds, setGridPreviewIds] = useState<string[] | null>(null);
+  const [folderPreviewIds, setFolderPreviewIds] = useState<string[] | null>(null);
+  const [dockPreviewIds, setDockPreviewIds] = useState<string[] | null>(null);
   const [dockTrashActive, setDockTrashActive] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(Boolean(data.notice));
   const [toasts, setToasts] = useState<HomeToastItem[]>([]);
@@ -2121,6 +2217,9 @@ export function HomePage({ data }: HomePageProps) {
       setFolderDropTargetId("");
       setDraggingDockId("");
       setDockDropTargetId("");
+      setGridPreviewIds(null);
+      setFolderPreviewIds(null);
+      setDockPreviewIds(null);
       setDockTrashActive(false);
       setOpenFolderId("");
     }
@@ -2542,6 +2641,44 @@ export function HomePage({ data }: HomePageProps) {
     await persistTabbar(nextTabbar);
   }
 
+  async function handlePersistVisibleOrder(orderedIds: string[]) {
+    const sortMap = new Map(orderedIds.map((id, index) => [id, index] as const));
+    const nextLinks = currentLinks.map((item) =>
+      sortMap.has(item.id)
+        ? {
+            ...item,
+            sort: sortMap.get(item.id) ?? item.sort
+          }
+        : item
+    );
+
+    await persistLinks(nextLinks);
+  }
+
+  async function handlePersistFolderOrder(folderId: string, orderedIds: string[]) {
+    const sortMap = new Map(orderedIds.map((id, index) => [id, index] as const));
+    const nextLinks = currentLinks.map((item) =>
+      item.pid === folderId && sortMap.has(item.id)
+        ? {
+            ...item,
+            sort: sortMap.get(item.id) ?? item.sort
+          }
+        : item
+    );
+
+    await persistLinks(nextLinks);
+  }
+
+  async function handlePersistDockOrder(orderedIds: string[]) {
+    const sortMap = new Map(orderedIds.map((id, index) => [id, index] as const));
+    const nextTabbar = currentTabbar.map((item) => ({
+      ...item,
+      sort: sortMap.get(item.id) ?? item.sort
+    }));
+
+    await persistTabbar(nextTabbar);
+  }
+
   async function handleMoveLinkIntoFolder(
     sourceId: string,
     folderId: string,
@@ -2724,6 +2861,9 @@ export function HomePage({ data }: HomePageProps) {
   const folder = openFolderId ? currentLinks.find((item) => item.id === openFolderId) ?? null : null;
   const folderChildren = folder ? buildFolderChildren(currentLinks, folder.id) : [];
   const dockLinks = normalizeTabbarOrder(currentTabbar).slice(0, 9);
+  const renderedTiles = buildOrderedItems(tiles, gridPreviewIds);
+  const renderedFolderChildren = buildOrderedItems(folderChildren, folderPreviewIds);
+  const renderedDockLinks = buildOrderedItems(dockLinks, dockPreviewIds);
   const compactMode = currentConfig.theme.CompactMode;
   const currentPageGroups = normalizeLinksOrder(currentLinks.filter((item) => item.type === "pageGroup"));
   const tileMenuLink = tileMenu.linkId ? currentLinks.find((item) => item.id === tileMenu.linkId) ?? null : null;
@@ -2748,6 +2888,7 @@ export function HomePage({ data }: HomePageProps) {
   const gridWidth =
     gridColumnCount * currentConfig.theme.iconWidth +
     Math.max(0, gridColumnCount - 1) * currentConfig.theme.colsGap;
+  const gridFlipRef = useFlipLayout(renderedTiles.map((item) => item.id));
 
   const cssVariables = {
     "--icon-size": `${currentConfig.theme.iconWidth}px`,
@@ -2980,17 +3121,19 @@ export function HomePage({ data }: HomePageProps) {
                   : undefined
               }
             >
-              {tiles.length > 0 ? (
+              {renderedTiles.length > 0 ? (
                 <div
+                  ref={gridFlipRef}
                   className={styles.grid}
                   style={{
                     gridTemplateColumns: `repeat(${gridColumnCount}, ${currentConfig.theme.iconWidth}px)`,
                     width: `${gridWidth}px`
                   }}
                 >
-                  {tiles.map((item) => {
+                  {renderedTiles.map((item) => {
                     const isDragging = draggingTileId === item.id;
                     const isDropTarget = dropTargetId === item.id && draggingTileId !== item.id;
+                    const orderedTileIds = renderedTiles.map((entry) => entry.id);
                     const shouldMoveIntoFolder =
                       isFolderLink(item) &&
                       Boolean(gridDraggedLink) &&
@@ -3003,20 +3146,31 @@ export function HomePage({ data }: HomePageProps) {
                             setFolderDropTargetId("");
                             setDraggingDockId("");
                             setDockDropTargetId("");
+                            setGridPreviewIds(orderedTileIds);
                             setDraggingTileId(item.id);
                           },
                           onDragEnter: () => {
+                            if (draggingTileId && draggingTileId !== item.id) {
+                              setGridPreviewIds((current) =>
+                                reorderIdList(current ?? orderedTileIds, draggingTileId, item.id)
+                              );
+                            }
                             setDropTargetId(item.id);
                           },
                           onDrop: () => {
                             const sourceDockId = draggingDockId;
                             const sourceTileId = draggingTileId;
                             const sourceLinkId = sourceDockId || sourceTileId;
+                            const nextGridOrder =
+                              sourceTileId && gridPreviewIds?.length
+                                ? gridPreviewIds
+                                : reorderIdList(orderedTileIds, sourceTileId, item.id);
 
                             setDraggingTileId("");
                             setDropTargetId("");
                             setDraggingDockId("");
                             setDockDropTargetId("");
+                            setGridPreviewIds(null);
 
                             if (shouldMoveIntoFolder && sourceLinkId) {
                               void handleMoveLinkIntoFolder(sourceLinkId, item.id, {
@@ -3030,13 +3184,16 @@ export function HomePage({ data }: HomePageProps) {
                               return;
                             }
 
-                            void handleReorderVisibleTiles(sourceTileId, item.id);
+                            if (sourceTileId && nextGridOrder.length > 0) {
+                              void handlePersistVisibleOrder(nextGridOrder);
+                            }
                           },
                           onDragEnd: () => {
                             setDraggingTileId("");
                             setDropTargetId("");
                             setDraggingDockId("");
                             setDockDropTargetId("");
+                            setGridPreviewIds(null);
                           }
                         }
                       : {
@@ -3134,7 +3291,7 @@ export function HomePage({ data }: HomePageProps) {
 
         {!compactMode && currentConfig.theme.tabbar ? (
           <Dock
-            links={dockLinks}
+            links={renderedDockLinks}
             openInBlank={currentConfig.openType.linkOpen}
             editMode={editMode}
             showTrash={currentConfig.theme.trash || Boolean(draggingDockId)}
@@ -3153,22 +3310,36 @@ export function HomePage({ data }: HomePageProps) {
               setDraggingFolderTileId("");
               setFolderDropTargetId("");
               setDockTrashActive(false);
+              setDockPreviewIds(renderedDockLinks.map((item) => item.id));
               setDraggingDockId(linkId);
             }}
             onDragEnter={(linkId) => {
               setDockTrashActive(false);
+              if (draggingDockId && draggingDockId !== linkId) {
+                setDockPreviewIds((current) =>
+                  reorderIdList(current ?? renderedDockLinks.map((item) => item.id), draggingDockId, linkId)
+                );
+              }
               setDockDropTargetId(linkId);
             }}
             onDrop={(linkId) => {
               const sourceId = draggingDockId;
+              const nextDockOrder =
+                sourceId && dockPreviewIds?.length
+                  ? dockPreviewIds
+                  : reorderIdList(renderedDockLinks.map((item) => item.id), sourceId, linkId);
               setDraggingDockId("");
               setDockDropTargetId("");
+              setDockPreviewIds(null);
               setDockTrashActive(false);
-              void handleReorderDock(sourceId, linkId);
+              if (sourceId && nextDockOrder.length > 0) {
+                void handlePersistDockOrder(nextDockOrder);
+              }
             }}
             onDragEnd={() => {
               setDraggingDockId("");
               setDockDropTargetId("");
+              setDockPreviewIds(null);
               setDockTrashActive(false);
             }}
             onGridDropToDock={(sourceId, targetId) => {
@@ -3176,6 +3347,7 @@ export function HomePage({ data }: HomePageProps) {
               setDropTargetId("");
               setDraggingFolderTileId("");
               setFolderDropTargetId("");
+              setDockPreviewIds(null);
               void handleDropTileToDock(sourceId, targetId);
             }}
             onTrashDragEnter={() => setDockTrashActive(true)}
@@ -3196,7 +3368,7 @@ export function HomePage({ data }: HomePageProps) {
         {folder ? (
           <FolderModal
             folder={folder}
-            items={folderChildren}
+            items={renderedFolderChildren}
             openInBlank={currentConfig.openType.linkOpen}
             editMode={editMode}
             draggingId={draggingFolderTileId}
@@ -3205,6 +3377,7 @@ export function HomePage({ data }: HomePageProps) {
               setOpenFolderId("");
               setDraggingFolderTileId("");
               setFolderDropTargetId("");
+              setFolderPreviewIds(null);
             }}
             onContextMenu={(linkId, event) => openTileContextMenu(linkId, event.clientX, event.clientY)}
             onEdit={(link) => {
@@ -3222,20 +3395,38 @@ export function HomePage({ data }: HomePageProps) {
               setDropTargetId("");
               setDraggingDockId("");
               setDockDropTargetId("");
+              setFolderPreviewIds(renderedFolderChildren.map((item) => item.id));
               setDraggingFolderTileId(linkId);
             }}
             onDragEnter={(linkId) => {
+              if (draggingFolderTileId && draggingFolderTileId !== linkId) {
+                setFolderPreviewIds((current) =>
+                  reorderIdList(
+                    current ?? renderedFolderChildren.map((item) => item.id),
+                    draggingFolderTileId,
+                    linkId
+                  )
+                );
+              }
               setFolderDropTargetId(linkId);
             }}
             onDrop={(linkId) => {
               const sourceId = draggingFolderTileId;
+              const nextFolderOrder =
+                sourceId && folderPreviewIds?.length
+                  ? folderPreviewIds
+                  : reorderIdList(renderedFolderChildren.map((item) => item.id), sourceId, linkId);
               setDraggingFolderTileId("");
               setFolderDropTargetId("");
-              void handleReorderFolderChildren(folder.id, sourceId, linkId);
+              setFolderPreviewIds(null);
+              if (sourceId && nextFolderOrder.length > 0) {
+                void handlePersistFolderOrder(folder.id, nextFolderOrder);
+              }
             }}
             onDragEnd={() => {
               setDraggingFolderTileId("");
               setFolderDropTargetId("");
+              setFolderPreviewIds(null);
             }}
           />
         ) : null}
