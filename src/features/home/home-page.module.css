@@ -829,6 +829,11 @@
   max-width: 100%;
 }
 
+.pageLinkTitleHidden .grid {
+  grid-auto-rows: var(--icon-size);
+  row-gap: var(--grid-gap, 35px);
+}
+
 .tile {
   display: flex;
   flex-direction: column;
@@ -1007,6 +1012,14 @@
   text-shadow: 0 0 1px rgba(107, 63, 63, 0.3);
   filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
   font-size: 12px;
+}
+
+.pageLinkTitleHidden .tileAction {
+  height: 100%;
+}
+
+.pageLinkTitleHidden .tileLabel {
+  display: none;
 }
 
 .folderCard {
@@ -1443,6 +1456,11 @@
   grid-auto-rows: calc(var(--icon-size) + 25px);
   column-gap: 30px;
   row-gap: 0;
+}
+
+.pageLinkTitleHidden .folderPanelGrid {
+  grid-auto-rows: var(--icon-size);
+  row-gap: 30px;
 }
 
 .authBackdrop {

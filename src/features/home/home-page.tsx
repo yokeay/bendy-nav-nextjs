@@ -468,7 +468,7 @@ function getTileStyle(link: HomeLink): CSSProperties {
 
 function getLinkSurfaceStyle(link: HomeLink): CSSProperties {
   return {
-    background: link.bgColor || "rgba(255, 255, 255, 0.14)"
+    background: link.bgColor || "var(--default-icon-background)"
   };
 }
 
@@ -634,7 +634,7 @@ function Sidebar({
                     className={styles.sidebarRowButton}
                     type="button"
                     onClick={() => onEditGroup(item.id)}
-                    aria-label={`编辑分组 ${item.label}`}
+                    aria-label={`编辑页面 ${item.label}`}
                   >
                     ✎
                   </button>
@@ -642,7 +642,7 @@ function Sidebar({
                     className={styles.sidebarRowDelete}
                     type="button"
                     onClick={() => onDeleteGroup(item.id)}
-                    aria-label={`删除分组 ${item.label}`}
+                    aria-label={`删除页面 ${item.label}`}
                   >
                     ×
                   </button>
@@ -2020,7 +2020,7 @@ function DesktopContextMenu({
           onClose();
         }}
       >
-        添加分类
+        添加页面
       </button>
       <button
         className={styles.contextMenuItem}
@@ -2196,7 +2196,7 @@ function TileContextMenu({
           onMouseLeave={() => setGroupMenuOpen(false)}
         >
           <button className={styles.contextMenuItem} type="button">
-            移动至分类
+            移动至页面
           </button>
           {groupMenuOpen ? (
             <div
@@ -3309,6 +3309,7 @@ export function HomePage({ data }: HomePageProps) {
     "--icon-size": `${currentConfig.theme.iconWidth}px`,
     "--icon-radius": `${currentConfig.theme.iconRadius}px`,
     "--name-color": currentConfig.theme.nameColor,
+    "--default-icon-background": currentConfig.theme.iconBg ? "#fff" : "transparent",
     "--sidebar-background": currentConfig.theme.sideBackground,
     "--grid-gap": `${currentConfig.theme.colsGap}px`
   } as CSSProperties;
@@ -3321,9 +3322,16 @@ export function HomePage({ data }: HomePageProps) {
   const sidebarVisible = !compactMode && currentConfig.theme.pageGroup;
   const sidebarOnRight = sidebarVisible && currentConfig.theme.pageGroupPosition === "right";
   const mainClassName = sidebarOnRight ? `${styles.main} ${styles.mainSidebarRight}` : styles.main;
+  const pageClassName = [
+    styles.page,
+    themeModeClassName,
+    currentConfig.theme.LinkTitle ? "" : styles.pageLinkTitleHidden
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`${styles.page} ${themeModeClassName}`} style={cssVariables}>
+    <div className={pageClassName} style={cssVariables}>
       <div
         className={styles.background}
         style={{
@@ -3736,7 +3744,7 @@ export function HomePage({ data }: HomePageProps) {
                   })}
                 </div>
               ) : (
-                <div className={styles.emptyState}>当前分组下没有可展示的导航项。</div>
+                <div className={styles.emptyState}>当前页面下没有可展示的导航项。</div>
               )}
             </section>
           ) : null}

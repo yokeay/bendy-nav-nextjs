@@ -1,12 +1,20 @@
 # Plan
 
+## 2.4.38 Focus
+
+- [x] Wire `LinkTitle` into the Next.js home rendering path so hidden label mode no longer renders tile names.
+- [x] Collapse grid and folder rows back to pure icon height while `LinkTitle` is disabled, avoiding the previous empty label gutter.
+- [x] Reconnect `iconBg` fallback semantics: explicit `bgColor` still wins, otherwise the default icon plate appears only when `iconBg` is enabled.
+- [x] Continue Phase 1 by replacing remaining "group" user-facing wording with "page" wording across page manager, sidebar, and settings flows.
+- [ ] Continue Phase 1 by separating internal page-management names from legacy `pageGroup` storage fields where it can be done without breaking persisted data.
+
 ## 2.4.37 Focus
 
 - [x] Reconnect `pageGroupPosition` to the Next.js home sidebar so the side rail can actually switch left/right.
 - [x] Reorder settings fields toward the legacy home controller, especially `Dock / 侧栏`, wallpaper opacity, and time field order.
 - [x] Restore `opacity` to the wallpaper mask semantics instead of the broken 0-100 pseudo card opacity slider.
 - [x] Reconnect `sideBackground` to the sidebar style and settings entry.
-- [ ] Continue closing the remaining gaps around `LinkTitle` and exact per-field parity with `latest/mtab`.
+- [x] Continue closing the remaining gaps around `LinkTitle` and exact per-field parity with `latest/mtab`.
 
 ## 2.4.36 Focus
 
@@ -34,7 +42,7 @@
 - [x] Reconnect add-tag flow to `LinkStore/list`, `LinkStore/getIcon`, and `LinkStore/push`.
 - [ ] Keep tightening add/edit dialog density, icon picker spacing, and settings-page parity with `latest/mtab`.
 
-当前版本：`2.4.37`
+当前版本：`2.4.38`
 
 ## 总目标
 

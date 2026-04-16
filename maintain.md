@@ -1,5 +1,30 @@
 # Maintain
 
+## v2.4.38
+
+- Date: 2026-04-16
+- Iteration type: small version
+- Goal: finish the current `LinkTitle` and per-field rendering gap from v2.4.37, then keep Phase 1 moving toward page-management wording.
+
+### Changes
+
+- Connected `theme.LinkTitle` to the Next.js home root class. When disabled, home and folder tile labels are no longer rendered visually.
+- Adjusted main grid and folder panel row sizing while labels are hidden so the layout uses pure icon-height rows instead of leaving the old label gutter.
+- Reconnected `iconBg` fallback behavior to legacy semantics: explicit card `bgColor` remains authoritative, and otherwise the default white icon plate only appears when `iconBg` is enabled.
+- Replaced the remaining user-facing "group/category" wording in the home sidebar, desktop context menu, tile context menu, and empty state with "page" wording while keeping the persisted `pageGroup` field intact.
+- Bumped the project version and metadata to `2.4.38`.
+
+### Result
+
+- `LinkTitle` is now a visible, testable setting rather than a stored field that the home renderer ignored.
+- `iconBg` no longer creates an always-on translucent plate for icons with no explicit background.
+- Page management now reads consistently as a page workflow in the user-facing home UI; the compatibility data field remains unchanged.
+
+### Risks And Next
+
+- The next Phase 1 item is the internal naming cleanup that separates page-management concepts from legacy `pageGroup` storage without breaking persisted data.
+- Settings center field order is closer, but full `latest/mtab` parity still requires another pass over page-management and control-center sections.
+
 ## v2.4.37
 
 - 日期：2026-04-06
