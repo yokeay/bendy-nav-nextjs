@@ -1,5 +1,30 @@
 # Maintain
 
+## Discussion Record — 2026-04-17（后台与登录体系重设计）
+
+- Type: design decision（尚未落码，记录用户与助手达成的技术方案共识）
+- Related docs: `docs/admin-backend-spec.md`（技术方案）、`docs/admin-backend-plan.md`（分阶段开发计划）
+
+### Decisions
+
+1. ORM 定 Prisma；`schema.prisma` 单文件，通过 `DATABASE_PROVIDER` 在 `postgresql` 与 `sqlite` 间切换；卸载现有 `postgres` 包。
+2. 三种部署形态必须共用一套代码：
+   - A. VPS / 自建服务器 + Docker Compose（PG 版镜像 + Postgres 服务）；
+   - B. 单容器平台（ClawCloud / Railway 等）— SQLite 单镜像 + `/data` volume；
+   - C. Serverless（Vercel 类）— Neon/Supabase Postgres + Upstash Redis + S3。
+3. 缓存必保：SQLite 形态仍允许与 Upstash Redis 组合，以应对并发读；`memory` 驱动仅作本地开发兜底。
+4. 认证体系整改：**删除邮箱/密码/验证码登录注册全部链路**，首页登录入口唯一保留 GitHub OAuth；不再考虑 TOTP，敏感操作通过 GitHub re-auth 实现二次确认。
+5. 管理员判定通过 env `ADMIN_GITHUB_EMAILS`（逗号分隔邮箱）匹配；管理员入口出现在首页"设置"页，不单设 `/admin/login`。
+6. 不迁移 mtab 数据，全新建库。
+7. 后台 UI 延续 CSS Module 自建组件风格，不引入 Tailwind/shadcn/recharts；`Agent.md` 第 4 条视为仅约束前台。
+8. 业务前缀默认 `bendy_`，可通过 `BUSINESS_PREFIX` env 改；数据库表、Redis key、env 命名统一遵循。
+9. 本轮不产生代码变更；待用户审阅 `docs/admin-backend-spec.md` 与 `docs/admin-backend-plan.md` 后再开 `feat/admin-foundation` 分支开工。
+
+### Next
+
+- 用户审阅两份新文档，确认无误后按 F1–F8 顺序推进。
+- F1 第一步：接入 Prisma，初始化 schema 与迁移，改造 CacheDriver / StorageDriver，刷新 `.env.example`。
+
 ## v2.4.39
 
 - Date: 2026-04-17
