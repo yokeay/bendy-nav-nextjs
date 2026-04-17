@@ -1,12 +1,27 @@
 # Plan
 
+## 2.4.39 Focus
+
+- [x] Treat UI parity drift as a blocking bug and realign the largest visible mismatches with `latest/mtab`.
+- [x] Restore Dock surface rendering to use the same `sideBackground` variable as the side rail.
+- [x] Bring add/edit, card catalog, recommended links, and page manager dialogs back toward the legacy light `mtab custom` controls instead of the mismatched dark dialog skin.
+- [x] Restore settings center sizing and mobile positioning parity, including the 600px high-panel breakpoint.
+- [x] Match desktop and tile context-menu positioning constants to their actual legacy widths.
+- [x] Separate the page manager component API from legacy `pageGroup` storage naming while preserving persisted fields.
+- [x] Replace default compact recommendations with 笨迪导航 / 笨迪博客, point 笨迪导航 to `https://polofox.com`, and remove leftover default wide icon tags.
+- [x] Replace 360 search fallbacks with DuckDuckGo in the active search-engine mapping path.
+- [x] Replace the login visual and favicon/logo PNG assets with the updated `docs` assets.
+- [x] Add `pageType` to desktop page objects with `normal` / `geek` creation and editing support.
+- [x] Implement the first inline-window path for `app = 1` desktop, Dock, and folder tags.
+- [ ] Continue the broader 1:1 pass over folder modal and remaining control-center field order after visual verification is available.
+
 ## 2.4.38 Focus
 
 - [x] Wire `LinkTitle` into the Next.js home rendering path so hidden label mode no longer renders tile names.
 - [x] Collapse grid and folder rows back to pure icon height while `LinkTitle` is disabled, avoiding the previous empty label gutter.
 - [x] Reconnect `iconBg` fallback semantics: explicit `bgColor` still wins, otherwise the default icon plate appears only when `iconBg` is enabled.
 - [x] Continue Phase 1 by replacing remaining "group" user-facing wording with "page" wording across page manager, sidebar, and settings flows.
-- [ ] Continue Phase 1 by separating internal page-management names from legacy `pageGroup` storage fields where it can be done without breaking persisted data.
+- [x] Continue Phase 1 by separating internal page-management names from legacy `pageGroup` storage fields where it can be done without breaking persisted data.
 
 ## 2.4.37 Focus
 
@@ -42,7 +57,7 @@
 - [x] Reconnect add-tag flow to `LinkStore/list`, `LinkStore/getIcon`, and `LinkStore/push`.
 - [ ] Keep tightening add/edit dialog density, icon picker spacing, and settings-page parity with `latest/mtab`.
 
-当前版本：`2.4.38`
+当前版本：`2.4.39`
 
 ## 总目标
 
@@ -94,7 +109,7 @@
 
 - [ ] 把当前“分组管理”彻底语义化为“页面管理”，包括标题、按钮、字段、提示文案和数据含义。
 - [ ] 首页必须视为固定页面参与页面管理显示，不能只显示附加页面。
-- [ ] 常驻保留“新增页面 / 页面管理”入口，不再隐藏在编辑态内部。
+- [x] 常驻保留“新增页面 / 页面管理”入口，不再隐藏在编辑态内部。
 - [ ] 对齐页面创建后的默认图标、默认排序、默认“添加标签”入口、默认激活页规则。
 - [ ] 对齐页面切换行为、最近页面恢复逻辑、本地缓存和登录态恢复逻辑。
 - [ ] 对齐页面删除后的回退页面选择规则。
@@ -128,7 +143,7 @@
 
 ### G. 特殊卡片与窗口容器
 
-- [ ] 对齐应用卡 `app = 1` 的窗口容器行为，不只保留角标。
+- [x] 对齐应用卡 `app = 1` 的窗口容器行为，不只保留角标。
 - [ ] 对齐 `记事本 / WebTerm / 火山翻译` 等特殊卡片打开方式。
 - [ ] 迁移窗口标题栏、最小化、全屏、拖拽、缩放和层级逻辑。
 - [ ] 迁移插件容器和动态组件卡片能力。

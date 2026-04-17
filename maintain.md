@@ -1,5 +1,35 @@
 # Maintain
 
+## v2.4.39
+
+- Date: 2026-04-17
+- Iteration type: small version
+- Goal: fix the severe UI parity drift before continuing lower-priority plan items.
+
+### Changes
+
+- Rebound the Dock surface to `sideBackground`, matching the legacy rail/Dock shared background behavior.
+- Restored the add/edit, card catalog, recommended link, and page manager dialogs to the light `mtab custom` control texture instead of the mismatched dark modal skin.
+- Reconnected settings-center sizing to the legacy 500px/600px behavior and added mobile bottom-sheet positioning.
+- Matched desktop and tile context-menu clamp widths to their rendered legacy widths.
+- Renamed the page manager component boundary from `pageGroups` to `pages` while keeping the persisted `pageGroup` storage field unchanged.
+- Updated the default compact recommendations: 笨迪导航 now points to `https://polofox.com`, 小涂博客 was replaced by 笨迪博客, and default wide icon tags were collapsed to normal 1x1 tags.
+- Replaced legacy 360 search-engine rows with DuckDuckGo in the active search-engine mapping path.
+- Replaced the login-left visual and favicon/logo PNG assets with the new files from `docs`.
+- Added a persisted page-level `pageType` field with `normal` and `geek` options in page creation/editing.
+- Added the first inline-window container for `app = 1` links across desktop tiles, Dock items, and folder items.
+- Bumped the project version and metadata to `2.4.39`.
+
+### Result
+
+- The most visible UI surfaces now align more closely with `latest/mtab`: Dock, settings center, add/edit flows, and page-management dialogs no longer use conflicting surfaces or sizing.
+- The user-facing defaults now use 笨迪 branding and the previously exposed inline-window option has a working first implementation.
+
+### Risks And Next
+
+- Visual browser verification could not be run in this environment because Node/npm are not currently on PATH.
+- Continue the broader 1:1 pass on folder modal details, remaining settings field order, richer inline-window controls, and internal page-management naming cleanup.
+
 ## v2.4.38
 
 - Date: 2026-04-16

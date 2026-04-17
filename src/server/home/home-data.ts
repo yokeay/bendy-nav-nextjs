@@ -16,7 +16,7 @@ import type {
   HomeUser
 } from "./types";
 
-const APP_VERSION = "2.4.38";
+const APP_VERSION = "2.4.39";
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_BRAND_ICON = "/brand/logo-192.png";
@@ -230,6 +230,7 @@ function normalizeLink(input: unknown): HomeLink | null {
     size: toStringValue(source.size, "1x1").trim() || "1x1",
     sort: toNumberValue(source.sort, 0),
     type,
+    pageType: toStringValue(source.pageType, "normal") === "geek" ? "geek" : "normal",
     bgColor: toStringValue(source.bgColor, "").trim() || null,
     pageGroup: toStringValue(source.pageGroup, "").trim(),
     form: toStringValue(source.form, "").trim(),

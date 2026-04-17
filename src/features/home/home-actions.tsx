@@ -409,6 +409,7 @@ export function buildActionLink(base: Partial<HomeLink> & Pick<HomeLink, "id" | 
     size: base.size ?? "1x1",
     sort: base.sort ?? 0,
     type: base.type ?? "icon",
+    pageType: base.pageType ?? "normal",
     bgColor: base.bgColor ?? "rgba(255, 255, 255, 1)",
     pageGroup: base.pageGroup ?? "",
     form: base.form ?? "link",

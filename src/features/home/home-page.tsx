@@ -88,9 +88,9 @@ const CLOSED_TILE_CONTEXT_MENU: TileContextMenuState = {
   linkId: ""
 };
 
-const DESKTOP_CONTEXT_MENU_WIDTH = 176;
+const DESKTOP_CONTEXT_MENU_WIDTH = 140;
 const DESKTOP_CONTEXT_MENU_HEIGHT = 248;
-const TILE_CONTEXT_MENU_WIDTH = 164;
+const TILE_CONTEXT_MENU_WIDTH = 150;
 const TILE_CONTEXT_MENU_HEIGHT = 188;
 
 const WEEKDAY_LABELS = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
@@ -338,7 +338,12 @@ function toStringValue(input: unknown, fallback = ""): string {
 
 function normalizeLinksInput(input: unknown): HomeLink[] {
   const list = Array.isArray(input) ? input : [];
-  return list.filter((item): item is HomeLink => Boolean(item && typeof item === "object" && "id" in item));
+  return list
+    .filter((item): item is HomeLink => Boolean(item && typeof item === "object" && "id" in item))
+    .map((item) => ({
+      ...item,
+      pageType: item.pageType === "geek" ? "geek" : "normal"
+    }));
 }
 
 function resolveTileLabel(link: HomeLink): string {
@@ -502,6 +507,10 @@ function normalizeSearchEngineKey(name: string, id: number) {
     return "duckduckgo";
   }
 
+  if (normalized.includes("360") || normalized.includes("haosou")) {
+    return "duckduckgo";
+  }
+
   return `legacy-${id}`;
 }
 
@@ -509,6 +518,16 @@ function mapLegacySearchEngine(row: LegacySearchEngineRow): HomeSearchEngine | n
   const url = row.url.trim();
   if (!url) {
     return null;
+  }
+
+  if (row.name.includes("360") || url.includes("so.com") || url.includes("haosou.com")) {
+    return {
+      key: "duckduckgo",
+      name: "DuckDuckGo",
+      icon: "/static/searchEngine/DuckDuckGo.svg",
+      action: "https://duckduckgo.com/",
+      queryParam: "q"
+    };
   }
 
   const placeholderIndex = url.indexOf("{1}");
@@ -846,7 +865,9 @@ function SearchBar({
 
         const mapped = response.data.map(mapLegacySearchEngine).filter((item): item is HomeSearchEngine => item !== null);
         if (mapped.length > 0) {
-          setAvailableEngines(mapped);
+          setAvailableEngines(
+            mapped.filter((engine, index, list) => list.findIndex((item) => item.key === engine.key) === index)
+          );
         }
       } catch {
         // keep fallback engines
@@ -941,7 +962,12 @@ function SearchBar({
       : [];
   const recommendWords =
     searchRecommend && !normalizedQuery
-      ? quickLinks
+      ? [...quickLinks]
+          .sort((left, right) => {
+            const leftPreferred = resolveTileLabel(left) === "笨迪导航" ? -1 : 0;
+            const rightPreferred = resolveTileLabel(right) === "笨迪导航" ? -1 : 0;
+            return leftPreferred - rightPreferred;
+          })
           .map((item) => resolveTileLabel(item))
           .filter((item, index, list) => Boolean(item) && list.indexOf(item) === index)
           .slice(0, 8)
@@ -1219,7 +1245,8 @@ function IconTile({
   onDragStart,
   onDragEnter,
   onDrop,
-  onDragEnd
+  onDragEnd,
+  onOpenInlineWindow
 }: {
   link: HomeLink;
   openInBlank: boolean;
@@ -1235,6 +1262,7 @@ function IconTile({
   onDragEnter?: () => void;
   onDrop?: () => void;
   onDragEnd?: () => void;
+  onOpenInlineWindow?: () => void;
 }) {
   const label = resolveTileLabel(link);
   const target = openInBlank && !isInternalLink(link.url) ? "_blank" : "_self";
@@ -1294,6 +1322,12 @@ function IconTile({
 
           if (editMode) {
             event.preventDefault();
+            return;
+          }
+
+          if (isAppLink(link)) {
+            event.preventDefault();
+            onOpenInlineWindow?.();
           }
         }}
         style={getLinkSurfaceStyle(link)}
@@ -1310,6 +1344,36 @@ function IconTile({
         )}
       </a>
       <span className={styles.tileLabel}>{label}</span>
+    </div>
+  );
+}
+
+function InlineAppWindow({ link, onClose }: { link: HomeLink; onClose: () => void }) {
+  const label = resolveTileLabel(link);
+
+  return (
+    <div className={styles.inlineWindowLayer} role="dialog" aria-label={`${label} 内联窗口`}>
+      <div className={styles.inlineWindow}>
+        <div className={styles.inlineWindowHeader}>
+          <div className={styles.inlineWindowTitle}>
+            {isTextIcon(link) ? (
+              <span className={styles.inlineWindowTextIcon}>{link.src.replace(/^txt:/, "")}</span>
+            ) : (
+              <img src={link.src} alt="" />
+            )}
+            <span>{label}</span>
+          </div>
+          <div className={styles.inlineWindowActions}>
+            <a href={link.url} target="_blank" rel="noreferrer">
+              新窗口打开
+            </a>
+            <button type="button" onClick={onClose} aria-label="关闭内联窗口">
+              ×
+            </button>
+          </div>
+        </div>
+        <iframe className={styles.inlineWindowFrame} src={link.url} title={label} />
+      </div>
     </div>
   );
 }
@@ -1601,6 +1665,7 @@ function FolderModal({
   onEdit,
   onDelete,
   onPin,
+  onOpenInlineWindow,
   onDragStart,
   onDragEnter,
   onDrop,
@@ -1617,6 +1682,7 @@ function FolderModal({
   onEdit: (link: HomeLink) => void;
   onDelete: (link: HomeLink) => void;
   onPin: (link: HomeLink) => void;
+  onOpenInlineWindow: (link: HomeLink) => void;
   onDragStart: (linkId: string) => void;
   onDragEnter: (linkId: string) => void;
   onDrop: (linkId: string) => void;
@@ -1660,6 +1726,7 @@ function FolderModal({
               onEdit={() => onEdit(item)}
               onDelete={() => onDelete(item)}
               onPin={() => onPin(item)}
+              onOpenInlineWindow={() => onOpenInlineWindow(item)}
               onDragStart={() => onDragStart(item.id)}
               onDragEnter={() => onDragEnter(item.id)}
               onDrop={() => onDrop(item.id)}
@@ -1691,7 +1758,8 @@ function Dock({
   onGridDropToDock,
   onTrashDragEnter,
   onTrashDragLeave,
-  onTrashDrop
+  onTrashDrop,
+  onOpenInlineWindow
 }: {
   links: HomeLink[];
   openInBlank: boolean;
@@ -1712,6 +1780,7 @@ function Dock({
   onTrashDragEnter: () => void;
   onTrashDragLeave: () => void;
   onTrashDrop: () => void;
+  onOpenInlineWindow: (link: HomeLink) => void;
 }) {
   const draggingLinkId = draggingTileId || draggingFolderTileId;
   const listRef = useFlipLayout(links.map((item) => item.id));
@@ -1808,7 +1877,17 @@ function Dock({
                   : undefined
               }
               onDragEnd={editMode ? onDragEnd : undefined}
-              onClick={editMode ? (event) => event.preventDefault() : undefined}
+              onClick={(event) => {
+                if (editMode) {
+                  event.preventDefault();
+                  return;
+                }
+
+                if (isAppLink(item)) {
+                  event.preventDefault();
+                  onOpenInlineWindow(item);
+                }
+              }}
             >
               {editMode ? (
                 <button
@@ -2252,6 +2331,7 @@ export function HomePage({ data }: HomePageProps) {
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [groupManagerOpen, setGroupManagerOpen] = useState(false);
   const [groupManagerInitialId, setGroupManagerInitialId] = useState("");
+  const [inlineWindowLink, setInlineWindowLink] = useState<HomeLink | null>(null);
   const [draggingTileId, setDraggingTileId] = useState("");
   const [dropTargetId, setDropTargetId] = useState("");
   const [draggingFolderTileId, setDraggingFolderTileId] = useState("");
@@ -2873,14 +2953,15 @@ export function HomePage({ data }: HomePageProps) {
     notify("已加入 Dock。", "success");
   }
 
-  async function handleSaveGroup(payload: { id?: string; name: string; src: string }) {
+  async function handleSaveGroup(payload: { id?: string; name: string; src: string; pageType: HomeLink["pageType"] }) {
     if (payload.id) {
       const nextLinks = currentLinks.map((item) =>
         item.id === payload.id && item.type === "pageGroup"
           ? {
               ...item,
               name: payload.name,
-              src: payload.src
+              src: payload.src,
+              pageType: payload.pageType
             }
           : item
       );
@@ -2896,6 +2977,7 @@ export function HomePage({ data }: HomePageProps) {
       src: payload.src,
       url: "",
       type: "pageGroup",
+      pageType: payload.pageType,
       sort: currentLinks.length + 1
     });
     const nextAddTile = buildActionLink({
@@ -3735,6 +3817,7 @@ export function HomePage({ data }: HomePageProps) {
                               }
                             : undefined
                         }
+                        onOpenInlineWindow={() => setInlineWindowLink(item)}
                         onDragStart={dragHandlers.onDragStart}
                         onDragEnter={dragHandlers.onDragEnter}
                         onDrop={dragHandlers.onDrop}
@@ -3822,6 +3905,7 @@ export function HomePage({ data }: HomePageProps) {
                 void handleRemoveDockItem(sourceId);
               }
             }}
+            onOpenInlineWindow={setInlineWindowLink}
           />
         ) : null}
         <RecordBar site={data.site} />
@@ -3851,6 +3935,7 @@ export function HomePage({ data }: HomePageProps) {
             onPin={(link) => {
               void handlePinToDock(link);
             }}
+            onOpenInlineWindow={setInlineWindowLink}
             onDragStart={(linkId) => {
               setDraggingTileId("");
               setDropTargetId("");
@@ -3889,6 +3974,12 @@ export function HomePage({ data }: HomePageProps) {
               setFolderDropTargetId("");
               setFolderPreviewIds(null);
             }}
+          />
+        ) : null}
+        {inlineWindowLink ? (
+          <InlineAppWindow
+            link={inlineWindowLink}
+            onClose={() => setInlineWindowLink(null)}
           />
         ) : null}
         <AuthDialog
@@ -3997,7 +4088,7 @@ export function HomePage({ data }: HomePageProps) {
         />
         <PageManagerDialog
           open={groupManagerOpen}
-          pageGroups={currentPageGroups}
+          pages={currentPageGroups}
           activePageId={activeGroupId}
           homePageId={homeGroupId}
           initialPageId={groupManagerInitialId}

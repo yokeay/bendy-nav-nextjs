@@ -7,12 +7,12 @@ import styles from "./home-page.module.css";
 
 type PageManagerDialogProps = {
   open: boolean;
-  pageGroups: HomeLink[];
+  pages: HomeLink[];
   activePageId: string;
   homePageId: string;
   initialPageId?: string;
   onClose: () => void;
-  onSave: (payload: { id?: string; name: string; src: string }) => Promise<string | void>;
+  onSave: (payload: { id?: string; name: string; src: string; pageType: HomeLink["pageType"] }) => Promise<string | void>;
   onDelete: (pageId: string) => Promise<void>;
   onSelectPage: (pageId: string) => void;
   onMovePage: (pageId: string, direction: "up" | "down") => Promise<void>;
@@ -45,7 +45,7 @@ function usePageIcons(open: boolean) {
 
 export function PageManagerDialog({
   open,
-  pageGroups,
+  pages,
   activePageId,
   homePageId,
   initialPageId,
@@ -59,6 +59,7 @@ export function PageManagerDialog({
   const [editingId, setEditingId] = useState("");
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
+  const [pageType, setPageType] = useState<HomeLink["pageType"]>("normal");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState("");
 
@@ -67,6 +68,7 @@ export function PageManagerDialog({
       setEditingId("");
       setName("");
       setIcon("");
+      setPageType("normal");
       setSaving(false);
       setDeletingId("");
     }
@@ -77,7 +79,7 @@ export function PageManagerDialog({
       return;
     }
 
-    const matchedPage = pageGroups.find((page) => page.id === initialPageId);
+    const matchedPage = pages.find((page) => page.id === initialPageId);
     if (!matchedPage) {
       return;
     }
@@ -85,7 +87,8 @@ export function PageManagerDialog({
     setEditingId(matchedPage.id);
     setName(matchedPage.name);
     setIcon(matchedPage.src);
-  }, [initialPageId, open, pageGroups]);
+    setPageType(matchedPage.pageType === "geek" ? "geek" : "normal");
+  }, [initialPageId, open, pages]);
 
   useEffect(() => {
     if (!open || initialPageId) {
@@ -95,18 +98,21 @@ export function PageManagerDialog({
     setEditingId("");
     setName("");
     setIcon(pageIcons[0]?.src ?? "/static/pageGroup/home.svg");
+    setPageType("normal");
   }, [initialPageId, open, pageIcons]);
 
   function beginCreate() {
     setEditingId("");
     setName("");
     setIcon(pageIcons[0]?.src ?? "/static/pageGroup/home.svg");
+    setPageType("normal");
   }
 
   function beginEdit(page: HomeLink) {
     setEditingId(page.id);
     setName(page.name);
     setIcon(page.src);
+    setPageType(page.pageType === "geek" ? "geek" : "normal");
   }
 
   function isHomeActive() {
@@ -128,7 +134,8 @@ export function PageManagerDialog({
       const savedPageId = await onSave({
         id: editingId || undefined,
         name: name.trim(),
-        src: icon
+        src: icon,
+        pageType
       });
 
       if (savedPageId) {
@@ -169,7 +176,7 @@ export function PageManagerDialog({
 
   return (
     <div className={styles.actionBackdrop} onClick={onClose}>
-      <div className={styles.actionDialogWide} onClick={(event) => event.stopPropagation()}>
+      <div className={styles.pageManagerDialog} onClick={(event) => event.stopPropagation()}>
         <div className={styles.actionHeader}>
           <div>
             <p className={styles.actionEyebrow}>桌面编辑</p>
@@ -180,7 +187,7 @@ export function PageManagerDialog({
           </button>
         </div>
 
-        <div className={styles.groupManagerLayout}>
+        <div className={styles.pageManagerShell}>
           <div className={styles.groupManagerList}>
             <div className={styles.groupManagerToolbar}>
               <button className={styles.actionPrimary} type="button" onClick={beginCreate}>
@@ -209,7 +216,7 @@ export function PageManagerDialog({
               </div>
             </div>
 
-            {pageGroups.map((page) => (
+            {pages.map((page) => (
               <div
                 className={activePageId === page.id ? `${styles.groupManagerItem} ${styles.groupManagerItemActive}` : styles.groupManagerItem}
                 key={page.id}
@@ -217,6 +224,7 @@ export function PageManagerDialog({
                 <div className={styles.groupManagerMeta}>
                   <img src={page.src} alt={page.name} />
                   <span>{page.name}</span>
+                  <em>{page.pageType === "geek" ? "极客" : "常规"}</em>
                 </div>
                 <div className={styles.groupManagerActions}>
                   <button className={styles.actionSecondary} type="button" onClick={() => void onMovePage(page.id, "up")}>
@@ -273,6 +281,28 @@ export function PageManagerDialog({
                 </div>
               </div>
             ) : null}
+
+            <div className={styles.actionLabel}>
+              <span>页面风格</span>
+              <div className={styles.pageTypeGrid}>
+                <button
+                  className={pageType === "normal" ? `${styles.pageTypeCard} ${styles.pageTypeCardActive}` : styles.pageTypeCard}
+                  type="button"
+                  onClick={() => setPageType("normal")}
+                >
+                  <strong>常规</strong>
+                  <small>适合日常导航、搜索和卡片组件</small>
+                </button>
+                <button
+                  className={pageType === "geek" ? `${styles.pageTypeCard} ${styles.pageTypeCardActive}` : styles.pageTypeCard}
+                  type="button"
+                  onClick={() => setPageType("geek")}
+                >
+                  <strong>极客</strong>
+                  <small>预留极客工作台风格，后续扩展专属内容</small>
+                </button>
+              </div>
+            </div>
 
             <div className={styles.actionFooter}>
               {hasFormValue ? (

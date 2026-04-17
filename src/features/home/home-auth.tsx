@@ -216,12 +216,7 @@ export function AuthDialog({ open, site, onClose, onNotify }: AuthDialogProps) {
     <div className={styles.authBackdrop} onClick={onClose}>
       <div className={styles.authLoginCard} onClick={(event) => event.stopPropagation()}>
         <div className={styles.authLoginVisual}>
-          <img className={styles.authVisualImage} src="/brand/logo-512.png" alt={site.title} />
-          <div className={styles.authVisualOverlay}>
-            <p className={styles.authVisualEyebrow}>笨迪导航</p>
-            <h2 className={styles.authVisualTitle}>{site.title}</h2>
-            <p className={styles.authVisualText}>登录后同步首页布局、Dock 和搜索偏好。</p>
-          </div>
+          <img className={styles.authVisualImage} src="/brand/login-banner-left.png" alt={site.title} />
         </div>
 
         <div className={styles.authDialog}>

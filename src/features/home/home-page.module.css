@@ -1144,10 +1144,11 @@
   height: 75px;
   max-width: calc(100vw - 24px);
   border-radius: 20px;
-  background: rgba(18, 28, 44, 0.48);
+  background: var(--sidebar-background);
+  border: 1px solid var(--sidebar-background);
   backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(80px);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
     0 18px 36px rgba(3, 10, 20, 0.28);
   z-index: 25;
 }
@@ -1490,17 +1491,13 @@
   flex: 1;
   width: 550px;
   min-width: 550px;
-  background:
-    linear-gradient(180deg, rgba(18, 24, 38, 0.16), rgba(18, 24, 38, 0.42)),
-    linear-gradient(135deg, rgba(80, 111, 255, 0.72), rgba(33, 177, 255, 0.52));
+  background: #164dae;
 }
 
 .authVisualImage {
   width: 100%;
   height: 100%;
-  padding: 6px;
   object-fit: cover;
-  border-radius: 16px;
 }
 
 .authVisualOverlay {
@@ -1768,19 +1765,19 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(2, 7, 14, 0.56);
-  backdrop-filter: blur(14px);
+  background: rgba(16, 16, 16, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 115;
 }
 
 .actionDialog,
 .actionDialogWide {
-  border-radius: 28px;
-  padding: 24px;
-  background: rgba(17, 26, 40, 0.92);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 24px 48px rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  padding: 20px;
+  background: #fff;
+  color: #3a3a3c;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
 }
 
 .actionDialog {
@@ -1793,6 +1790,28 @@
   overflow: auto;
 }
 
+.pageManagerDialog {
+  width: min(920px, calc(100vw - 24px));
+  max-height: min(720px, calc(100vh - 48px));
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  color: #25262b;
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.26);
+}
+
+.pageManagerDialog .actionHeader {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #ececec;
+}
+
+.pageManagerShell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  min-height: 510px;
+}
+
 .actionHeader {
   display: flex;
   align-items: flex-start;
@@ -1803,21 +1822,22 @@
 .actionEyebrow {
   margin: 0;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.58);
+  color: #8e8e94;
 }
 
 .actionTitle {
   margin: 6px 0 0;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
+  color: #1f2328;
 }
 
 .actionClose {
   width: 34px;
   height: 34px;
   border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  border-radius: 8px;
+  background: #f3f3f3;
+  color: #3a3a3c;
   cursor: pointer;
   font-size: 1.35rem;
 }
@@ -1835,23 +1855,24 @@
 
 .actionLabel span {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.74);
+  color: #3a3a3c;
 }
 
 .actionInput {
   width: 100%;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #eee;
+  color: #3a3a3c;
   outline: none;
 }
 
 .actionInput:focus {
-  border-color: rgba(21, 112, 239, 0.54);
-  box-shadow: 0 0 0 4px rgba(21, 112, 239, 0.12);
+  border-color: rgba(74, 157, 236, 0.76);
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(74, 157, 236, 0.2);
 }
 
 .actionModeRow {
@@ -1866,7 +1887,7 @@
   height: 64px;
   padding: 0;
   border: none;
-  border-radius: 14px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
 }
@@ -1880,7 +1901,7 @@
   height: 100%;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 8px;
   overflow: hidden;
   font-size: 20px;
   font-weight: 700;
@@ -1971,6 +1992,42 @@
   gap: 10px;
 }
 
+.pageTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pageTypeCard {
+  display: grid;
+  gap: 6px;
+  min-height: 86px;
+  padding: 12px;
+  border: 1px solid #ececec;
+  border-radius: 8px;
+  background: #f7f7f8;
+  color: #3a3a3c;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pageTypeCardActive {
+  border-color: rgba(0, 122, 255, 0.72);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.12);
+}
+
+.pageTypeCard strong {
+  font-size: 14px;
+  color: #1f2328;
+}
+
+.pageTypeCard small {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #74757a;
+}
+
 .actionTabs {
   margin-top: 16px;
   display: inline-flex;
@@ -1994,31 +2051,35 @@
 .addCardItem {
   display: grid;
   gap: 12px;
-  padding: 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 15px;
+  border-radius: 10px;
+  background: rgba(222, 222, 224, 0.3);
+  box-shadow: none;
 }
 
 .addCardTitle {
   margin: 0;
   font-size: 16px;
-  color: #fff;
+  color: #000;
+  text-align: center;
 }
 
 .addCardTips {
   margin: 0;
   min-height: 40px;
-  color: rgba(255, 255, 255, 0.74);
+  color: #374151;
   font-size: 13px;
   line-height: 1.5;
+  text-align: center;
 }
 
 .addCardPreview {
-  border-radius: 16px;
+  width: min(360px, 100%);
+  margin: auto;
+  border-radius: 12px;
   overflow: hidden;
   height: 160px;
-  background: rgba(255, 255, 255, 0.08);
+  background: #f3f3f3;
 }
 
 .addCardPreviewFrame {
@@ -2037,15 +2098,15 @@
 }
 
 .addCardMeta {
-  color: rgba(255, 255, 255, 0.68);
+  color: #6c6c6c;
   font-size: 12px;
 }
 
 .addCardEmpty {
   padding: 24px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.76);
+  border-radius: 10px;
+  background: #f3f3f3;
+  color: #6c6c6c;
   font-size: 13px;
 }
 
@@ -2053,17 +2114,17 @@
 .actionIconActive {
   aspect-ratio: 1 / 1;
   border: none;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: #fff;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px #ececec;
 }
 
 .actionIconActive {
   box-shadow:
     inset 0 0 0 2px rgba(21, 112, 239, 0.8),
-    0 12px 24px rgba(3, 10, 20, 0.22);
+    0 8px 18px rgba(21, 112, 239, 0.16);
 }
 
 .actionIcon img {
@@ -2085,18 +2146,18 @@
   min-height: 44px;
   padding: 0 18px;
   border: none;
-  border-radius: 14px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
 .actionPrimary {
-  background: #1570ef;
+  background: #007aff;
   color: #fff;
 }
 
 .actionSecondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: #f3f3f3;
+  color: #6c6c6c;
   position: relative;
 }
 
@@ -2118,19 +2179,20 @@
 
 .actionGalleryItem,
 .actionGalleryItemActive {
+  position: relative;
   aspect-ratio: 16 / 9;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  background: #f3f3f3;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px #ececec;
 }
 
 .actionGalleryItemActive {
   box-shadow:
     inset 0 0 0 2px rgba(21, 112, 239, 0.8),
-    0 12px 24px rgba(3, 10, 20, 0.22);
+    0 8px 18px rgba(21, 112, 239, 0.16);
 }
 
 .actionGalleryItem img {
@@ -2158,12 +2220,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: inherit;
 }
 
 .actionGalleryMeta strong {
   flex-shrink: 0;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.18);
   font-size: 11px;
   font-weight: 600;
@@ -2173,22 +2236,27 @@
   width: 100%;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #eee;
+  color: #3a3a3c;
   outline: none;
+}
+
+.actionSelect:focus {
+  border-color: rgba(74, 157, 236, 0.76);
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(74, 157, 236, 0.2);
 }
 
 .linkEditorDialog {
   width: min(980px, calc(100vw - 32px));
   max-height: min(820px, calc(100vh - 32px));
   padding: 22px;
-  border-radius: 28px;
-  background: rgba(17, 26, 40, 0.94);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 28px 56px rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+  background: #fff;
+  color: #3a3a3c;
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.26);
   overflow: auto;
 }
 
@@ -2213,9 +2281,9 @@
 .linkPreviewPanel,
 .linkIconLibrary,
 .catalogPanel {
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #f8f8f8;
+  box-shadow: none;
 }
 
 .linkPreviewPanel,
@@ -2228,7 +2296,7 @@
   height: 84px;
   display: grid;
   place-items: center;
-  border-radius: 24px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow:
     inset 0 0 0 1px rgba(17, 22, 30, 0.08),
@@ -2255,12 +2323,12 @@
 
 .linkPreviewMeta strong {
   font-size: 15px;
-  color: #fff;
+  color: #373737;
 }
 
 .linkPreviewMeta span {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.68);
+  color: #8e8e94;
   word-break: break-all;
 }
 
@@ -2268,7 +2336,7 @@
   margin-bottom: 12px;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.76);
+  color: #3a3a3c;
 }
 
 .editorRow {
@@ -2281,7 +2349,7 @@
 .editorLabel {
   padding-top: 11px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #3a3a3c;
 }
 
 .editorControl {
@@ -2303,7 +2371,7 @@
 .editorHint {
   font-size: 12px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.6);
+  color: #8c939d;
 }
 
 .actionInputLight,
@@ -2311,16 +2379,19 @@
   width: 100%;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #eee;
+  color: #3a3a3c;
   outline: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+}
+
+.actionSelectLight {
   appearance: none;
   background-image:
-    linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.68) 50%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.68) 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, #6c6c6c 50%),
+    linear-gradient(135deg, #6c6c6c 50%, transparent 50%);
   background-position:
     calc(100% - 20px) calc(50% - 2px),
     calc(100% - 14px) calc(50% - 2px);
@@ -2330,13 +2401,14 @@
 }
 
 .actionInputLight::placeholder {
-  color: rgba(255, 255, 255, 0.42);
+  color: #8c939d;
 }
 
 .actionInputLight:focus,
 .actionSelectLight:focus {
-  border-color: rgba(21, 112, 239, 0.54);
-  box-shadow: 0 0 0 4px rgba(21, 112, 239, 0.12);
+  border-color: rgba(74, 157, 236, 0.76);
+  background-color: #fff;
+  box-shadow: 0 0 0 5px rgba(74, 157, 236, 0.2);
 }
 
 .actionPrimarySoft,
@@ -2346,21 +2418,21 @@
   min-height: 44px;
   padding: 0 16px;
   border: none;
-  border-radius: 14px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
 .actionPrimarySoft {
-  background: rgba(21, 112, 239, 0.18);
-  color: #b8d5ff;
+  background: #007aff;
+  color: #fff;
 }
 
 .actionSecondarySoft {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: #f3f3f3;
+  color: #6c6c6c;
 }
 
 .catalogPanel {
@@ -2383,7 +2455,7 @@
 .catalogLabel {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.68);
+  color: #6c6c6c;
 }
 
 .pushStoreRow {
@@ -2403,7 +2475,7 @@
 .pushStoreText {
   font-size: 12px;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.68);
+  color: #6c6c6c;
 }
 
 .recommendList {
@@ -2420,9 +2492,9 @@
   display: grid;
   gap: 14px;
   padding: 15px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(222, 222, 224, 0.3);
+  box-shadow: none;
 }
 
 .recommendHeader {
@@ -2437,7 +2509,7 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  border-radius: 18px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -2456,14 +2528,14 @@
 .recommendMeta h3 {
   margin: 0;
   font-size: 15px;
-  color: #fff;
+  color: #111827;
 }
 
 .recommendMeta p {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.68);
+  color: #6c6c6c;
 }
 
 .recommendFooter {
@@ -2479,7 +2551,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.58);
+  color: #8e8e94;
 }
 
 .groupManagerLayout {
@@ -2492,9 +2564,27 @@
 .groupManagerList,
 .groupManagerEditor {
   padding: 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: #f8f8f8;
+  box-shadow: none;
+}
+
+.pageManagerShell .groupManagerList,
+.pageManagerShell .groupManagerEditor {
+  border-radius: 0;
+  background: #fff;
+}
+
+.pageManagerShell .groupManagerList {
+  border-right: 1px solid #ececec;
+  overflow: auto;
+}
+
+.pageManagerShell .groupManagerEditor {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  background: #fafafa;
+  overflow: auto;
 }
 
 .groupManagerToolbar {
@@ -2508,8 +2598,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  border-top: 1px solid #ececec;
+  border-radius: 8px;
 }
 
 .groupManagerItem:first-of-type {
@@ -2518,9 +2609,8 @@
 }
 
 .groupManagerItemActive {
-  border-radius: 14px;
-  padding-inline: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.42);
 }
 
 .groupManagerMeta {
@@ -2534,8 +2624,8 @@
   width: 34px;
   height: 34px;
   object-fit: contain;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #fff;
   padding: 6px;
 }
 
@@ -2544,22 +2634,131 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #f4f7fb;
+  color: #373737;
+}
+
+.groupManagerMeta em {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #2764c5;
+  font-size: 11px;
+  font-style: normal;
 }
 
 .groupManagerActions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.groupManagerActions .actionSecondary,
+.groupManagerActions .actionDanger {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .actionDanger {
   min-height: 44px;
   padding: 0 18px;
   border: none;
-  border-radius: 14px;
+  border-radius: 8px;
   cursor: pointer;
   background: rgba(164, 33, 55, 0.94);
   color: #fff;
+}
+
+.inlineWindowLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 108;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  pointer-events: none;
+}
+
+.inlineWindow {
+  width: min(980px, calc(100vw - 48px));
+  height: min(680px, calc(100vh - 72px));
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 24px 68px rgba(0, 0, 0, 0.32);
+  pointer-events: auto;
+}
+
+.inlineWindowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid #ececec;
+  background: #f8f8f9;
+}
+
+.inlineWindowTitle {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #25262b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inlineWindowTitle img,
+.inlineWindowTextIcon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.inlineWindowTextIcon {
+  color: #25262b;
+  font-size: 12px;
+}
+
+.inlineWindowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inlineWindowActions a,
+.inlineWindowActions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: #eee;
+  color: #4b4c52;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.inlineWindowActions button {
+  width: 32px;
+  padding: 0;
+  font-size: 18px;
+}
+
+.inlineWindowFrame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
 }
 
 .settingsBackdrop {
@@ -2583,7 +2782,7 @@
 
 .controlModel {
   position: absolute;
-  bottom: 60px;
+  bottom: 0;
   width: 700px;
   height: 500px;
   display: flex;
@@ -2591,7 +2790,13 @@
   border-radius: 14px;
   background: #f8f8f8;
   box-shadow: 5px 5px 10px rgba(205, 205, 205, 0.2);
-  transform: scale(1);
+  transform: scale(0);
+}
+
+@media (min-height: 650px) {
+  .controlModel {
+    height: 600px;
+  }
 }
 
 .controlModelLeft {
@@ -3016,6 +3221,34 @@
   }
 }
 
+@keyframes settingsPanelMobileLeftIn {
+  from {
+    transform: scale(0);
+    left: 0;
+    bottom: 0;
+  }
+
+  to {
+    transform: scale(1);
+    left: 0;
+    bottom: 0;
+  }
+}
+
+@keyframes settingsPanelMobileRightIn {
+  from {
+    transform: scale(0);
+    right: 0;
+    bottom: 0;
+  }
+
+  to {
+    transform: scale(1);
+    right: 0;
+    bottom: 0;
+  }
+}
+
 .settingsDialog {
   width: min(980px, calc(100vw - 24px));
   max-height: min(760px, calc(100vh - 48px));
@@ -3243,8 +3476,9 @@
 }
 
 .segmentedItem {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.78);
+  background: #fff;
+  color: #3a3a3c;
+  box-shadow: inset 0 0 0 1px rgba(226, 226, 226, 0.9);
 }
 
 .segmentedItemActive {
@@ -3350,6 +3584,53 @@
   }
 }
 
+@media (max-width: 700px) {
+  .controlModel {
+    width: 100%;
+    height: min(600px, 86vh);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .controlModelLeft {
+    left: 0;
+    animation: settingsPanelMobileLeftIn 220ms ease forwards;
+  }
+
+  .controlModelRight {
+    right: 0;
+    animation: settingsPanelMobileRightIn 220ms ease forwards;
+  }
+
+  .controlMenu {
+    width: 80px;
+  }
+
+  .controlUserCard {
+    justify-content: center;
+    margin: 8px 10px;
+    padding: 0;
+    width: calc(100% - 20px);
+    height: 45px;
+  }
+
+  .controlUserCardMeta,
+  .controlMenuItem span:last-child {
+    display: none;
+  }
+
+  .controlMenuItem,
+  .controlMenuItemActive {
+    justify-content: center;
+    width: calc(100% - 20px);
+    margin: 8px 10px;
+    padding: 4px;
+  }
+
+  .controlBox {
+    padding: 10px 5px 10px 10px;
+  }
+}
+
 @media (max-width: 640px) {
   .toolbar {
     top: 84px;
@@ -3407,6 +3688,35 @@
   .actionDialog,
   .actionDialogWide {
     padding: 20px;
+  }
+
+  .pageManagerDialog {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .pageManagerShell {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .pageManagerShell .groupManagerList {
+    max-height: 42vh;
+    border-right: none;
+    border-bottom: 1px solid #ececec;
+  }
+
+  .pageTypeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .inlineWindowLayer {
+    padding: 12px;
+  }
+
+  .inlineWindow {
+    width: 100%;
+    height: calc(100vh - 24px);
   }
 
   .linkEditorDialog {

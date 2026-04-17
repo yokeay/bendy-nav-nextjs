@@ -1,4 +1,5 @@
 export type HomeLinkType = "icon" | "pageGroup" | "component";
+export type HomePageType = "normal" | "geek";
 
 export type HomeLink = {
   id: string;
@@ -10,6 +11,7 @@ export type HomeLink = {
   size: string;
   sort: number;
   type: HomeLinkType;
+  pageType: HomePageType;
   bgColor: string | null;
   pageGroup: string;
   form: string;
