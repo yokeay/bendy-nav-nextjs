@@ -1,0 +1,13 @@
+.linkCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.linkIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #f4f6fb;
+}
