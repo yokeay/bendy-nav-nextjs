@@ -590,6 +590,7 @@ function Sidebar({
   pageGroups,
   activeGroupId,
   position,
+  autoHide,
   editMode,
   user,
   onOpenAuth,
@@ -604,6 +605,7 @@ function Sidebar({
   pageGroups: HomeLink[];
   activeGroupId: string;
   position: "left" | "right";
+  autoHide: boolean;
   editMode: boolean;
   user: HomeData["user"];
   onOpenAuth: () => void;
@@ -620,7 +622,11 @@ function Sidebar({
   });
 
   return (
-    <aside className={position === "right" ? `${styles.sidebar} ${styles.sidebarRight}` : styles.sidebar}>
+    <aside className={[
+      styles.sidebar,
+      position === "right" ? styles.sidebarRight : "",
+      autoHide ? styles.sidebarAutoHide : ""
+    ].filter(Boolean).join(" ")}>
       <div className={styles.sidebarGroup}>
         <div className={styles.sidebarProfile}>
           {user ? (
@@ -1541,13 +1547,30 @@ function ComponentTile({
           }
         }}
       >
-        <iframe
-          className={styles.componentTileFrame}
-          src={link.url}
-          title={resolveTileLabel(link)}
-          loading="lazy"
-          tabIndex={-1}
-        />
+        {(() => {
+          const frameUrl = typeof link.url === "string" ? link.url.trim() : "";
+          const isSafeFrame = /^https?:\/\//i.test(frameUrl);
+          if (!isSafeFrame) {
+            return (
+              <div className={styles.componentTileFrame} style={{ display: "flex", alignItems: "center", justifyContent: "center", background: link.bgColor || "#fff" }}>
+                {isTextIcon(link) ? (
+                  <span className={styles.tileTextIcon}>{link.src.replace(/^txt:/, "")}</span>
+                ) : link.src ? (
+                  <img src={link.src} alt="" style={{ maxWidth: "48%", maxHeight: "48%", objectFit: "contain" }} />
+                ) : null}
+              </div>
+            );
+          }
+          return (
+            <iframe
+              className={styles.componentTileFrame}
+              src={frameUrl}
+              title={resolveTileLabel(link)}
+              loading="lazy"
+              tabIndex={-1}
+            />
+          );
+        })()}
       </button>
       <span className={styles.tileLabel}>{resolveTileLabel(link)}</span>
     </div>
@@ -3444,6 +3467,7 @@ export function HomePage({ data }: HomePageProps) {
             pageGroups={currentPageGroups}
             activeGroupId={activeGroupId}
             position={currentConfig.theme.pageGroupPosition}
+            autoHide={currentConfig.theme.pageGroupStatus}
             editMode={editMode}
             user={data.user}
             onOpenAuth={() => setAuthOpen(true)}

@@ -193,3 +193,110 @@
 - [ ] 这轮是否把新增方向和剩余方向写回 `maintain.md` 与 `plan.md`。
 - [ ] `npm run typecheck` 是否通过。
 - [ ] `npm run build` 是否通过。
+
+---
+
+## 后台管理改造计划（Phase 5：Admin Backend Redesign）
+
+### 目标
+
+为 Bendy 导航构建完整的后台管理系统，统一管理用户、书签、页面、卡片、壁纸、插件、审计日志。后台路径使用 `/admin`，独立于首页。后端沿用 Next.js route handlers，持久层采用 Prisma + SQLite（开发）/ MySQL（生产），配置全部走 `.env`。
+
+### 边界
+
+- 后台访问需登录 + RBAC（角色：`superadmin` / `admin` / `auditor`）。
+- 敏感操作（删除用户、踢出会话、重置导航默认数据）需二次校验（TOTP 或邮件二次确认）。
+- 所有接口遵守 `{code, message, data}` 响应格式；错误码集中在 `src/server/shared/error-codes.ts`。
+- 所有业务资源均带业务前缀 `bendy_`（DB 表 / Redis key / 配置项）。
+
+### 模块拆分
+
+1. **Auth 子系统**
+   - `/admin/login`，`/admin/totp/bind`，`/admin/totp/verify`
+   - Token：短期 access (15min) + 长期 refresh (14d)，存储在 httpOnly cookie
+   - 登录失败限流 (5次/15min) + 验证码兜底
+   - TOTP 密钥使用 AES-GCM 加密，密钥来自 `.env:ADMIN_TOTP_MASTER_KEY`
+
+2. **Dashboard**
+   - 首屏概览：用户总数、当日新增、在线会话、最近 50 条审计日志、磁盘占用
+   - 图表：近 30 天注册 / 登录 / 书签创建趋势（使用 `recharts`）
+
+3. **用户管理**
+   - 列表（分页、搜索、角色筛选）
+   - 详情页（基础资料、书签数、会话、登录历史）
+   - 操作：禁用/启用、踢人（吊销所有 refresh token）、重置密码、改角色、删除（软删）
+   - 批量：导出 CSV、批量禁用
+
+4. **书签/卡片/页面管理**
+   - 全局视角查看任意用户的首页数据（只读默认，启用"维护模式"后可改）
+   - 默认模板（defaultTab.json）在线编辑器（JSON schema 校验 + 预览）
+   - 卡片插件目录维护
+
+5. **壁纸库管理**
+   - 上传 / 替换 / 删除 / 排序
+   - 对接 S3 / 本地 FS（`.env:STORAGE_DRIVER`）
+
+6. **审计日志**
+   - 所有敏感操作写入 `bendy_audit_log`
+   - 列表页可按用户、操作类型、时间范围筛选
+   - 导出 JSON / CSV
+
+7. **系统设置**
+   - 站点基本信息、备案号、Logo、第三方登录开关（QQ/微信）
+   - 备份与恢复：手动触发备份、列出快照、一键恢复
+   - 维护模式开关（前台只读）
+
+### 数据模型（Prisma schema 新增）
+
+- `BendyAdminUser { id, email, passwordHash, totpSecret?, role, status, lastLoginAt }`
+- `BendyAdminSession { id, userId, refreshTokenHash, userAgent, ip, revokedAt, expiresAt }`
+- `BendyAdminAuditLog { id, actorId, action, targetType, targetId, payload(JSON), ip, createdAt }`
+- `BendyWallpaper { id, url, category, order, uploadedBy, createdAt }`
+- `BendyDefaultTemplate { id, version, content(JSON), publishedAt, publishedBy }`
+
+### API 约定
+
+- 全部放在 `app/api/admin/*`
+- Middleware：`requireAdminAuth`, `requireRole`, `auditLog`
+- 返回统一结构；错误码列表：1001 Token 过期 / 1002 权限不足 / 1003 二次校验失败 / 2001 资源不存在 / 2002 校验失败 / 5001 服务器错误
+
+### 前端路由
+
+- `/admin` — 登录态校验后跳 `/admin/dashboard`
+- `/admin/login` - `/admin/totp`
+- `/admin/dashboard` - `/admin/users` - `/admin/users/[id]`
+- `/admin/content/templates` - `/admin/content/wallpapers` - `/admin/content/plugins`
+- `/admin/audit` - `/admin/settings` - `/admin/backup`
+
+### UI 规范
+
+- 基于 shadcn-style 组件（已有的 Next.js CSS module 体系）
+- 三栏布局：左侧菜单 280px + 顶部导航 56px + 内容区
+- 色板延续首页主题（深色 + 品牌蓝）；表格、表单、按钮统一组件化
+
+### 实施顺序（单次迭代内）
+
+1. **基础设施**
+   - 落地 Prisma + 迁移；生成 `schema.prisma`；添加 `prisma migrate dev` 到脚本
+   - 写 seed：创建默认 `superadmin`（从 `.env` 读取初始账号）
+   - 建立 `src/server/admin/**` 分层（application / domain / infra）
+2. **Auth**
+   - 登录、TOTP 绑定/校验、刷新、登出、吊销
+   - 单元测试：TOTP 生成/验证、Token 签发/吊销、限流
+3. **后台壳层**
+   - 布局组件、左侧菜单、面包屑、全局 Toast
+   - Middleware `requireAdminAuth`
+4. **用户管理**（含审计写入）
+5. **内容管理**（模板、壁纸、插件）
+6. **审计日志 + 系统设置 + 备份**
+7. **Dashboard 指标卡**
+
+### 验收标准
+
+- `npm run typecheck` / `npm run lint` / `npm run build` 全部通过
+- Auth、TOTP、审计日志模块测试覆盖率 ≥ 80%
+- `npm audit` 无高危漏洞
+- Docker Compose 一键拉起（web + mysql + redis）
+- README 与 maintain.md 记录所有新增 `.env` 配置项
+
+- [ ] `npm run build` 是否通过。
