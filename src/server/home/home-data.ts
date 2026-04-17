@@ -16,7 +16,7 @@ import type {
   HomeUser
 } from "./types";
 
-const APP_VERSION = "2.4.4";
+const APP_VERSION = "2.4.39";
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_BRAND_ICON = "/brand/logo-192.png";
@@ -230,6 +230,7 @@ function normalizeLink(input: unknown): HomeLink | null {
     size: toStringValue(source.size, "1x1").trim() || "1x1",
     sort: toNumberValue(source.sort, 0),
     type,
+    pageType: toStringValue(source.pageType, "normal") === "geek" ? "geek" : "normal",
     bgColor: toStringValue(source.bgColor, "").trim() || null,
     pageGroup: toStringValue(source.pageGroup, "").trim(),
     form: toStringValue(source.form, "").trim(),
@@ -473,6 +474,12 @@ function normalizeOpenType(input: Record<string, unknown>): HomeOpenType {
 
 function normalizeTheme(input: Record<string, unknown>): HomeTheme {
   return {
+    themeMode:
+      toStringValue(input.themeMode, "auto") === "dark"
+        ? "dark"
+        : toStringValue(input.themeMode, "auto") === "light"
+          ? "light"
+          : "auto",
     backgroundImage: normalizeAssetPath(
       toStringValue(input.backgroundImage, "/static/background.jpeg")
     ),
@@ -487,6 +494,7 @@ function normalizeTheme(input: Record<string, unknown>): HomeTheme {
     iconRadius: Math.max(6, toNumberValue(input.iconRadius, 10)),
     CompactMode: toBooleanValue(input.CompactMode, false),
     nameColor: toStringValue(input.nameColor, "#fff"),
+    sideBackground: toStringValue(input.sideBackground, "rgba(46, 46, 46, 0.4)"),
     opacity: Math.min(1, Math.max(0, Number(input.opacity ?? 0.1))),
     colsGap: Math.max(8, toNumberValue(input.colsGap, 35)),
     pageGroup: toBooleanValue(input.pageGroup, true),
@@ -554,7 +562,10 @@ function buildSiteInfo(settings: Record<string, string>): HomeSiteInfo {
         ? "old_password"
         : "email_code",
     qqLoginEnabled: settingValue(settings, "qq_login", "0") === "1",
-    wxLoginEnabled: settingValue(settings, "wx_login", "0") === "1"
+    wxLoginEnabled: settingValue(settings, "wx_login", "0") === "1",
+    isPushLinkStore: settingValue(settings, "is_push_link_store", "0") === "1",
+    isPushLinkStatus: settingValue(settings, "is_push_link_status", "0") === "1",
+    isPushLinkStoreTips: settingValue(settings, "is_push_link_store_tips", "", true)
   };
 }
 

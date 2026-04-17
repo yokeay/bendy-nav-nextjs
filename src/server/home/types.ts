@@ -1,4 +1,5 @@
 export type HomeLinkType = "icon" | "pageGroup" | "component";
+export type HomePageType = "normal" | "geek";
 
 export type HomeLink = {
   id: string;
@@ -10,6 +11,7 @@ export type HomeLink = {
   size: string;
   sort: number;
   type: HomeLinkType;
+  pageType: HomePageType;
   bgColor: string | null;
   pageGroup: string;
   form: string;
@@ -30,6 +32,7 @@ export type HomeOpenType = {
 };
 
 export type HomeTheme = {
+  themeMode?: "auto" | "light" | "dark";
   backgroundImage: string;
   backgroundMime: number;
   blur: number;
@@ -42,6 +45,7 @@ export type HomeTheme = {
   iconRadius: number;
   CompactMode: boolean;
   nameColor: string;
+  sideBackground: string;
   opacity: number;
   colsGap: number;
   pageGroup: boolean;
@@ -80,6 +84,9 @@ export type HomeSiteInfo = {
   authCheckMode: "email_code" | "old_password";
   qqLoginEnabled: boolean;
   wxLoginEnabled: boolean;
+  isPushLinkStore: boolean;
+  isPushLinkStatus: boolean;
+  isPushLinkStoreTips: string;
 };
 
 export type HomeUser = {

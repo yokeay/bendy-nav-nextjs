@@ -54,7 +54,7 @@ function useMailCodeCountdown() {
     }
 
     const timer = window.setTimeout(() => {
-      setSeconds(seconds - 1);
+      setSeconds((current) => current - 1);
     }, 1000);
 
     return () => {
@@ -99,7 +99,7 @@ export function AuthDialog({ open, site, onClose, onNotify }: AuthDialogProps) {
     return () => {
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [open, onClose]);
+  }, [onClose, open]);
 
   const title = useMemo(() => {
     if (mode === "register") {
@@ -214,132 +214,163 @@ export function AuthDialog({ open, site, onClose, onNotify }: AuthDialogProps) {
 
   return (
     <div className={styles.authBackdrop} onClick={onClose}>
-      <div className={styles.authDialog} onClick={(event) => event.stopPropagation()}>
-        <div className={styles.authHeader}>
-          <div>
-            <p className={styles.authEyebrow}>账户</p>
-            <h2 className={styles.authTitle}>{title}</h2>
-          </div>
+      <div className={styles.authLoginCard} onClick={(event) => event.stopPropagation()}>
+        <div className={styles.authLoginVisual}>
+          <img className={styles.authVisualImage} src="/brand/login-banner-left.png" alt={site.title} />
+        </div>
+
+        <div className={styles.authDialog}>
           <button className={styles.authClose} type="button" onClick={onClose} aria-label="关闭">
             ×
           </button>
-        </div>
 
-        <div className={styles.authTabs}>
-          <button
-            className={mode === "login" ? styles.authTabActive : styles.authTab}
-            type="button"
-            onClick={() => setMode("login")}
-          >
-            登录
-          </button>
-          {site.allowRegister ? (
+          <div className={styles.authHeader}>
+            <div>
+              <p className={styles.authEyebrow}>账户</p>
+              <h2 className={styles.authTitle}>{title}</h2>
+            </div>
+          </div>
+
+          <div className={styles.authTabs}>
             <button
-              className={mode === "register" ? styles.authTabActive : styles.authTab}
+              className={mode === "login" ? styles.authTabActive : styles.authTab}
               type="button"
-              onClick={() => setMode("register")}
+              onClick={() => setMode("login")}
             >
-              注册
+              登录
             </button>
-          ) : null}
-          <button
-            className={mode === "reset" ? styles.authTabActive : styles.authTab}
-            type="button"
-            onClick={() => setMode("reset")}
-          >
-            找回
-          </button>
-        </div>
+            {site.allowRegister ? (
+              <button
+                className={mode === "register" ? styles.authTabActive : styles.authTab}
+                type="button"
+                onClick={() => setMode("register")}
+              >
+                注册
+              </button>
+            ) : null}
+            <button
+              className={mode === "reset" ? styles.authTabActive : styles.authTab}
+              type="button"
+              onClick={() => setMode("reset")}
+            >
+              找回
+            </button>
+          </div>
 
-        <form className={styles.authForm} onSubmit={handleSubmit}>
-          <label className={styles.authLabel}>
-            <span>邮箱账号</span>
-            <input
-              className={styles.authInput}
-              value={form.username}
-              onChange={(event) => setForm({ ...form, username: event.target.value })}
-              placeholder="请输入邮箱"
-              autoComplete="email"
-            />
-          </label>
-
-          <label className={styles.authLabel}>
-            <span>{mode === "reset" ? "新密码" : "密码"}</span>
-            <input
-              className={styles.authInput}
-              type="password"
-              value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
-              placeholder="请输入 6-18 位密码"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-            />
-          </label>
-
-          {mode === "register" && site.authCheckMode === "email_code" ? (
+          <form className={styles.authForm} onSubmit={handleSubmit}>
             <label className={styles.authLabel}>
-              <span>邮箱验证码</span>
-              <div className={styles.authInlineField}>
-                <input
-                  className={styles.authInput}
-                  value={form.code}
-                  onChange={(event) => setForm({ ...form, code: event.target.value })}
-                  placeholder="请输入验证码"
-                />
-                <button
-                  className={styles.authSecondaryButton}
-                  type="button"
-                  disabled={codeTimer.seconds > 0}
-                  onClick={handleMailCode}
-                >
-                  {codeTimer.seconds > 0 ? `${codeTimer.seconds}s` : "获取验证码"}
-                </button>
-              </div>
+              <span>邮箱账号</span>
+              <input
+                className={styles.authInput}
+                value={form.username}
+                onChange={(event) => setForm({ ...form, username: event.target.value })}
+                placeholder="请输入邮箱"
+                autoComplete="email"
+              />
             </label>
-          ) : null}
 
-          {mode === "reset" && site.authCheckMode === "old_password" ? (
             <label className={styles.authLabel}>
-              <span>旧密码</span>
+              <span>{mode === "reset" ? "新密码" : "登录密码"}</span>
               <input
                 className={styles.authInput}
                 type="password"
-                value={form.oldPassword}
-                onChange={(event) => setForm({ ...form, oldPassword: event.target.value })}
-                placeholder="请输入旧密码"
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                placeholder="请输入6-18位密码"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
               />
             </label>
-          ) : null}
 
-          {mode === "reset" && site.authCheckMode === "email_code" ? (
-            <label className={styles.authLabel}>
-              <span>邮箱验证码</span>
-              <div className={styles.authInlineField}>
+            {mode === "register" && site.authCheckMode === "email_code" ? (
+              <label className={styles.authLabel}>
+                <span>邮箱验证码</span>
+                <div className={styles.authInlineField}>
+                  <input
+                    className={styles.authInput}
+                    value={form.code}
+                    onChange={(event) => setForm({ ...form, code: event.target.value })}
+                    placeholder="请输入验证码"
+                  />
+                  <button
+                    className={styles.authSecondaryButton}
+                    type="button"
+                    disabled={codeTimer.seconds > 0}
+                    onClick={handleMailCode}
+                  >
+                    {codeTimer.seconds > 0 ? `${codeTimer.seconds}s` : "获取"}
+                  </button>
+                </div>
+              </label>
+            ) : null}
+
+            {mode === "reset" && site.authCheckMode === "old_password" ? (
+              <label className={styles.authLabel}>
+                <span>旧密码</span>
                 <input
                   className={styles.authInput}
-                  value={form.code}
-                  onChange={(event) => setForm({ ...form, code: event.target.value })}
-                  placeholder="请输入验证码"
+                  type="password"
+                  value={form.oldPassword}
+                  onChange={(event) => setForm({ ...form, oldPassword: event.target.value })}
+                  placeholder="请输入旧密码"
                 />
-                <button
-                  className={styles.authSecondaryButton}
-                  type="button"
-                  disabled={codeTimer.seconds > 0}
-                  onClick={handleMailCode}
-                >
-                  {codeTimer.seconds > 0 ? `${codeTimer.seconds}s` : "获取验证码"}
-                </button>
+              </label>
+            ) : null}
+
+            {mode === "reset" && site.authCheckMode === "email_code" ? (
+              <label className={styles.authLabel}>
+                <span>邮箱验证码</span>
+                <div className={styles.authInlineField}>
+                  <input
+                    className={styles.authInput}
+                    value={form.code}
+                    onChange={(event) => setForm({ ...form, code: event.target.value })}
+                    placeholder="请输入验证码"
+                  />
+                  <button
+                    className={styles.authSecondaryButton}
+                    type="button"
+                    disabled={codeTimer.seconds > 0}
+                    onClick={handleMailCode}
+                  >
+                    {codeTimer.seconds > 0 ? `${codeTimer.seconds}s` : "获取"}
+                  </button>
+                </div>
+              </label>
+            ) : null}
+
+            <button className={styles.authSubmit} type="submit" disabled={submitting}>
+              {submitting ? "处理中..." : mode === "login" ? "登录" : mode === "register" ? "提交注册" : "提交"}
+            </button>
+          </form>
+
+          {mode === "login" && (site.qqLoginEnabled || site.wxLoginEnabled) ? (
+            <div className={styles.authSocial}>
+              <div className={styles.authSocialDivider} />
+              <div className={styles.authSocialRow}>
+                {site.qqLoginEnabled ? (
+                  <button
+                    className={styles.authSocialButton}
+                    type="button"
+                    onClick={() => onNotify("QQ 登录路径暂时保留在兼容入口。", "info")}
+                    title="QQ登录"
+                  >
+                    <img src="/static/qq_symbol.png" alt="" />
+                  </button>
+                ) : null}
+                {site.wxLoginEnabled ? (
+                  <button
+                    className={styles.authSocialButton}
+                    type="button"
+                    onClick={() => onNotify("微信登录路径暂时保留在兼容入口。", "info")}
+                    title="微信登录"
+                  >
+                    微
+                  </button>
+                ) : null}
               </div>
-            </label>
+            </div>
           ) : null}
-
-          <button className={styles.authSubmit} type="submit" disabled={submitting}>
-            {submitting ? "处理中..." : mode === "login" ? "登录" : mode === "register" ? "提交注册" : "重置密码"}
-          </button>
-        </form>
-
-        {(site.qqLoginEnabled || site.wxLoginEnabled) && mode === "login" ? (
-          <p className={styles.authHint}>第三方登录仍暂时保留在兼容入口，后续再迁移。</p>
-        ) : null}
+        </div>
       </div>
     </div>
   );
@@ -396,7 +427,13 @@ export function UserMenu({ user, legacyUrl, onNotify }: UserMenuProps) {
 
   return (
     <div className={styles.userMenuRoot} data-home-user-menu="true">
-      <button className={styles.userButton} type="button" onClick={() => setOpen(!open)}>
+      <button
+        className={styles.userButton}
+        type="button"
+        title="打开账户菜单"
+        aria-label="打开账户菜单"
+        onClick={() => setOpen(!open)}
+      >
         <img className={styles.userAvatar} src={user.avatar} alt={user.nickname || user.email || "用户"} />
         <span className={styles.userButtonText}>{user.nickname || user.email || `用户 #${user.userId}`}</span>
       </button>
