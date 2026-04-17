@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bendy
+      POSTGRES_PASSWORD: bendy
+      POSTGRES_DB: bendy
+    volumes:
+      - bendy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "bendy"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.pg
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      BUSINESS_PREFIX: bendy
+      APP_BASE_URL: http://localhost:3000
+      DATABASE_PROVIDER: postgresql
+      DATABASE_URL: postgresql://bendy:bendy@postgres:5432/bendy
+      CACHE_DRIVER: ${CACHE_DRIVER:-memory}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: /data/uploads
+      STORAGE_LOCAL_PUBLIC_BASE_URL: /uploads
+      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:?set GITHUB_OAUTH_CLIENT_ID}
+      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:?set GITHUB_OAUTH_CLIENT_SECRET}
+      ADMIN_GITHUB_EMAILS: ${ADMIN_GITHUB_EMAILS:?set ADMIN_GITHUB_EMAILS}
+      SESSION_JWT_SECRET: ${SESSION_JWT_SECRET:?set SESSION_JWT_SECRET}
+    volumes:
+      - bendy_uploads:/data/uploads
+
+volumes:
+  bendy_pgdata:
+  bendy_uploads:

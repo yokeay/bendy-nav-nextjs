@@ -91,6 +91,79 @@
 
 默认访问地址为 `http://127.0.0.1:3000`。
 
+### 部署（三种形态）
+
+本项目支持三种部署场景，共用同一套代码，差异由 `.env` 变量切换。
+
+#### A. VPS / 自建服务器（Docker Compose + PostgreSQL）
+
+推荐用于自有云服务器、家庭 NAS。数据库由 compose 起的 `postgres:16` 容器承担，壁纸等上传落在 volume。
+
+```bash
+cd docker
+GITHUB_OAUTH_CLIENT_ID=... \
+GITHUB_OAUTH_CLIENT_SECRET=... \
+ADMIN_GITHUB_EMAILS=you@example.com \
+SESSION_JWT_SECRET=$(openssl rand -hex 32) \
+  docker compose -f docker-compose.pg.yml up -d --build
+```
+
+打开 `http://<host>:3000`，使用 GitHub 登录。邮箱命中 `ADMIN_GITHUB_EMAILS` 的用户会看到后台入口。
+
+#### B. 单容器平台（ClawCloud / Railway / Fly.io 等，SQLite）
+
+推荐用于"一键拉起、零运维"。DB 文件在容器内 `/data/bendy.db`，通过持久卷挂载。Upstash Redis 可选但强烈建议开启，避免 SQLite 高并发读抖动。
+
+```bash
+docker build -f docker/Dockerfile.sqlite -t bendy-nav-sqlite .
+docker run -d -p 3000:3000 \
+  -v bendy_data:/data \
+  -e APP_BASE_URL=https://nav.example.com \
+  -e GITHUB_OAUTH_CLIENT_ID=... \
+  -e GITHUB_OAUTH_CLIENT_SECRET=... \
+  -e ADMIN_GITHUB_EMAILS=you@example.com \
+  -e SESSION_JWT_SECRET=$(openssl rand -hex 32) \
+  -e CACHE_DRIVER=upstash \
+  -e UPSTASH_REDIS_REST_URL=... \
+  -e UPSTASH_REDIS_REST_TOKEN=... \
+  bendy-nav-sqlite
+```
+
+#### C. Serverless（Vercel / Netlify / Cloudflare Pages Functions）
+
+- 数据库：Neon / Supabase Postgres（免费层即可）
+- 缓存：Upstash Redis（REST，天然 Serverless 友好）
+- 存储：**必须** S3 兼容对象存储，不能用 `local`，因为 Serverless 文件系统非持久
+
+推荐环境变量：
+
+```
+DATABASE_PROVIDER=postgresql
+DATABASE_URL=<neon pooled connection>
+CACHE_DRIVER=upstash
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+STORAGE_DRIVER=s3
+S3_BUCKET=...
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_PUBLIC_BASE_URL=https://cdn.example.com
+GITHUB_OAUTH_CLIENT_ID=...
+GITHUB_OAUTH_CLIENT_SECRET=...
+ADMIN_GITHUB_EMAILS=you@example.com
+SESSION_JWT_SECRET=<32+ chars>
+APP_BASE_URL=https://nav.example.com
+```
+
+首次部署：`npm run prisma:deploy` 后再 `next build`。后续 `prisma migrate deploy` 可做到零停机。
+
+### Docker 构建直接查阅
+
+- `docker/Dockerfile.pg` — PostgreSQL 版镜像（与 compose 配合）
+- `docker/Dockerfile.sqlite` — SQLite 单机版镜像（带 `/data` volume）
+- `docker/docker-compose.pg.yml` — 形态 A 的 compose 编排
+- `docker/entrypoint.sh` — 容器启动时按 `DATABASE_PROVIDER` 运行 migrate 或 db push，随后跑 seed
+
 ### Vercel 部署说明
 
 Vercel 可以部署当前项目，但必须先理解它的边界。
