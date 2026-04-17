@@ -1,7 +1,5 @@
 ﻿import type { NextRequest, NextResponse } from "next/server";
 import { resolveRequestScope } from "@/server/admin/policy/scope-policy";
-import { dispatchAdminRequest } from "@/server/admin/entry";
-import { dispatchClientRequest } from "@/server/client/entry";
 
 export async function dispatchLegacyRoute(
   request: NextRequest,
@@ -10,8 +8,10 @@ export async function dispatchLegacyRoute(
   const scope = resolveRequestScope(pathSegments);
 
   if (scope === "admin") {
+    const { dispatchAdminRequest } = await import("@/server/admin/entry");
     return dispatchAdminRequest(request, pathSegments);
   }
 
+  const { dispatchClientRequest } = await import("@/server/client/entry");
   return dispatchClientRequest(request, pathSegments);
 }

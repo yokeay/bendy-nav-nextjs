@@ -48,9 +48,9 @@ import { TtlCache } from "@/lib/cache";
 
 
 
-const APP_VERSION = "2.4.3";
+const APP_VERSION = "2.4.9";
 
-const APP_VERSION_CODE = 243;
+const APP_VERSION_CODE = 249;
 
 const ROOT_DIR = process.cwd();
 
@@ -3025,35 +3025,24 @@ async function handleApiController(ctx: LegacyContext, action: string): Promise<
     }
 
     case "cardimages": {
-
       const target = toPublicAbsPath("static/CardBackground/bg");
-
       const files = await readdir(target);
-
       const result: { thumbor: string; url: string; mtime: number }[] = [];
 
       for (const file of files) {
-
         const abs = path.join(target, file);
-
         const st = await stat(abs);
 
         if (st.isFile()) {
-
           const web = joinPath("/static/CardBackground/bg", file);
-
           result.push({ thumbor: web, url: web, mtime: st.mtimeMs });
-
         }
-
       }
 
       result.sort((a, b) => b.mtime - a.mtime);
 
       return jsonSuccess(
-
         result.map(({ thumbor, url }) => ({ thumbor, url }))
-
       );
 
     }
