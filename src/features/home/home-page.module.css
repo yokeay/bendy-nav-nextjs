@@ -160,6 +160,34 @@
   background: linear-gradient(180deg, var(--sidebar-background), rgba(22, 30, 42, 0.22));
   backdrop-filter: blur(18px);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 260ms ease;
+  z-index: 60;
+}
+
+.sidebarAutoHide {
+  transform: translateX(calc(-100% + 6px));
+}
+
+.sidebarAutoHide.sidebarRight {
+  transform: translateX(calc(100% - 6px));
+}
+
+.sidebarAutoHide:hover {
+  transform: translateX(0);
+}
+
+.sidebarAutoHide::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -14px;
+  width: 14px;
+}
+
+.sidebarAutoHide.sidebarRight::after {
+  right: auto;
+  left: -14px;
 }
 
 .sidebarRight {
@@ -2132,6 +2160,7 @@
   height: 100%;
   object-fit: contain;
   padding: 10px;
+  filter: brightness(0) saturate(100%) invert(32%);
 }
 
 .actionFooter {
@@ -2625,7 +2654,7 @@
   height: 34px;
   object-fit: contain;
   border-radius: 8px;
-  background: #fff;
+  background: #2e68ff;
   padding: 6px;
 }
 
@@ -2737,13 +2766,18 @@
 
 .inlineWindowActions a,
 .inlineWindowActions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 32px;
+  height: 32px;
   padding: 0 10px;
   border: none;
   border-radius: 8px;
   background: #eee;
   color: #4b4c52;
   font-size: 12px;
+  line-height: 1;
   text-decoration: none;
   cursor: pointer;
 }

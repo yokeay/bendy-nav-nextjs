@@ -1,9 +1,22 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { HomeConfig, HomeSiteInfo } from "@/server/home/types";
-import iconStyles from "./home-settings-icons.module.css";
+import {
+  IconAbout,
+  IconData,
+  IconExport,
+  IconGeneral,
+  IconImport,
+  IconReset,
+  IconTags,
+  IconTime,
+  IconWallpaper
+} from "./home-settings-icons";
 import styles from "./home-page.module.css";
+
+type IconComponent = (p: { className?: string }) => ReactElement;
 
 type SettingsSection = "profile" | "general" | "tags" | "wallpaper" | "time" | "data" | "about";
 
@@ -67,17 +80,17 @@ type ActionRowProps = {
   actionLabel: string;
   onClick: () => void;
   danger?: boolean;
-  iconClassName?: string;
+  icon?: IconComponent;
   showDescription?: boolean;
 };
 
-const SECTION_OPTIONS: Array<{ id: SettingsSection; label: string; iconClassName: string }> = [
-  { id: "general", label: "常规设置", iconClassName: iconStyles.glyphGeneral },
-  { id: "tags", label: "主题标签", iconClassName: iconStyles.glyphTags },
-  { id: "wallpaper", label: "壁纸设置", iconClassName: iconStyles.glyphWallpaper },
-  { id: "time", label: "时间日期", iconClassName: iconStyles.glyphTime },
-  { id: "data", label: "数据变动记录", iconClassName: iconStyles.glyphData },
-  { id: "about", label: "关于我们", iconClassName: iconStyles.glyphAbout }
+const SECTION_OPTIONS: Array<{ id: SettingsSection; label: string; Icon: IconComponent }> = [
+  { id: "general", label: "常规设置", Icon: IconGeneral },
+  { id: "tags", label: "主题标签", Icon: IconTags },
+  { id: "wallpaper", label: "壁纸设置", Icon: IconWallpaper },
+  { id: "time", label: "时间日期", Icon: IconTime },
+  { id: "data", label: "数据变动记录", Icon: IconData },
+  { id: "about", label: "关于我们", Icon: IconAbout }
 ];
 
 function ToggleRow({ label, description, checked, onChange, showDescription = false }: ToggleRowProps) {
@@ -158,14 +171,14 @@ function ActionRow({
   actionLabel,
   onClick,
   danger = false,
-  iconClassName,
+  icon: Icon,
   showDescription = false
 }: ActionRowProps) {
   return (
     <div className={styles.controlActionRow}>
       <div className={styles.controlActionMeta}>
         <p className={styles.settingRowTitle}>
-          {iconClassName ? <span className={`${iconStyles.glyph} ${iconClassName} ${styles.controlActionGlyph}`} /> : null}
+          {Icon ? <Icon className={styles.controlActionGlyph} /> : null}
           {label}
         </p>
         {showDescription ? <p className={styles.settingRowDescription}>{description}</p> : null}
@@ -299,7 +312,7 @@ export function HomeSettingsDialog({
                 type="button"
                 onClick={() => setActiveSection(item.id)}
               >
-                <span className={`${iconStyles.glyph} ${item.iconClassName} ${styles.controlMenuGlyph}`} />
+                <item.Icon className={styles.controlMenuGlyph} />
                 <span>{item.label}</span>
               </button>
             ))}
@@ -333,21 +346,21 @@ export function HomeSettingsDialog({
                     label="导入书签备份"
                     description="从导出的 JSON 备份恢复首页数据。"
                     actionLabel="导入"
-                    iconClassName={iconStyles.glyphImport}
+                    icon={IconImport}
                     onClick={onImportBackup}
                   />
                   <ActionRow
                     label="导出书签备份"
                     description="导出当前首页标签、Dock 和设置快照。"
                     actionLabel="导出"
-                    iconClassName={iconStyles.glyphExport}
+                    icon={IconExport}
                     onClick={onExportBackup}
                   />
                   <ActionRow
                     label="重置标签"
                     description="回到项目默认首页数据。"
                     actionLabel="重置"
-                    iconClassName={iconStyles.glyphReset}
+                    icon={IconReset}
                     onClick={onResetHome}
                     danger
                   />

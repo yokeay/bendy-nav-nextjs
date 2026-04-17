@@ -182,19 +182,18 @@ export function PageManagerDialog({
             <p className={styles.actionEyebrow}>桌面编辑</p>
             <h2 className={styles.actionTitle}>页面管理</h2>
           </div>
-          <button className={styles.actionClose} type="button" onClick={onClose} aria-label="关闭">
-            ×
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button className={styles.actionPrimary} type="button" onClick={beginCreate}>
+              新建页面
+            </button>
+            <button className={styles.actionClose} type="button" onClick={onClose} aria-label="关闭">
+              ×
+            </button>
+          </div>
         </div>
 
         <div className={styles.pageManagerShell}>
           <div className={styles.groupManagerList}>
-            <div className={styles.groupManagerToolbar}>
-              <button className={styles.actionPrimary} type="button" onClick={beginCreate}>
-                新建页面
-              </button>
-            </div>
-
             <div className={isHomeActive() ? `${styles.groupManagerItem} ${styles.groupManagerItemActive}` : styles.groupManagerItem}>
               <div className={styles.groupManagerMeta}>
                 <img src="/static/pageGroup/home.svg" alt="首页" />
