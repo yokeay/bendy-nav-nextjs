@@ -217,15 +217,20 @@ model UserSearchEngine {
 // ---------- Wallpaper ----------
 
 model Wallpaper {
-  id         String   @id @default(cuid())
-  url        String
-  category   String   @default("default")
-  sort       Int      @default(0)
-  uploadedBy String?
-  meta       Json?
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  name        String   @default("")
+  url         String
+  hdUrl       String?
+  description String?
+  colorMode   String   @default("day")
+  category    String   @default("default")
+  sort        Int      @default(0)
+  uploadedBy  String?
+  meta        Json?
+  createdAt   DateTime @default(now())
 
   @@index([category])
+  @@index([colorMode])
   @@map("bendy_wallpaper")
 }
 

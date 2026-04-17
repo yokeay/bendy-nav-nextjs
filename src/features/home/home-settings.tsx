@@ -477,17 +477,6 @@ export function HomeSettingsDialog({
                     <div className={styles.segmented}>
                       <button
                         className={
-                          config.theme.pageGroupPosition === "left"
-                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
-                            : styles.segmentedItem
-                        }
-                        type="button"
-                        onClick={() => updateThemeString("pageGroupPosition", "left")}
-                      >
-                        左侧
-                      </button>
-                      <button
-                        className={
                           config.theme.pageGroupPosition === "right"
                             ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
                             : styles.segmentedItem
@@ -496,6 +485,17 @@ export function HomeSettingsDialog({
                         onClick={() => updateThemeString("pageGroupPosition", "right")}
                       >
                         右侧
+                      </button>
+                      <button
+                        className={
+                          config.theme.pageGroupPosition === "bottom"
+                            ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
+                            : styles.segmentedItem
+                        }
+                        type="button"
+                        onClick={() => updateThemeString("pageGroupPosition", "bottom")}
+                      >
+                        底部（Dock）
                       </button>
                     </div>
                   </div>

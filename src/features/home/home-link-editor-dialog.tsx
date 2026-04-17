@@ -751,33 +751,6 @@ export function AddLinkDialog({
                   <span>{normalizeUrl(url) || "未设置跳转地址"}</span>
                 </div>
               </div>
-
-              {folderIcons.length > 0 ? (
-                <div className={styles.linkIconLibrary}>
-                  <div className={styles.linkIconLibraryTitle}>选择图标</div>
-                  <div className={styles.actionGrid}>
-                    {folderIcons.slice(0, 24).map((item) => (
-                      <button
-                        key={item.src}
-                        className={
-                          iconMode === 1 && !normalizeUrl(customIconUrl) && imageIcon === item.src
-                            ? `${styles.actionIcon} ${styles.actionIconActive}`
-                            : styles.actionIcon
-                        }
-                        type="button"
-                        title={item.name}
-                        onClick={() => {
-                          setImageIcon(item.src);
-                          setCustomIconUrl("");
-                          setIconMode(1);
-                        }}
-                      >
-                        <img src={item.src} alt={item.name} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
             </div>
           </div>
         ) : null}

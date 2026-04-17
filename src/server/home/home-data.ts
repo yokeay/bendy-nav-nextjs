@@ -515,7 +515,7 @@ function normalizeTheme(input: Record<string, unknown>): HomeTheme {
     userCenterPosition: toStringValue(input.userCenterPosition, "left"),
     trash: toBooleanValue(input.trash, true),
     pageGroupPosition:
-      toStringValue(input.pageGroupPosition, "left") === "right" ? "right" : "left"
+      toStringValue(input.pageGroupPosition, "right") === "bottom" ? "bottom" : "right"
   };
 }
 

@@ -62,7 +62,7 @@ export type HomeTheme = {
   bottom2top: boolean;
   userCenterPosition: string;
   trash: boolean;
-  pageGroupPosition: "left" | "right";
+  pageGroupPosition: "right" | "bottom";
 };
 
 export type HomeConfig = {

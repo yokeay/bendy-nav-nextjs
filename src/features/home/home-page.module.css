@@ -197,6 +197,68 @@
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.sidebarBottom {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 14px;
+  transform: translateX(-50%);
+  flex-direction: row;
+  width: auto;
+  max-width: calc(100vw - 32px);
+  height: 64px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(30, 36, 52, 0.75), rgba(20, 26, 40, 0.6));
+  backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.sidebarBottom .sidebarGroup {
+  flex-direction: row;
+  width: auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebarBottom .sidebarFooter {
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebarBottom .sidebarText,
+.sidebarBottom .userButtonText {
+  display: none;
+}
+
+.sidebarBottom .sidebarLink,
+.sidebarBottom .userButton {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+
+.sidebarBottom .sidebarLink:hover,
+.sidebarBottom .userButton:hover {
+  transform: translateY(-3px) scale(1.08);
+}
+
+.sidebarBottom.sidebarAutoHide {
+  transform: translate(-50%, calc(100% + 20px));
+}
+
+.sidebarBottom.sidebarAutoHide:hover {
+  transform: translateX(-50%);
+}
+
 .sidebarGroup {
   width: 100%;
   display: flex;
@@ -541,6 +603,11 @@
 .mainSidebarRight {
   margin-left: 0;
   margin-right: 55px;
+}
+
+.mainSidebarBottom {
+  margin-left: 0;
+  padding-bottom: 96px;
 }
 
 .hero {
@@ -1493,14 +1560,10 @@
 }
 
 .authBackdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
   background: rgba(13, 12, 34, 0.56);
-  z-index: 100;
+  z-index: 0;
 }
 
 .authLoginCard {
@@ -3896,3 +3959,55 @@
 .authCancelButton:hover {
   background: rgba(20, 24, 56, 0.04);
 }
+
+.bdLogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-radius: 10px;
+  background: #111318;
+  color: #ffffff;
+  user-select: none;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.bdLogoSm {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.bdLogoMd {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+
+.bdLogoLg {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+  border-radius: 14px;
+}
+
+:global([data-theme="dark"]) .bdLogo,
+:global(html[data-theme="dark"]) .bdLogo,
+.pageThemeDark .bdLogo {
+  background: #ffffff;
+  color: #111318;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global([data-theme="auto"]) .bdLogo,
+  :global(html:not([data-theme])) .bdLogo,
+  .pageThemeAuto .bdLogo {
+    background: #ffffff;
+    color: #111318;
+  }
+}
+

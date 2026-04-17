@@ -13,7 +13,15 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     return res as Response;
   }
   const { id } = await ctx.params;
-  const body = (await req.json().catch(() => ({}))) as { category?: string; sort?: number };
+  const body = (await req.json().catch(() => ({}))) as {
+    name?: string;
+    url?: string;
+    hdUrl?: string | null;
+    description?: string | null;
+    colorMode?: "day" | "night";
+    category?: string;
+    sort?: number;
+  };
   const row = await updateWallpaper(id, body);
   await writeAudit({
     actorId: actor.sub,

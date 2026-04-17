@@ -17,12 +17,11 @@ function readString(params: Record<string, string | string[] | undefined>, key: 
 
 export default async function WallpapersPage({ searchParams }: Props) {
   const params = await searchParams;
-  const category = readString(params, "category");
+  const colorModeParam = readString(params, "colorMode");
+  const colorMode =
+    colorModeParam === "day" || colorModeParam === "night" ? colorModeParam : undefined;
   const page = Math.max(1, Number(readString(params, "page")) || 1);
-  const { items, total, pageSize, categories } = await listWallpapers({
-    category: category || undefined,
-    page
-  });
+  const { items, total, pageSize } = await listWallpapers({ colorMode, page });
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
@@ -32,27 +31,30 @@ export default async function WallpapersPage({ searchParams }: Props) {
         <span className={styles.stat}>共 {total} 张</span>
       </div>
 
-      <WallpaperUploader existingCategories={categories} currentCategory={category} />
+      <WallpaperUploader />
 
       <form method="get" className={styles.filterForm}>
-        <select name="category" defaultValue={category} className={styles.select}>
-          <option value="">全部分类</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
+        <select name="colorMode" defaultValue={colorMode ?? ""} className={styles.select}>
+          <option value="">全部主题色</option>
+          <option value="day">白天</option>
+          <option value="night">夜间</option>
         </select>
         <button className={styles.filterSubmit} type="submit">筛选</button>
       </form>
 
       {items.length === 0 ? (
-        <div className={styles.empty}>暂无壁纸，使用上方表单上传第一张。</div>
+        <div className={styles.empty}>暂无壁纸，使用上方表单添加。</div>
       ) : (
         <div className={styles.grid}>
           {items.map((w) => (
             <WallpaperItem
               key={w.id}
               id={w.id}
+              name={w.name}
               url={w.url}
+              hdUrl={w.hdUrl}
+              description={w.description}
+              colorMode={w.colorMode}
               category={w.category}
               sort={w.sort}
               createdAt={w.createdAt.toISOString()}
@@ -62,9 +64,19 @@ export default async function WallpapersPage({ searchParams }: Props) {
       )}
 
       <div className={styles.pagination}>
-        {page > 1 ? <a href={`?category=${encodeURIComponent(category)}&page=${page - 1}`} className={styles.pageBtn}>上一页</a> : null}
-        <span>{page} / {totalPages}</span>
-        {page < totalPages ? <a href={`?category=${encodeURIComponent(category)}&page=${page + 1}`} className={styles.pageBtn}>下一页</a> : null}
+        {page > 1 ? (
+          <a href={`?colorMode=${colorMode ?? ""}&page=${page - 1}`} className={styles.pageBtn}>
+            上一页
+          </a>
+        ) : null}
+        <span>
+          {page} / {totalPages}
+        </span>
+        {page < totalPages ? (
+          <a href={`?colorMode=${colorMode ?? ""}&page=${page + 1}`} className={styles.pageBtn}>
+            下一页
+          </a>
+        ) : null}
       </div>
     </div>
   );
