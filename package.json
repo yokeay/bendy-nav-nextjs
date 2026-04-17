@@ -13,6 +13,9 @@
     "prisma:deploy": "npm run prisma:provider && prisma migrate deploy",
     "prisma:push": "npm run prisma:provider && prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "node -e \"const fs=require('fs');try{fs.rmSync('tsconfig.tsbuildinfo',{force:true});}catch{}\" && tsc --noEmit -p tsconfig.typecheck.json",
     "check:encoding": "node --experimental-vm-modules scripts/check-encoding.mjs"
   },
@@ -39,9 +42,11 @@
     "@types/nodemailer": "^7.0.1",
     "@types/qs": "^6.14.0",
     "@types/react": "19.2.14",
+    "@vitest/coverage-v8": "^4.1.4",
     "prisma": "^5.22.0",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.4"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
