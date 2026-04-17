@@ -1,0 +1,198 @@
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cardAccent {
+  background: #3a7bff;
+  color: #fff;
+  border-color: transparent;
+}
+
+.cardAccent .cardLabel,
+.cardAccent .cardValue {
+  color: #fff;
+}
+
+.cardLabel {
+  font-size: 12px;
+  color: #8790a3;
+}
+
+.cardValue {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1e27;
+  line-height: 1.1;
+}
+
+.chartCard {
+  margin-top: 20px;
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #1a1e27;
+  font-weight: 600;
+}
+
+.chartAxis {
+  color: #8790a3;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.chartBody {
+  height: 140px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(20, 24, 56, 0.08);
+}
+
+.bar {
+  flex: 1;
+  min-height: 2px;
+  background: #3a7bff;
+  border-radius: 3px 3px 0 0;
+  opacity: 0.85;
+}
+
+.bar:hover {
+  opacity: 1;
+}
+
+.chartFooter {
+  display: flex;
+  justify-content: space-between;
+  color: #8790a3;
+  font-size: 11px;
+}
+
+.sectionTitle {
+  margin-top: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1e27;
+}
+
+.auditList {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.auditRow {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(80px, 0.6fr) minmax(120px, 1fr) auto;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(20, 24, 56, 0.05);
+  font-size: 12px;
+  align-items: center;
+}
+
+.auditRow:last-of-type {
+  border-bottom: 0;
+}
+
+.auditAction {
+  font-weight: 600;
+  color: #3a7bff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.auditActor {
+  color: #1a1e27;
+}
+
+.auditTarget {
+  color: #5b6378;
+}
+
+.auditDate {
+  color: #8790a3;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.auditEmpty {
+  padding: 20px;
+  text-align: center;
+  color: #8790a3;
+  font-size: 12px;
+}
+
+.auditMore {
+  display: block;
+  padding: 10px 14px;
+  color: #3a7bff;
+  font-size: 12px;
+  text-decoration: none;
+  border-top: 1px solid rgba(20, 24, 56, 0.05);
+  text-align: right;
+}
+
+.auditMore:hover {
+  background: #f4f6fb;
+}
+
+/* Audit page */
+.auditTable {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.auditTableInner {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.auditTableInner th {
+  text-align: left;
+  padding: 12px;
+  background: #f4f6fb;
+  color: #5b6378;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.auditTableInner td {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(20, 24, 56, 0.05);
+}
+
+.auditPayload {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #5b6378;
+  font-size: 11px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
