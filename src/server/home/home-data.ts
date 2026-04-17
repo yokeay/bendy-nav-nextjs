@@ -360,6 +360,9 @@ async function decorateLinks(links: HomeLink[]): Promise<HomeLink[]> {
 }
 
 async function resolveCurrentUser(auth: HomeAuthCookies): Promise<HomeUser | null> {
+  if (auth.sessionUser) {
+    return auth.sessionUser;
+  }
   const userId = toNumberValue(auth.userId, 0);
   const token = toStringValue(auth.token, "").trim();
 

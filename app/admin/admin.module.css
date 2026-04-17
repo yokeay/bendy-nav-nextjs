@@ -1,0 +1,195 @@
+.root {
+  min-height: 100vh;
+  background: #f4f6fb;
+  color: #1a1e27;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #0f1218;
+  color: #cdd1db;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 8px;
+}
+
+.brandMark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #3a7bff;
+  color: #fff;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.brandText {
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navItem {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #cdd1db;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.navItemActive,
+.navItemActive:hover {
+  background: #3a7bff;
+  color: #fff;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  height: 56px;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(20, 24, 56, 0.08);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbarTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1e27;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: #f4f6fb;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.userChipLogin {
+  color: #1a1e27;
+  font-weight: 600;
+}
+
+.userChipRole {
+  color: #3a7bff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+}
+
+.logoutBtn {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(20, 24, 56, 0.12);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  color: #5b6378;
+}
+
+.logoutBtn:hover {
+  background: #f4f6fb;
+}
+
+.mainInner {
+  padding: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+.content {
+  max-width: 1040px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.pageHint {
+  margin: 0;
+  color: #5b6378;
+  font-size: 13px;
+}
+
+.placeholderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.placeholderCard {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.placeholderLabel {
+  font-size: 12px;
+  color: #8790a3;
+}
+
+.placeholderValue {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1e27;
+}

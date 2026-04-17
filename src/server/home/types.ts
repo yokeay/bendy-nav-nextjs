@@ -114,6 +114,7 @@ export type HomeSearchEngine = {
 export type HomeAuthCookies = {
   userId?: string;
   token?: string;
+  sessionUser?: HomeUser | null;
 };
 
 export type HomeData = {
