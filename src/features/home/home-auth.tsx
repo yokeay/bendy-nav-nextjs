@@ -17,6 +17,7 @@ type UserMenuProps = {
   user: HomeUser;
   legacyUrl: string;
   onNotify: ToastDispatcher;
+  onOpenProfile?: () => void;
 };
 
 function buildReturnTo(): string {
@@ -68,7 +69,7 @@ export function AuthDialog({ open, site, onClose, onNotify }: AuthDialogProps) {
   );
 }
 
-export function UserMenu({ user, legacyUrl, onNotify }: UserMenuProps) {
+export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile }: UserMenuProps) {
   void legacyUrl;
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -124,6 +125,18 @@ export function UserMenu({ user, legacyUrl, onNotify }: UserMenuProps) {
           <div className={styles.userPanelActions}>
             {user.manager ? (
               <a className={styles.userPanelAction} href="/admin">进入管理后台</a>
+            ) : null}
+            {onOpenProfile ? (
+              <button
+                className={styles.userPanelAction}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenProfile();
+                }}
+              >
+                修改资料
+              </button>
             ) : null}
             <button
               className={styles.userPanelAction}

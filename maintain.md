@@ -25,6 +25,40 @@
 - 用户审阅两份新文档，确认无误后按 F1–F8 顺序推进。
 - F1 第一步：接入 Prisma，初始化 schema 与迁移，改造 CacheDriver / StorageDriver，刷新 `.env.example`。
 
+## v2.4.40
+
+- Date: 2026-04-18
+- Iteration type: small version
+- Goal: 把 GitHub 头像真正用起来，补齐用户资料与管理端编辑能力，简化登录后首页界面，并开放外部书签导入通道。
+
+### Changes
+
+- SSR 登录态直接从 Prisma 读取头像和昵称；侧栏 UserMenu / 设置面板的头像不再写死为品牌 logo。
+- `/api/auth/me` 返回 `name` 与 `avatarUrl`，方便未来的客户端刷新场景复用。
+- 新增 `PATCH /api/me`：已登录用户自助修改昵称（最长 64）和头像 URL（http(s):// 或 / 开头，最长 512）。
+- 管理端用户详情新增“资料编辑”卡片，管理员可改昵称 / 头像 / 邮箱；邮箱与其他账户冲突时返回 `CONFLICT(2003)`。
+- 审计 `user.profile.update` 动作覆盖这两个入口；无论是用户自改还是管理员改都会写入审计日志。
+- 新增 `POST /api/bookmarks/import`：使用 `BOOKMARK_IMPORT_API_KEY`（header `x-api-key`）鉴权；双写 Prisma `bendy_link` 表与 legacy `link` JSON 列（legacy 用户不存在时跳过并在响应里告知 `legacyWritten: false`）；单次最多 1000 条；审计 `bookmark.import` 动作。
+- 首页默认数据清空：`public/static/defaultTab.json` 仅保留日历 / 天气 / 热搜三张插件卡；Dock / 侧栏 / 书签图标均不再携带任何默认条目。
+- “个人中心位置”默认改为居中（新增 `.controlModelCenter` 样式 + 居中动画与移动端底栏覆盖），老数据里的 `"left"` 值会被解析器规整为 `"center"`。
+- “侧栏位置”默认改为底部 Dock；未显式配置的 legacy 配置会直接采用新默认值。
+- 登录后顶栏只保留简洁模式切换 / 退出编辑按钮；登录按钮与设置入口让位给侧栏 UserMenu，避免按钮重复。
+- 标准模式搜索引擎按钮由“循环切换”改为下拉弹窗，与 compact 模式行为一致；按钮末尾加了 caret 图标。
+- 设置面板 UserCard 登录态改版：横向 avatar + 站名、下方居中显示用户昵称；未登录态保持原样。
+- UserMenu 新增“修改资料”入口；点击后弹出 `HomeProfileDialog`，保存成功会即时更新 UserMenu / 侧栏 / UserCard 三处头像与昵称。
+- `.env.example` 增加 `BOOKMARK_IMPORT_API_KEY` 占位，默认空值 → 接口默认禁用。
+
+### Result
+
+- 外部工具（浏览器扩展 / 爬虫）可以无登录态地向任意指定用户导入书签批次，且同时写入新旧两套库表。
+- 新安装的实例首页干净，不再把阿里云 / 华为云等历史站点硬塞给用户。
+- 登录后交互链路更短：顶栏 / UserMenu / 设置面板三处都能找到自己的头像和昵称。
+
+### Risks And Next
+
+- 尚未在浏览器里做一次真跑验证（本地环境仍然缺少 Node/npm PATH）；`npm run typecheck` 已通过。
+- `BOOKMARK_IMPORT_API_KEY` 是长寿命凭据；部署文档在下一轮补充轮换 / 撤销章节。
+
 ## v2.4.39
 
 - Date: 2026-04-17

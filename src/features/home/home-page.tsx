@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AddLinkDialog, BackgroundDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
+import { HomeProfileDialog } from "./home-profile-dialog";
 import { BdLogo } from "./bd-logo";
 import {
   buildFolderChildren as buildFolderChildrenModel,
@@ -600,7 +601,8 @@ function Sidebar({
   onOpenSettings,
   onEditGroup,
   onDeleteGroup,
-  onNotify
+  onNotify,
+  onOpenProfile
 }: {
   data: HomeData;
   pageGroups: HomeLink[];
@@ -616,6 +618,7 @@ function Sidebar({
   onEditGroup: (groupId: string) => void;
   onDeleteGroup: (groupId: string) => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
+  onOpenProfile?: () => void;
 }) {
   const sidebarLinks = buildSidebarLinks({
     ...data,
@@ -632,7 +635,7 @@ function Sidebar({
       <div className={styles.sidebarGroup}>
         <div className={styles.sidebarProfile}>
           {user ? (
-            <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
+            <UserMenu user={user} legacyUrl="" onNotify={onNotify} onOpenProfile={onOpenProfile} />
           ) : (
             <button
               className={styles.userButton}
@@ -736,20 +739,9 @@ function Toolbar({
   onToggleEditMode: () => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
-  const accountButton = user ? (
-    <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
-  ) : (
-    <button
-      className={styles.userButton}
-      type="button"
-      onClick={onOpenAuth}
-      title="登录"
-      aria-label="登录"
-    >
-      <BdLogo size="md" />
-      <span className={styles.userButtonText}>登录</span>
-    </button>
-  );
+  const loggedIn = Boolean(user);
+  void onOpenAuth;
+  void onNotify;
 
   return (
     <div
@@ -762,16 +754,29 @@ function Toolbar({
         .filter(Boolean)
         .join(" ")}
     >
-      {accountButton}
-      <button
-        className={styles.toolbarButton}
-        type="button"
-        onClick={onOpenSettings}
-        title="打开设置中心"
-        aria-label="打开设置中心"
-      >
-        <img src="/icons/setting.svg" alt="" />
-      </button>
+      {!loggedIn ? (
+        <button
+          className={styles.userButton}
+          type="button"
+          onClick={onOpenAuth}
+          title="登录"
+          aria-label="登录"
+        >
+          <BdLogo size="md" />
+          <span className={styles.userButtonText}>登录</span>
+        </button>
+      ) : null}
+      {!loggedIn ? (
+        <button
+          className={styles.toolbarButton}
+          type="button"
+          onClick={onOpenSettings}
+          title="打开设置中心"
+          aria-label="打开设置中心"
+        >
+          <img src="/icons/setting.svg" alt="" />
+        </button>
+      ) : null}
       {editMode ? (
         <button
           className={styles.toolbarButton}
@@ -1157,17 +1162,13 @@ function SearchBar({
         <button
         className={styles.searchEngineButton}
         type="button"
-        onClick={() => {
-          if (availableEngines.length === 0) {
-            return;
-          }
-          setEngineIndex((engineIndex + 1) % availableEngines.length);
-        }}
-        title={`切换搜索引擎，当前为 ${currentEngine.name}`}
-        aria-label={`切换搜索引擎，当前为 ${currentEngine.name}`}
+        onClick={() => setPanelOpen((open) => !open)}
+        title={`选择搜索引擎，当前为 ${currentEngine.name}`}
+        aria-label={`选择搜索引擎，当前为 ${currentEngine.name}`}
       >
           <img src={currentEngine.icon} alt="" />
           <span className={styles.searchEngineLabel}>{currentEngine.name}</span>
+          <span className={styles.searchEngineCompactCaret} aria-hidden="true" />
         </button>
         <input
           className={styles.searchInput}
@@ -2349,6 +2350,8 @@ export function HomePage({ data }: HomePageProps) {
   const [editMode, setEditMode] = useState(false);
   const [openFolderId, setOpenFolderId] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileUser, setProfileUser] = useState(data.user);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [linkEditorOpen, setLinkEditorOpen] = useState(false);
@@ -3476,7 +3479,7 @@ export function HomePage({ data }: HomePageProps) {
             position={currentConfig.theme.pageGroupPosition}
             autoHide={currentConfig.theme.pageGroupStatus}
             editMode={editMode}
-            user={data.user}
+            user={profileUser}
             onOpenAuth={() => setAuthOpen(true)}
             onSelectGroup={setActiveGroupId}
             onOpenGroupManager={() => {
@@ -3489,6 +3492,7 @@ export function HomePage({ data }: HomePageProps) {
               void handleDeleteGroup(groupId);
             }}
             onNotify={notify}
+            onOpenProfile={() => setProfileOpen(true)}
           />
         ) : null}
 
@@ -3505,7 +3509,7 @@ export function HomePage({ data }: HomePageProps) {
               })
             )
           }
-          user={data.user}
+          user={profileUser}
           onOpenAuth={() => setAuthOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onToggleEditMode={() => setEditMode((current) => !current)}
@@ -4019,18 +4023,44 @@ export function HomePage({ data }: HomePageProps) {
           onClose={() => setAuthOpen(false)}
           onNotify={notify}
         />
+        {profileUser ? (
+          <HomeProfileDialog
+            open={profileOpen}
+            user={profileUser}
+            onClose={() => setProfileOpen(false)}
+            onSaved={(next) => {
+              setProfileUser((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      name: next.name,
+                      avatarUrl: next.avatarUrl,
+                      nickname: next.name ?? prev.nickname,
+                      avatar: next.avatarUrl?.trim() || prev.avatar
+                    }
+                  : prev
+              );
+            }}
+            onNotify={notify}
+          />
+        ) : null}
         <HomeSettingsDialog
           open={settingsOpen}
           config={currentConfig}
           site={data.site}
           saving={settingsSaving}
           loggedIn={Boolean(data.user)}
+          user={profileUser}
           pageCount={Math.max(1, currentPageGroups.length + 1)}
           onClose={() => setSettingsOpen(false)}
           onSave={handleSaveSettings}
           onOpenAuth={() => {
             setSettingsOpen(false);
             setAuthOpen(true);
+          }}
+          onOpenProfile={() => {
+            setSettingsOpen(false);
+            setProfileOpen(true);
           }}
           onOpenBackground={() => {
             setSettingsOpen(false);

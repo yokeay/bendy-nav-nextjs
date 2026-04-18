@@ -297,3 +297,48 @@
   justify-content: space-between;
   gap: 10px;
 }
+
+.profileForm {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 12px;
+  background: #fafbfe;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 10px;
+}
+
+.profileFormLabel {
+  color: #5b6378;
+  font-size: 12px;
+}
+
+.profileFormInput {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(20, 24, 56, 0.14);
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+}
+
+.profileFormFoot {
+  grid-column: 1 / span 2;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.profileFormError {
+  color: #c84142;
+  font-size: 12px;
+  margin-right: auto;
+}
+
+.profileFormOk {
+  color: #1a9a5a;
+  font-size: 12px;
+  margin-right: auto;
+}

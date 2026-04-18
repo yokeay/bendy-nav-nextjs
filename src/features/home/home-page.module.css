@@ -2908,6 +2908,12 @@
   animation: settingsPanelRightIn 220ms ease forwards;
 }
 
+.controlModelCenter {
+  left: 50%;
+  transform-origin: center bottom;
+  animation: settingsPanelCenterIn 220ms ease forwards;
+}
+
 .controlMenu {
   width: 210px;
   height: 100%;
@@ -2973,6 +2979,35 @@
 .controlUserCardMeta span {
   font-size: 12px;
   color: #8e8e94;
+}
+
+.controlUserCardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.controlUserCardAvatarImg {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  object-fit: cover;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.controlUserCardSite {
+  font-size: 14px;
+  color: #373737;
+  font-weight: 600;
+}
+
+.controlUserCardNickname {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8e8e94;
+  width: 100%;
+  text-align: center;
 }
 
 .controlUserHeader {
@@ -3318,6 +3353,20 @@
   }
 }
 
+@keyframes settingsPanelCenterIn {
+  from {
+    transform: translate(-50%, 24px) scale(0.96);
+    opacity: 0;
+    bottom: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+    bottom: 60px;
+  }
+}
+
 @keyframes settingsPanelMobileLeftIn {
   from {
     transform: scale(0);
@@ -3342,6 +3391,20 @@
   to {
     transform: scale(1);
     right: 0;
+    bottom: 0;
+  }
+}
+
+@keyframes settingsPanelMobileCenterIn {
+  from {
+    transform: scale(0);
+    left: 0;
+    bottom: 0;
+  }
+
+  to {
+    transform: scale(1);
+    left: 0;
     bottom: 0;
   }
 }
@@ -3698,6 +3761,12 @@
     animation: settingsPanelMobileRightIn 220ms ease forwards;
   }
 
+  .controlModelCenter {
+    left: 0;
+    transform: none;
+    animation: settingsPanelMobileCenterIn 220ms ease forwards;
+  }
+
   .controlMenu {
     width: 80px;
   }
@@ -3958,6 +4027,43 @@
 
 .authCancelButton:hover {
   background: rgba(20, 24, 56, 0.04);
+}
+
+.profileField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profileFieldLabel {
+  font-size: 12px;
+  color: #5b6378;
+}
+
+.profileFieldInput {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(20, 24, 56, 0.14);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #1a1e27;
+  background: #fff;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.profileFieldInput:focus {
+  border-color: rgba(79, 157, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(79, 157, 247, 0.18);
+}
+
+.profileActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 .bdLogo {

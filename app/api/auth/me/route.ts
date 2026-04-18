@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import prisma from "@/server/infrastructure/db/prisma";
 import { readSession } from "@/server/auth/middleware";
 
 export async function GET() {
@@ -6,6 +7,10 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ code: 0, message: "ok", data: { authenticated: false } });
   }
+  const profile = await prisma.user.findUnique({
+    where: { id: session.sub },
+    select: { name: true, avatarUrl: true }
+  });
   return NextResponse.json({
     code: 0,
     message: "ok",
@@ -16,6 +21,8 @@ export async function GET() {
         login: session.login,
         email: session.email,
         role: session.role,
+        name: profile?.name ?? null,
+        avatarUrl: profile?.avatarUrl ?? null,
         reauthAt: session.reauthAt ?? null
       }
     }

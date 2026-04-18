@@ -50,6 +50,9 @@ export default async function UserDetailPage({ params }: Props) {
             userId={user.id}
             role={user.role}
             status={user.status}
+            initialName={user.name}
+            initialAvatarUrl={user.avatarUrl}
+            initialEmail={user.email}
           />
         </div>
 

@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import { useEffect, useMemo, useState } from "react";
-import type { HomeConfig, HomeSiteInfo } from "@/server/home/types";
+import type { HomeConfig, HomeSiteInfo, HomeUser } from "@/server/home/types";
 import {
   IconAbout,
   IconData,
@@ -26,6 +26,7 @@ type HomeSettingsDialogProps = {
   site: HomeSiteInfo;
   saving: boolean;
   loggedIn: boolean;
+  user: HomeUser | null;
   pageCount: number;
   searchHistoryEnabled: boolean;
   snapshots: Array<{
@@ -36,6 +37,7 @@ type HomeSettingsDialogProps = {
   onSave: () => void;
   onOpenPageManager: () => void;
   onOpenAuth: () => void;
+  onOpenProfile: () => void;
   onOpenBackground: () => void;
   onImportBackup: () => void;
   onExportBackup: () => void;
@@ -216,6 +218,7 @@ export function HomeSettingsDialog({
   site,
   saving,
   loggedIn,
+  user,
   pageCount,
   searchHistoryEnabled,
   snapshots,
@@ -223,6 +226,7 @@ export function HomeSettingsDialog({
   onSave,
   onOpenPageManager,
   onOpenAuth,
+  onOpenProfile,
   onOpenBackground,
   onImportBackup,
   onExportBackup,
@@ -243,7 +247,7 @@ export function HomeSettingsDialog({
     () =>
       config.theme.userCenterPosition === "right"
         ? `${styles.controlModel} ${styles.controlModelRight}`
-        : `${styles.controlModel} ${styles.controlModelLeft}`,
+        : `${styles.controlModel} ${styles.controlModelCenter}`,
     [config.theme.userCenterPosition]
   );
 
@@ -293,11 +297,33 @@ export function HomeSettingsDialog({
             type="button"
             onClick={() => setActiveSection("profile")}
           >
-            <div className={styles.controlUserCardAvatar}>{site.title.slice(0, 1)}</div>
-            <div className={styles.controlUserCardMeta}>
-              <strong>{loggedIn ? site.title : "游客"}</strong>
-              <span>{loggedIn ? "登录后配置已同步" : "未登录，当前仅保存在本地"}</span>
-            </div>
+            {loggedIn && user ? (
+              <>
+                <div className={styles.controlUserCardHead}>
+                  {user.avatar ? (
+                    <img
+                      className={styles.controlUserCardAvatarImg}
+                      src={user.avatar}
+                      alt={user.nickname || user.email || "用户"}
+                    />
+                  ) : (
+                    <div className={styles.controlUserCardAvatar}>{site.title.slice(0, 1)}</div>
+                  )}
+                  <strong className={styles.controlUserCardSite}>{site.title}</strong>
+                </div>
+                <span className={styles.controlUserCardNickname}>
+                  {user.nickname || user.email || "已登录用户"}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className={styles.controlUserCardAvatar}>{site.title.slice(0, 1)}</div>
+                <div className={styles.controlUserCardMeta}>
+                  <strong>游客</strong>
+                  <span>未登录，当前仅保存在本地</span>
+                </div>
+              </>
+            )}
           </button>
 
           <div className={styles.controlMenuList}>
@@ -342,6 +368,14 @@ export function HomeSettingsDialog({
                     </div>
                   )}
 
+                  {loggedIn ? (
+                    <ActionRow
+                      label="修改资料"
+                      description="更新你的昵称和头像 URL。"
+                      actionLabel="编辑"
+                      onClick={onOpenProfile}
+                    />
+                  ) : null}
                   <ActionRow
                     label="导入书签备份"
                     description="从导出的 JSON 备份恢复首页数据。"
@@ -506,14 +540,14 @@ export function HomeSettingsDialog({
                     <div className={styles.segmented}>
                       <button
                         className={
-                          config.theme.userCenterPosition === "left"
+                          config.theme.userCenterPosition === "center"
                             ? `${styles.segmentedItem} ${styles.segmentedItemActive}`
                             : styles.segmentedItem
                         }
                         type="button"
-                        onClick={() => updateThemeString("userCenterPosition", "left")}
+                        onClick={() => updateThemeString("userCenterPosition", "center")}
                       >
-                        左侧
+                        居中
                       </button>
                       <button
                         className={

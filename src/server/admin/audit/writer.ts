@@ -15,7 +15,9 @@ export type AuditAction =
   | "system.config.update"
   | "system.maintenance.toggle"
   | "system.backup.trigger"
-  | "system.backup.restore";
+  | "system.backup.restore"
+  | "user.profile.update"
+  | "bookmark.import";
 
 export interface AuditInput {
   actorId?: string | null;

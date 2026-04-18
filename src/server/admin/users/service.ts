@@ -68,10 +68,32 @@ export async function getUser(id: string) {
   return user;
 }
 
-export async function updateUser(
-  id: string,
-  patch: { role?: Role; status?: UserStatus }
-) {
+export type UserProfilePatch = {
+  role?: Role;
+  status?: UserStatus;
+  name?: string | null;
+  avatarUrl?: string | null;
+  email?: string;
+};
+
+export class EmailConflictError extends Error {
+  constructor() {
+    super("email already in use");
+    this.name = "EmailConflictError";
+  }
+}
+
+export async function updateUser(id: string, patch: UserProfilePatch) {
+  if (patch.email !== undefined) {
+    const existing = await prisma.user.findFirst({
+      where: { email: patch.email, id: { not: id }, deletedAt: null },
+      select: { id: true }
+    });
+    if (existing) {
+      throw new EmailConflictError();
+    }
+  }
+
   return prisma.user.update({
     where: { id },
     data: patch

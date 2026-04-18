@@ -60,7 +60,7 @@ export type HomeTheme = {
   maxColumn: number;
   latestPageGroup: boolean;
   bottom2top: boolean;
-  userCenterPosition: string;
+  userCenterPosition: "center" | "right";
   trash: boolean;
   pageGroupPosition: "right" | "bottom";
 };
@@ -91,11 +91,14 @@ export type HomeSiteInfo = {
 
 export type HomeUser = {
   userId: number;
+  id: string;
   groupId: number;
   manager: boolean;
   email: string;
   nickname: string;
   avatar: string;
+  name?: string | null;
+  avatarUrl?: string | null;
 };
 
 export type HomeNotice = {
