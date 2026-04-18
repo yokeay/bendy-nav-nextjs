@@ -688,3 +688,5 @@ docs/errors/编辑标签页，标签显示不正确.png
 docs/errors/设置菜单内icon丢失，显示不全.png
 docs/errors/内联窗口打开的时候右上角这个新窗口打开这个按钮，有文字不居中啊，这不对吧.png
 docs/errors/页面管理图标不正确.png
+.claude/settings.local.json
+tsconfig.typecheck.tsbuildinfo
