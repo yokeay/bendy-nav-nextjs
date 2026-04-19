@@ -1,0 +1,294 @@
+// Bendy Nav — Prisma schema
+// Dual-DB via env: DATABASE_PROVIDER = postgresql | sqlite
+// All tables use business prefix `bendy_` via @@map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// NOTE: `provider` is rewritten by scripts/prisma-provider.ts based on
+// DATABASE_PROVIDER env (postgresql | sqlite) before generate/migrate/push.
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity ----------
+
+enum Role {
+  user
+  admin
+  superadmin
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+model User {
+  id          String     @id @default(cuid())
+  githubId    String     @unique
+  email       String     @unique
+  login       String
+  name        String?
+  avatarUrl   String?
+  role        Role       @default(user)
+  status      UserStatus @default(active)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  lastLoginAt DateTime?
+  deletedAt   DateTime?
+
+  sessions    Session[]
+  auditLogs   AuditLog[]  @relation("AuditActor")
+  pages       Page[]
+  links       Link[]
+  folders     LinkFolder[]
+  docks       Dock[]
+  setting     Setting?
+  userEngines UserSearchEngine[]
+  todos       PluginTodo[]
+  todoFolders PluginTodoFolder[]
+
+  @@index([email])
+  @@map("bendy_user")
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  jti        String    @unique
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("bendy_session")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String?
+  targetId   String?
+  payload    Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("bendy_audit_log")
+}
+
+// ---------- Home Content ----------
+
+model Page {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  icon      String?
+  pageType  String   @default("normal")
+  sort      Int      @default(0)
+  config    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links   Link[]
+  folders LinkFolder[]
+
+  @@index([userId])
+  @@map("bendy_page")
+}
+
+model LinkFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  pageId    String
+  name      String
+  icon      String?
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page  Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  links Link[]
+
+  @@index([userId])
+  @@index([pageId])
+  @@map("bendy_link_folder")
+}
+
+model Link {
+  id          String   @id @default(cuid())
+  userId      String
+  pageId      String?
+  folderId    String?
+  name        String
+  url         String
+  icon        String?
+  bgColor     String?
+  iconBg      Boolean  @default(false)
+  app         Int      @default(0)
+  size        String   @default("1x1")
+  sort        Int      @default(0)
+  meta        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page   Page?       @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  folder LinkFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([pageId])
+  @@index([folderId])
+  @@map("bendy_link")
+}
+
+model Dock {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  url       String
+  icon      String?
+  sort      Int      @default(0)
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("bendy_dock")
+}
+
+model Setting {
+  userId    String   @id
+  config    Json
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bendy_setting")
+}
+
+// ---------- Search ----------
+
+model SearchEngine {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  url       String
+  icon      String?
+  sort      Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userBindings UserSearchEngine[]
+
+  @@map("bendy_search_engine")
+}
+
+model UserSearchEngine {
+  userId   String
+  engineId String
+  sort     Int    @default(0)
+  enabled  Boolean @default(true)
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  engine SearchEngine @relation(fields: [engineId], references: [id], onDelete: Cascade)
+
+  @@id([userId, engineId])
+  @@map("bendy_user_search_engine")
+}
+
+// ---------- Wallpaper ----------
+
+model Wallpaper {
+  id          String   @id @default(cuid())
+  name        String   @default("")
+  url         String
+  hdUrl       String?
+  description String?
+  colorMode   String   @default("day")
+  category    String   @default("default")
+  sort        Int      @default(0)
+  uploadedBy  String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([colorMode])
+  @@map("bendy_wallpaper")
+}
+
+// ---------- Default home template (admin-published) ----------
+
+model DefaultTemplate {
+  id          String   @id @default(cuid())
+  version     String   @unique
+  content     Json
+  publishedAt DateTime @default(now())
+  publishedBy String?
+  notes       String?
+
+  @@map("bendy_default_template")
+}
+
+// ---------- System config (single-row style) ----------
+
+model SystemConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("bendy_system_config")
+}
+
+// ---------- Plugin: todo（占位，保留插件位） ----------
+
+model PluginTodoFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos PluginTodo[]
+
+  @@index([userId])
+  @@map("bendy_plugin_todo_folder")
+}
+
+model PluginTodo {
+  id        String   @id @default(cuid())
+  userId    String
+  folderId  String?
+  content   String
+  done      Boolean  @default(false)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder PluginTodoFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([folderId])
+  @@map("bendy_plugin_todo")
+}

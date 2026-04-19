@@ -3513,6 +3513,26 @@ async function handleWxLogin(ctx: LegacyContext): Promise<NextResponse> {
 
 async function handleUserController(ctx: LegacyContext, action: string): Promise<NextResponse> {
 
+  const deprecatedAuthActions = new Set([
+    "login",
+    "register",
+    "loginout",
+    "sendemailcode",
+    "send_email_code",
+    "sendmailcode",
+    "resetpassword",
+    "forgetpassword",
+    "qlogin",
+    "qq_login",
+    "wx_login",
+    "is_wx_login",
+    "wx_login_info",
+    "wx_login_scan"
+  ]);
+  if (deprecatedAuthActions.has(action.toLowerCase())) {
+    return jsonError("该登录方式已下线，请改用 GitHub 登录。");
+  }
+
   switch (action.toLowerCase()) {
 
     case "login": {

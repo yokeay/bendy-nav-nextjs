@@ -97,14 +97,14 @@ export function PageManagerDialog({
 
     setEditingId("");
     setName("");
-    setIcon(pageIcons[0]?.src ?? "/static/pageGroup/home.svg");
+    setIcon(pageIcons[0]?.src ?? "/icons/apps.svg");
     setPageType("normal");
   }, [initialPageId, open, pageIcons]);
 
   function beginCreate() {
     setEditingId("");
     setName("");
-    setIcon(pageIcons[0]?.src ?? "/static/pageGroup/home.svg");
+    setIcon(pageIcons[0]?.src ?? "/icons/apps.svg");
     setPageType("normal");
   }
 
@@ -196,7 +196,13 @@ export function PageManagerDialog({
           <div className={styles.groupManagerList}>
             <div className={isHomeActive() ? `${styles.groupManagerItem} ${styles.groupManagerItemActive}` : styles.groupManagerItem}>
               <div className={styles.groupManagerMeta}>
-                <img src="/static/pageGroup/home.svg" alt="首页" />
+                <img
+                  src={pageIcons[0]?.src || "/icons/apps.svg"}
+                  alt="首页"
+                  onError={(event) => {
+                    (event.currentTarget as HTMLImageElement).src = "/icons/apps.svg";
+                  }}
+                />
                 <span>首页</span>
               </div>
                 <div className={styles.groupManagerActions}>
@@ -221,7 +227,13 @@ export function PageManagerDialog({
                 key={page.id}
               >
                 <div className={styles.groupManagerMeta}>
-                  <img src={page.src} alt={page.name} />
+                  <img
+                    src={page.src || "/icons/apps.svg"}
+                    alt={page.name}
+                    onError={(event) => {
+                      (event.currentTarget as HTMLImageElement).src = "/icons/apps.svg";
+                    }}
+                  />
                   <span>{page.name}</span>
                   <em>{page.pageType === "geek" ? "极客" : "常规"}</em>
                 </div>

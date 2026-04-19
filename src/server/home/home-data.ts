@@ -16,7 +16,7 @@ import type {
   HomeUser
 } from "./types";
 
-const APP_VERSION = "2.4.39";
+const APP_VERSION = "2.4.40";
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DEFAULT_BRAND_ICON = "/brand/logo-192.png";
@@ -360,6 +360,9 @@ async function decorateLinks(links: HomeLink[]): Promise<HomeLink[]> {
 }
 
 async function resolveCurrentUser(auth: HomeAuthCookies): Promise<HomeUser | null> {
+  if (auth.sessionUser) {
+    return auth.sessionUser;
+  }
   const userId = toNumberValue(auth.userId, 0);
   const token = toStringValue(auth.token, "").trim();
 
@@ -409,6 +412,7 @@ async function resolveCurrentUser(auth: HomeAuthCookies): Promise<HomeUser | nul
 
     return {
       userId: currentUser.id,
+      id: "",
       groupId: toNumberValue(currentUser.group_id, 0),
       manager: toNumberValue(currentUser.manager, 0) === 1,
       email: toStringValue(currentUser.mail, "").trim(),
@@ -509,10 +513,11 @@ function normalizeTheme(input: Record<string, unknown>): HomeTheme {
     maxColumn: Math.max(3, toNumberValue(input.maxColumn, 14)),
     latestPageGroup: toBooleanValue(input.latestPageGroup, false),
     bottom2top: toBooleanValue(input.bottom2top, true),
-    userCenterPosition: toStringValue(input.userCenterPosition, "left"),
+    userCenterPosition:
+      toStringValue(input.userCenterPosition, "center") === "right" ? "right" : "center",
     trash: toBooleanValue(input.trash, true),
     pageGroupPosition:
-      toStringValue(input.pageGroupPosition, "left") === "right" ? "right" : "left"
+      toStringValue(input.pageGroupPosition, "bottom") === "right" ? "right" : "bottom"
   };
 }
 

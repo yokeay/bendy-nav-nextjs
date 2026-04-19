@@ -5,6 +5,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AddLinkDialog, BackgroundDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
+import { HomeProfileDialog } from "./home-profile-dialog";
+import { BdLogo } from "./bd-logo";
 import {
   buildFolderChildren as buildFolderChildrenModel,
   buildVisibleHomeCards,
@@ -599,12 +601,13 @@ function Sidebar({
   onOpenSettings,
   onEditGroup,
   onDeleteGroup,
-  onNotify
+  onNotify,
+  onOpenProfile
 }: {
   data: HomeData;
   pageGroups: HomeLink[];
   activeGroupId: string;
-  position: "left" | "right";
+  position: "right" | "bottom";
   autoHide: boolean;
   editMode: boolean;
   user: HomeData["user"];
@@ -615,6 +618,7 @@ function Sidebar({
   onEditGroup: (groupId: string) => void;
   onDeleteGroup: (groupId: string) => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
+  onOpenProfile?: () => void;
 }) {
   const sidebarLinks = buildSidebarLinks({
     ...data,
@@ -625,12 +629,13 @@ function Sidebar({
     <aside className={[
       styles.sidebar,
       position === "right" ? styles.sidebarRight : "",
+      position === "bottom" ? styles.sidebarBottom : "",
       autoHide ? styles.sidebarAutoHide : ""
     ].filter(Boolean).join(" ")}>
       <div className={styles.sidebarGroup}>
         <div className={styles.sidebarProfile}>
           {user ? (
-            <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
+            <UserMenu user={user} legacyUrl="" onNotify={onNotify} onOpenProfile={onOpenProfile} />
           ) : (
             <button
               className={styles.userButton}
@@ -639,7 +644,7 @@ function Sidebar({
               title="登录"
               aria-label="登录"
             >
-              <img className={styles.userAvatar} src={data.site.logo} alt={data.site.title} />
+              <BdLogo size="md" />
               <span className={styles.userButtonText}>登录</span>
             </button>
           )}
@@ -693,7 +698,7 @@ function Sidebar({
           title={editMode ? "页面管理" : "新增页面"}
           aria-label={editMode ? "页面管理" : "新增页面"}
         >
-          <img className={styles.sidebarIcon} src="/dist/assets/add.c36dce54.1766672520393.svg" alt="" />
+          <img className={styles.sidebarIcon} src="/icons/add.svg" alt="" />
           <span className={styles.sidebarText}>页面</span>
         </button>
       </div>
@@ -706,7 +711,7 @@ function Sidebar({
           title="打开设置中心"
           aria-label="打开设置中心"
         >
-          <img className={styles.sidebarFooterIcon} src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
+          <img className={styles.sidebarFooterIcon} src="/icons/setting.svg" alt="" />
         </button>
       </div>
     </aside>
@@ -734,20 +739,9 @@ function Toolbar({
   onToggleEditMode: () => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
 }) {
-  const accountButton = user ? (
-    <UserMenu user={user} legacyUrl="" onNotify={onNotify} />
-  ) : (
-    <button
-      className={styles.userButton}
-      type="button"
-      onClick={onOpenAuth}
-      title="登录"
-      aria-label="登录"
-    >
-      <img className={styles.userAvatar} src="/brand/logo-192.png" alt="" />
-      <span className={styles.userButtonText}>登录</span>
-    </button>
-  );
+  const loggedIn = Boolean(user);
+  void onOpenAuth;
+  void onNotify;
 
   return (
     <div
@@ -760,16 +754,29 @@ function Toolbar({
         .filter(Boolean)
         .join(" ")}
     >
-      {accountButton}
-      <button
-        className={styles.toolbarButton}
-        type="button"
-        onClick={onOpenSettings}
-        title="打开设置中心"
-        aria-label="打开设置中心"
-      >
-        <img src="/dist/assets/setting.6abb23f3.1766672520393.svg" alt="" />
-      </button>
+      {!loggedIn ? (
+        <button
+          className={styles.userButton}
+          type="button"
+          onClick={onOpenAuth}
+          title="登录"
+          aria-label="登录"
+        >
+          <BdLogo size="md" />
+          <span className={styles.userButtonText}>登录</span>
+        </button>
+      ) : null}
+      {!loggedIn ? (
+        <button
+          className={styles.toolbarButton}
+          type="button"
+          onClick={onOpenSettings}
+          title="打开设置中心"
+          aria-label="打开设置中心"
+        >
+          <img src="/icons/setting.svg" alt="" />
+        </button>
+      ) : null}
       {editMode ? (
         <button
           className={styles.toolbarButton}
@@ -778,7 +785,7 @@ function Toolbar({
           title="退出编辑模式"
           aria-label="退出编辑模式"
         >
-          <img src="/dist/assets/edit.619ba3d7.1766672520393.svg" alt="" />
+          <img src="/icons/edit.svg" alt="" />
         </button>
       ) : null}
       <button
@@ -790,8 +797,8 @@ function Toolbar({
         <img
           src={
             compactMode
-              ? "/dist/assets/apps.1b96d9dd.1766672520393.svg"
-              : "/dist/assets/light.8db34f6e.1766672520393.svg"
+              ? "/icons/apps.svg"
+              : "/icons/light.svg"
           }
           alt=""
         />
@@ -1141,7 +1148,7 @@ function SearchBar({
             placeholder="输入并搜索..."
           />
           <button className={styles.searchSubmit} type="submit" aria-label="开始搜索">
-            <img src="/dist/assets/search.95fa887a.1766672520393.svg" alt="" />
+            <img src="/icons/search.svg" alt="" />
           </button>
         </form>
         {searchPanelContent}
@@ -1155,17 +1162,13 @@ function SearchBar({
         <button
         className={styles.searchEngineButton}
         type="button"
-        onClick={() => {
-          if (availableEngines.length === 0) {
-            return;
-          }
-          setEngineIndex((engineIndex + 1) % availableEngines.length);
-        }}
-        title={`切换搜索引擎，当前为 ${currentEngine.name}`}
-        aria-label={`切换搜索引擎，当前为 ${currentEngine.name}`}
+        onClick={() => setPanelOpen((open) => !open)}
+        title={`选择搜索引擎，当前为 ${currentEngine.name}`}
+        aria-label={`选择搜索引擎，当前为 ${currentEngine.name}`}
       >
           <img src={currentEngine.icon} alt="" />
           <span className={styles.searchEngineLabel}>{currentEngine.name}</span>
+          <span className={styles.searchEngineCompactCaret} aria-hidden="true" />
         </button>
         <input
           className={styles.searchInput}
@@ -1176,7 +1179,7 @@ function SearchBar({
           placeholder="输入并搜索..."
         />
         <button className={styles.searchSubmit} type="submit" aria-label="开始搜索">
-          <img src="/dist/assets/search.95fa887a.1766672520393.svg" alt="" />
+          <img src="/icons/search.svg" alt="" />
         </button>
       </form>
       {searchPanelContent}
@@ -1340,7 +1343,7 @@ function IconTile({
       >
         {isAppLink(link) ? (
           <span className={styles.tileAppBadge}>
-            <img className={styles.tileAppBadgeIcon} src="/dist/assets/wapp.cf7c9591.1766672520393.svg" alt="" />
+            <img className={styles.tileAppBadgeIcon} src="/icons/wapp.svg" alt="" />
           </span>
         ) : null}
         {isTextIcon(link) ? (
@@ -1549,7 +1552,7 @@ function ComponentTile({
       >
         {(() => {
           const frameUrl = typeof link.url === "string" ? link.url.trim() : "";
-          const isSafeFrame = /^https?:\/\//i.test(frameUrl);
+          const isSafeFrame = /^https?:\/\//i.test(frameUrl) || frameUrl.startsWith("/");
           if (!isSafeFrame) {
             return (
               <div className={styles.componentTileFrame} style={{ display: "flex", alignItems: "center", justifyContent: "center", background: link.bgColor || "#fff" }}>
@@ -1929,7 +1932,7 @@ function Dock({
               <span className={styles.dockItemFrame} style={getLinkSurfaceStyle(item)}>
                 {isAppLink(item) ? (
                   <span className={styles.tileAppBadge}>
-                    <img className={styles.tileAppBadgeIcon} src="/dist/assets/wapp.cf7c9591.1766672520393.svg" alt="" />
+                    <img className={styles.tileAppBadgeIcon} src="/icons/wapp.svg" alt="" />
                   </span>
                 ) : null}
                 {isTextIcon(item) ? (
@@ -1973,7 +1976,7 @@ function Dock({
                 : undefined
             }
           >
-            <img src="/dist/assets/lajitong.15d0afcb.1766672520393.png" alt="" />
+            <img src="/icons/lajitong.png" alt="" />
           </button>
         </div>
       ) : null}
@@ -2347,6 +2350,8 @@ export function HomePage({ data }: HomePageProps) {
   const [editMode, setEditMode] = useState(false);
   const [openFolderId, setOpenFolderId] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileUser, setProfileUser] = useState(data.user);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [linkEditorOpen, setLinkEditorOpen] = useState(false);
@@ -3426,7 +3431,12 @@ export function HomePage({ data }: HomePageProps) {
         : styles.pageThemeAuto;
   const sidebarVisible = !compactMode && currentConfig.theme.pageGroup;
   const sidebarOnRight = sidebarVisible && currentConfig.theme.pageGroupPosition === "right";
-  const mainClassName = sidebarOnRight ? `${styles.main} ${styles.mainSidebarRight}` : styles.main;
+  const sidebarOnBottom = sidebarVisible && currentConfig.theme.pageGroupPosition === "bottom";
+  const mainClassName = sidebarOnRight
+    ? `${styles.main} ${styles.mainSidebarRight}`
+    : sidebarOnBottom
+      ? `${styles.main} ${styles.mainSidebarBottom}`
+      : styles.main;
   const pageClassName = [
     styles.page,
     themeModeClassName,
@@ -3469,7 +3479,7 @@ export function HomePage({ data }: HomePageProps) {
             position={currentConfig.theme.pageGroupPosition}
             autoHide={currentConfig.theme.pageGroupStatus}
             editMode={editMode}
-            user={data.user}
+            user={profileUser}
             onOpenAuth={() => setAuthOpen(true)}
             onSelectGroup={setActiveGroupId}
             onOpenGroupManager={() => {
@@ -3482,6 +3492,7 @@ export function HomePage({ data }: HomePageProps) {
               void handleDeleteGroup(groupId);
             }}
             onNotify={notify}
+            onOpenProfile={() => setProfileOpen(true)}
           />
         ) : null}
 
@@ -3498,7 +3509,7 @@ export function HomePage({ data }: HomePageProps) {
               })
             )
           }
-          user={data.user}
+          user={profileUser}
           onOpenAuth={() => setAuthOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onToggleEditMode={() => setEditMode((current) => !current)}
@@ -4012,18 +4023,44 @@ export function HomePage({ data }: HomePageProps) {
           onClose={() => setAuthOpen(false)}
           onNotify={notify}
         />
+        {profileUser ? (
+          <HomeProfileDialog
+            open={profileOpen}
+            user={profileUser}
+            onClose={() => setProfileOpen(false)}
+            onSaved={(next) => {
+              setProfileUser((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      name: next.name,
+                      avatarUrl: next.avatarUrl,
+                      nickname: next.name ?? prev.nickname,
+                      avatar: next.avatarUrl?.trim() || prev.avatar
+                    }
+                  : prev
+              );
+            }}
+            onNotify={notify}
+          />
+        ) : null}
         <HomeSettingsDialog
           open={settingsOpen}
           config={currentConfig}
           site={data.site}
           saving={settingsSaving}
           loggedIn={Boolean(data.user)}
+          user={profileUser}
           pageCount={Math.max(1, currentPageGroups.length + 1)}
           onClose={() => setSettingsOpen(false)}
           onSave={handleSaveSettings}
           onOpenAuth={() => {
             setSettingsOpen(false);
             setAuthOpen(true);
+          }}
+          onOpenProfile={() => {
+            setSettingsOpen(false);
+            setProfileOpen(true);
           }}
           onOpenBackground={() => {
             setSettingsOpen(false);

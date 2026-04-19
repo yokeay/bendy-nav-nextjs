@@ -1,0 +1,173 @@
+.formCard {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  color: #5b6378;
+}
+
+.input {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(20, 24, 56, 0.14);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.toggleField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1a1e27;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.primaryBtn {
+  height: 34px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 6px;
+  background: #3a7bff;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.errorText {
+  color: #c84142;
+  font-size: 12px;
+}
+
+.successText {
+  color: #1a9a5a;
+  font-size: 12px;
+}
+
+.linksRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.linkCard {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.linkCard:hover {
+  border-color: #3a7bff;
+  box-shadow: 0 4px 16px rgba(58, 123, 255, 0.12);
+}
+
+.linkCardTitle {
+  font-weight: 600;
+  color: #1a1e27;
+  font-size: 14px;
+}
+
+.linkCardHint {
+  color: #8790a3;
+  font-size: 12px;
+}
+
+/* Backup page */
+.backupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.backupBtn {
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #3a7bff;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.backupBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.snapshotList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.snapshotItem {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.snapshotMeta {
+  font-size: 12px;
+  color: #5b6378;
+}
+
+.snapshotTitle {
+  font-weight: 600;
+  color: #1a1e27;
+  font-size: 13px;
+}
+
+.snapshotLink {
+  color: #3a7bff;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.backupNote {
+  background: #fff9e6;
+  border: 1px solid #ffd580;
+  color: #8a5a0b;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 16px;
+}

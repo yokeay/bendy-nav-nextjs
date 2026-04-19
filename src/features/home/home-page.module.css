@@ -197,6 +197,68 @@
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.sidebarBottom {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 14px;
+  transform: translateX(-50%);
+  flex-direction: row;
+  width: auto;
+  max-width: calc(100vw - 32px);
+  height: 64px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(30, 36, 52, 0.75), rgba(20, 26, 40, 0.6));
+  backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.sidebarBottom .sidebarGroup {
+  flex-direction: row;
+  width: auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebarBottom .sidebarFooter {
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebarBottom .sidebarText,
+.sidebarBottom .userButtonText {
+  display: none;
+}
+
+.sidebarBottom .sidebarLink,
+.sidebarBottom .userButton {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+
+.sidebarBottom .sidebarLink:hover,
+.sidebarBottom .userButton:hover {
+  transform: translateY(-3px) scale(1.08);
+}
+
+.sidebarBottom.sidebarAutoHide {
+  transform: translate(-50%, calc(100% + 20px));
+}
+
+.sidebarBottom.sidebarAutoHide:hover {
+  transform: translateX(-50%);
+}
+
 .sidebarGroup {
   width: 100%;
   display: flex;
@@ -541,6 +603,11 @@
 .mainSidebarRight {
   margin-left: 0;
   margin-right: 55px;
+}
+
+.mainSidebarBottom {
+  margin-left: 0;
+  padding-bottom: 96px;
 }
 
 .hero {
@@ -1493,14 +1560,10 @@
 }
 
 .authBackdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
   background: rgba(13, 12, 34, 0.56);
-  z-index: 100;
+  z-index: 0;
 }
 
 .authLoginCard {
@@ -2845,6 +2908,12 @@
   animation: settingsPanelRightIn 220ms ease forwards;
 }
 
+.controlModelCenter {
+  left: 50%;
+  transform-origin: center bottom;
+  animation: settingsPanelCenterIn 220ms ease forwards;
+}
+
 .controlMenu {
   width: 210px;
   height: 100%;
@@ -2910,6 +2979,35 @@
 .controlUserCardMeta span {
   font-size: 12px;
   color: #8e8e94;
+}
+
+.controlUserCardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.controlUserCardAvatarImg {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  object-fit: cover;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.controlUserCardSite {
+  font-size: 14px;
+  color: #373737;
+  font-weight: 600;
+}
+
+.controlUserCardNickname {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8e8e94;
+  width: 100%;
+  text-align: center;
 }
 
 .controlUserHeader {
@@ -3255,6 +3353,20 @@
   }
 }
 
+@keyframes settingsPanelCenterIn {
+  from {
+    transform: translate(-50%, 24px) scale(0.96);
+    opacity: 0;
+    bottom: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+    bottom: 60px;
+  }
+}
+
 @keyframes settingsPanelMobileLeftIn {
   from {
     transform: scale(0);
@@ -3279,6 +3391,20 @@
   to {
     transform: scale(1);
     right: 0;
+    bottom: 0;
+  }
+}
+
+@keyframes settingsPanelMobileCenterIn {
+  from {
+    transform: scale(0);
+    left: 0;
+    bottom: 0;
+  }
+
+  to {
+    transform: scale(1);
+    left: 0;
     bottom: 0;
   }
 }
@@ -3635,6 +3761,12 @@
     animation: settingsPanelMobileRightIn 220ms ease forwards;
   }
 
+  .controlModelCenter {
+    left: 0;
+    transform: none;
+    animation: settingsPanelMobileCenterIn 220ms ease forwards;
+  }
+
   .controlMenu {
     width: 80px;
   }
@@ -3829,3 +3961,159 @@
     flex-direction: column;
   }
 }
+
+/* GitHub-only auth dialog (F2) */
+.authOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.authCard {
+  position: relative;
+  z-index: 1;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  padding: 28px 24px 20px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(16, 24, 56, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.authSubtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #5b6378;
+  line-height: 1.6;
+}
+
+.authGithubButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #1a1e27;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.authGithubButton:hover {
+  background: #0f1218;
+}
+
+.authCancelButton {
+  height: 38px;
+  border: 1px solid rgba(20, 24, 56, 0.12);
+  background: transparent;
+  border-radius: 10px;
+  color: #5b6378;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.authCancelButton:hover {
+  background: rgba(20, 24, 56, 0.04);
+}
+
+.profileField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profileFieldLabel {
+  font-size: 12px;
+  color: #5b6378;
+}
+
+.profileFieldInput {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(20, 24, 56, 0.14);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #1a1e27;
+  background: #fff;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.profileFieldInput:focus {
+  border-color: rgba(79, 157, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(79, 157, 247, 0.18);
+}
+
+.profileActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.bdLogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-radius: 10px;
+  background: #111318;
+  color: #ffffff;
+  user-select: none;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.bdLogoSm {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.bdLogoMd {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+
+.bdLogoLg {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+  border-radius: 14px;
+}
+
+:global([data-theme="dark"]) .bdLogo,
+:global(html[data-theme="dark"]) .bdLogo,
+.pageThemeDark .bdLogo {
+  background: #ffffff;
+  color: #111318;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global([data-theme="auto"]) .bdLogo,
+  :global(html:not([data-theme])) .bdLogo,
+  .pageThemeAuto .bdLogo {
+    background: #ffffff;
+    color: #111318;
+  }
+}
+

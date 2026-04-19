@@ -1,0 +1,151 @@
+.publisher {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0 20px;
+}
+
+.metaRow {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(20, 24, 56, 0.14);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.editor {
+  width: 100%;
+  min-height: 320px;
+  padding: 10px 12px;
+  border: 1px solid rgba(20, 24, 56, 0.14);
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  background: #0f1218;
+  color: #e6e9f2;
+  resize: vertical;
+  tab-size: 2;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.primaryBtn {
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #3a7bff;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(20, 24, 56, 0.14);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.errorText {
+  color: #c84142;
+  font-size: 12px;
+}
+
+.successText {
+  color: #1a9a5a;
+  font-size: 12px;
+}
+
+.subTitle {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.empty {
+  padding: 32px;
+  background: #fff;
+  border: 1px dashed rgba(20, 24, 56, 0.14);
+  border-radius: 10px;
+  text-align: center;
+  color: #8790a3;
+}
+
+.versionList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.versionCard {
+  background: #fff;
+  border: 1px solid rgba(20, 24, 56, 0.06);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.versionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.versionTag {
+  font-weight: 600;
+  color: #3a7bff;
+  font-size: 13px;
+}
+
+.versionDate {
+  color: #8790a3;
+  font-size: 12px;
+}
+
+.versionNotes {
+  margin: 0;
+  color: #5b6378;
+  font-size: 12px;
+}
+
+.versionSummary {
+  cursor: pointer;
+  color: #5b6378;
+  font-size: 12px;
+}
+
+.versionJson {
+  margin: 8px 0 0;
+  padding: 10px;
+  background: #0f1218;
+  color: #e6e9f2;
+  border-radius: 8px;
+  font-size: 12px;
+  overflow-x: auto;
+  max-height: 320px;
+}
