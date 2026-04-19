@@ -1192,7 +1192,7 @@ function TileEditControls({
   onDelete,
   onPin
 }: {
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete: () => void;
   onPin?: () => void;
 }) {
@@ -1212,18 +1212,20 @@ function TileEditControls({
           +
         </button>
       ) : null}
-      <button
-        className={styles.tileEditButton}
-        type="button"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onEdit();
-        }}
-        aria-label="编辑"
-      >
-        ✎
-      </button>
+      {onEdit ? (
+        <button
+          className={styles.tileEditButton}
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onEdit();
+          }}
+          aria-label="编辑"
+        >
+          ✎
+        </button>
+      ) : null}
       <button
         className={styles.tileDeleteButton}
         type="button"
@@ -1496,6 +1498,7 @@ function ComponentTile({
   onContextMenu,
   onLongPress,
   onOpenInlineWindow,
+  onDelete,
   onDragStart,
   onDragEnter,
   onDragLeave,
@@ -1510,6 +1513,7 @@ function ComponentTile({
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onLongPress?: () => void;
   onOpenInlineWindow?: (link: HomeLink) => void;
+  onDelete?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
   onDragLeave?: () => void;
@@ -1556,6 +1560,7 @@ function ComponentTile({
       onDrop={editMode ? onDrop : undefined}
       onDragEnd={editMode ? onDragEnd : undefined}
     >
+      {editMode && onDelete ? <TileEditControls onDelete={onDelete} /> : null}
       <button
         className={`${styles.tileAction} ${styles.componentTileAction}`}
         type="button"
@@ -2198,7 +2203,10 @@ function TileContextMenu({
   onMoveOutOfFolder,
   onPin,
   onUnpin,
-  onMoveToGroup
+  onMoveToGroup,
+  onResize,
+  currentSize,
+  resizeOptions
 }: {
   open: boolean;
   x: number;
@@ -2217,12 +2225,17 @@ function TileContextMenu({
   onPin?: () => void;
   onUnpin?: () => void;
   onMoveToGroup?: (groupId: string) => void;
+  onResize?: (size: string) => void;
+  currentSize?: string;
+  resizeOptions?: Array<{ label: string; size: string }>;
 }) {
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  const [resizeMenuOpen, setResizeMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setGroupMenuOpen(false);
+      setResizeMenuOpen(false);
     }
   }, [open]);
 
@@ -2236,6 +2249,7 @@ function TileContextMenu({
   const canMoveOutOfFolder = insideFolder && Boolean(onMoveOutOfFolder);
   const canMoveToGroup = Boolean(onMoveToGroup);
   const canTogglePin = tabbarEnabled && (Boolean(onPin) || Boolean(onUnpin));
+  const canResize = Boolean(onResize) && Array.isArray(resizeOptions) && resizeOptions.length > 0;
   const deleteLabel = isFolder ? "删除文件夹" : "删除标签";
   const editLabel = "编辑标签";
 
@@ -2351,6 +2365,41 @@ function TileContextMenu({
                   {resolveTileLabel(group)}
                 </button>
               ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {canResize ? (
+        <div
+          className={styles.contextMenuSubmenuWrap}
+          onMouseEnter={() => setResizeMenuOpen(true)}
+          onMouseLeave={() => setResizeMenuOpen(false)}
+        >
+          <button className={styles.contextMenuItem} type="button">
+            调整规格
+          </button>
+          {resizeMenuOpen ? (
+            <div
+              className={`${styles.contextMenuSubmenu} ${
+                submenuDirection === "left" ? styles.contextMenuSubmenuLeft : styles.contextMenuSubmenuRight
+              }`}
+            >
+              {resizeOptions!.map((option) => {
+                const active = option.size === currentSize;
+                return (
+                  <button
+                    key={option.size}
+                    className={styles.contextMenuItem}
+                    type="button"
+                    onClick={() => {
+                      onResize?.(option.size);
+                      onClose();
+                    }}
+                  >
+                    {active ? `✓ ${option.label}` : option.label}
+                  </button>
+                );
+              })}
             </div>
           ) : null}
         </div>
@@ -2938,6 +2987,15 @@ export function HomePage({ data }: HomePageProps) {
     notify("标签已删除。", "success");
   }
 
+  async function handleResizeLink(linkId: string, size: string) {
+    const target = currentLinks.find((item) => item.id === linkId);
+    if (!target || target.size === size) {
+      return;
+    }
+    const nextLinks = currentLinks.map((item) => (item.id === linkId ? { ...item, size } : item));
+    await persistLinks(nextLinks);
+  }
+
   async function handleDeleteFolder(folderId: string) {
     if (!window.confirm("确认删除这个文件夹吗？文件夹内标签会一并删除。")) {
       return;
@@ -3489,8 +3547,10 @@ export function HomePage({ data }: HomePageProps) {
   const tileMenuCanEdit = tileMenuLink ? canEditTile(tileMenuLink) : false;
   const tileMenuIsFolder = tileMenuLink ? isFolderLink(tileMenuLink) : false;
   const tileMenuIsAction = tileMenuLink ? isActionTile(tileMenuLink) : false;
+  const tileMenuIsComponent = tileMenuLink ? tileMenuLink.type === "component" && !tileMenuIsFolder : false;
   const tileMenuInsideFolder = Boolean(tileMenuLink?.pid);
   const tileMenuCanMove = Boolean(tileMenuLink) && !tileMenuIsAction;
+  const tileMenuCanDelete = tileMenuCanEdit || tileMenuIsFolder || tileMenuIsComponent;
   const tileMenuSubmenuDirection =
     tileMenu.x > viewportWidth - (TILE_CONTEXT_MENU_WIDTH * 2 + 24) ? "left" : "right";
   const gridDraggedLinkId = draggingDockId || draggingTileId;
@@ -3672,19 +3732,19 @@ export function HomePage({ data }: HomePageProps) {
               : undefined
           }
           onDelete={
-            tileMenuCanEdit
+            tileMenuIsFolder
               ? () => {
                   if (tileMenuLink) {
-                    void handleDeleteLink(tileMenuLink.id);
+                    void handleDeleteFolder(tileMenuLink.id);
                   }
                 }
-              : tileMenuIsFolder
+              : tileMenuCanDelete
                 ? () => {
                     if (tileMenuLink) {
-                      void handleDeleteFolder(tileMenuLink.id);
+                      void handleDeleteLink(tileMenuLink.id);
                     }
-                }
-              : undefined
+                  }
+                : undefined
           }
           onMoveOutOfFolder={
             tileMenuInsideFolder
@@ -3720,6 +3780,25 @@ export function HomePage({ data }: HomePageProps) {
                     void handleMoveLinkToGroup(tileMenuLink.id, groupId);
                   }
                 }
+              : undefined
+          }
+          onResize={
+            tileMenuIsComponent
+              ? (size) => {
+                  if (tileMenuLink) {
+                    void handleResizeLink(tileMenuLink.id, size);
+                  }
+                }
+              : undefined
+          }
+          currentSize={tileMenuLink?.size}
+          resizeOptions={
+            tileMenuIsComponent
+              ? [
+                  { label: "小 (1×1)", size: "1x1" },
+                  { label: "中 (2×2)", size: "2x2" },
+                  { label: "大 (2×4)", size: "2x4" }
+                ]
               : undefined
           }
         />
@@ -3918,6 +3997,7 @@ export function HomePage({ data }: HomePageProps) {
                           onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                           onLongPress={enterGlobalEditMode}
                           onOpenInlineWindow={setInlineWindowLink}
+                          onDelete={() => void handleDeleteLink(item.id)}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
                           onDragLeave={dragHandlers.onDragLeave}
