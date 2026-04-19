@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx scripts/dev.ts",
-    "build": "next build",
+    "build": "npm run prisma:generate && next build",
     "start": "tsx scripts/start.ts",
     "db:init": "tsx scripts/db-init.ts",
     "prisma:provider": "tsx scripts/prisma-provider.ts",
