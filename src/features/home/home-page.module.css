@@ -979,6 +979,29 @@
     0 12px 24px rgba(3, 10, 20, 0.26);
 }
 
+.tileMergeTarget .tileAction {
+  transform: scale(0.86);
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+  box-shadow:
+    inset 0 0 0 2px rgba(34, 197, 94, 0.78),
+    0 18px 36px rgba(16, 185, 129, 0.38);
+}
+
+.tileMergeTarget::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 18px;
+  border: 2px dashed rgba(34, 197, 94, 0.7);
+  pointer-events: none;
+  animation: tileMergePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tileMergePulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
 .tileEditActions {
   position: absolute;
   top: -8px;

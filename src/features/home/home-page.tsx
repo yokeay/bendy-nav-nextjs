@@ -1246,6 +1246,7 @@ function IconTile({
   editMode,
   isDragging,
   isDropTarget,
+  isMergeTarget,
   onContextMenu,
   onEdit,
   onDelete,
@@ -1253,6 +1254,7 @@ function IconTile({
   onLongPress,
   onDragStart,
   onDragEnter,
+  onDragLeave,
   onDrop,
   onDragEnd,
   onOpenInlineWindow
@@ -1262,6 +1264,7 @@ function IconTile({
   editMode: boolean;
   isDragging: boolean;
   isDropTarget: boolean;
+  isMergeTarget?: boolean;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -1269,6 +1272,7 @@ function IconTile({
   onLongPress?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
+  onDragLeave?: () => void;
   onDrop?: () => void;
   onDragEnd?: () => void;
   onOpenInlineWindow?: () => void;
@@ -1279,7 +1283,8 @@ function IconTile({
   const tileClassName = [
     styles.tile,
     isDragging ? styles.tileDragging : "",
-    isDropTarget ? styles.tileDropTarget : ""
+    isDropTarget ? styles.tileDropTarget : "",
+    isMergeTarget ? styles.tileMergeTarget : ""
   ]
     .filter(Boolean)
     .join(" ");
@@ -1310,6 +1315,7 @@ function IconTile({
       }}
       onDragStart={editMode ? onDragStart : undefined}
       onDragEnter={editMode ? onDragEnter : undefined}
+      onDragLeave={editMode ? onDragLeave : undefined}
       onDragOver={editMode ? (event) => event.preventDefault() : undefined}
       onDrop={editMode ? onDrop : undefined}
       onDragEnd={editMode ? onDragEnd : undefined}
@@ -1397,6 +1403,7 @@ function ActionTile({
   onLongPress,
   onDragStart,
   onDragEnter,
+  onDragLeave,
   onDrop,
   onDragEnd
 }: {
@@ -1409,6 +1416,7 @@ function ActionTile({
   onLongPress?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
+  onDragLeave?: () => void;
   onDrop?: () => void;
   onDragEnd?: () => void;
 }) {
@@ -1447,6 +1455,7 @@ function ActionTile({
       }}
       onDragStart={editMode ? onDragStart : undefined}
       onDragEnter={editMode ? onDragEnter : undefined}
+      onDragLeave={editMode ? onDragLeave : undefined}
       onDragOver={editMode ? (event) => event.preventDefault() : undefined}
       onDrop={editMode ? onDrop : undefined}
       onDragEnd={editMode ? onDragEnd : undefined}
@@ -1479,10 +1488,12 @@ function ComponentTile({
   editMode,
   isDragging,
   isDropTarget,
+  isMergeTarget,
   onContextMenu,
   onLongPress,
   onDragStart,
   onDragEnter,
+  onDragLeave,
   onDrop,
   onDragEnd
 }: {
@@ -1490,17 +1501,20 @@ function ComponentTile({
   editMode: boolean;
   isDragging: boolean;
   isDropTarget: boolean;
+  isMergeTarget?: boolean;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onLongPress?: () => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
+  onDragLeave?: () => void;
   onDrop?: () => void;
   onDragEnd?: () => void;
 }) {
   const tileClassName = [
     styles.tile,
     isDragging ? styles.tileDragging : "",
-    isDropTarget ? styles.tileDropTarget : ""
+    isDropTarget ? styles.tileDropTarget : "",
+    isMergeTarget ? styles.tileMergeTarget : ""
   ]
     .filter(Boolean)
     .join(" ");
@@ -1533,6 +1547,7 @@ function ComponentTile({
       }}
       onDragStart={editMode ? onDragStart : undefined}
       onDragEnter={editMode ? onDragEnter : undefined}
+      onDragLeave={editMode ? onDragLeave : undefined}
       onDragOver={editMode ? (event) => event.preventDefault() : undefined}
       onDrop={editMode ? onDrop : undefined}
       onDragEnd={editMode ? onDragEnd : undefined}
@@ -2364,6 +2379,8 @@ export function HomePage({ data }: HomePageProps) {
   const [dropTargetId, setDropTargetId] = useState("");
   const [draggingFolderTileId, setDraggingFolderTileId] = useState("");
   const [folderDropTargetId, setFolderDropTargetId] = useState("");
+  const [mergeTargetId, setMergeTargetId] = useState("");
+  const mergeTimerRef = useRef<number | null>(null);
   const [draggingDockId, setDraggingDockId] = useState("");
   const [dockDropTargetId, setDockDropTargetId] = useState("");
   const [gridPreviewIds, setGridPreviewIds] = useState<string[] | null>(null);
@@ -2583,6 +2600,11 @@ export function HomePage({ data }: HomePageProps) {
       setDockPreviewIds(null);
       setDockTrashActive(false);
       setOpenFolderId("");
+      setMergeTargetId("");
+      if (mergeTimerRef.current !== null) {
+        window.clearTimeout(mergeTimerRef.current);
+        mergeTimerRef.current = null;
+      }
     }
   }, [editMode]);
 
@@ -3204,6 +3226,72 @@ export function HomePage({ data }: HomePageProps) {
     await persistTabbar(nextTabbar);
   }
 
+  function canAutoMergeLinks(source: HomeLink, target: HomeLink): boolean {
+    if (source.id === target.id) return false;
+    if (!canEditTile(source) || !canEditTile(target)) return false;
+    if (isFolderLink(source) || isFolderLink(target)) return false;
+    if (source.pageGroup !== target.pageGroup) return false;
+    return true;
+  }
+
+  function clearMergeTimer() {
+    if (mergeTimerRef.current !== null) {
+      window.clearTimeout(mergeTimerRef.current);
+      mergeTimerRef.current = null;
+    }
+  }
+
+  function scheduleMergePreview(targetId: string) {
+    clearMergeTimer();
+    mergeTimerRef.current = window.setTimeout(() => {
+      setMergeTargetId(targetId);
+      mergeTimerRef.current = null;
+    }, 600);
+  }
+
+  async function handleAutoCreateFolder(
+    sourceId: string,
+    targetId: string,
+    options: { removeFromDock?: boolean } = {}
+  ) {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+
+    const source = currentLinks.find((item) => item.id === sourceId);
+    const target = currentLinks.find((item) => item.id === targetId);
+    if (!source || !target || !canAutoMergeLinks(source, target)) return;
+
+    const folderId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const folder = buildActionLink({
+      id: folderId,
+      name: "未命名文件夹",
+      src: "/static/pageGroup/home.svg",
+      url: "",
+      type: "component",
+      component: "iconGroup",
+      size: target.size || "2x2",
+      sort: target.sort,
+      pageGroup: target.pageGroup
+    });
+
+    const nextLinks = currentLinks.map((item) => {
+      if (item.id === targetId) {
+        return { ...item, pid: folderId, pageGroup: target.pageGroup, sort: 0 };
+      }
+      if (item.id === sourceId) {
+        return { ...item, pid: folderId, pageGroup: target.pageGroup, sort: 1 };
+      }
+      return item;
+    });
+
+    await persistLinks([...nextLinks, folder]);
+
+    if (options.removeFromDock && currentTabbar.some((item) => item.id === sourceId)) {
+      await persistTabbar(currentTabbar.filter((item) => item.id !== sourceId));
+    }
+
+    notify("已创建文件夹。", "success");
+  }
+
   async function handleMoveLinkIntoFolder(
     sourceId: string,
     folderId: string,
@@ -3699,6 +3787,10 @@ export function HomePage({ data }: HomePageProps) {
                       Boolean(gridDraggedLink) &&
                       canEditTile(gridDraggedLink) &&
                       gridDraggedLink.id !== item.id;
+                    const shouldAutoMerge =
+                      Boolean(gridDraggedLink) &&
+                      canAutoMergeLinks(gridDraggedLink, item);
+                    const isMergeTarget = mergeTargetId === item.id && shouldAutoMerge;
                     const dragHandlers = editMode
                         ? {
                           onDragStart: () => {
@@ -3708,6 +3800,8 @@ export function HomePage({ data }: HomePageProps) {
                             setDockDropTargetId("");
                             setGridPreviewIds(orderedTileIds);
                             setDraggingTileId(item.id);
+                            setMergeTargetId("");
+                            clearMergeTimer();
                           },
                           onDragEnter: () => {
                             if (draggingTileId && draggingTileId !== item.id) {
@@ -3716,11 +3810,24 @@ export function HomePage({ data }: HomePageProps) {
                               );
                             }
                             setDropTargetId(item.id);
+                            if (shouldAutoMerge) {
+                              scheduleMergePreview(item.id);
+                            } else {
+                              clearMergeTimer();
+                              setMergeTargetId("");
+                            }
+                          },
+                          onDragLeave: () => {
+                            if (mergeTargetId === item.id) {
+                              setMergeTargetId("");
+                            }
+                            clearMergeTimer();
                           },
                           onDrop: () => {
                             const sourceDockId = draggingDockId;
                             const sourceTileId = draggingTileId;
                             const sourceLinkId = sourceDockId || sourceTileId;
+                            const autoMergeFired = mergeTargetId === item.id && shouldAutoMerge;
                             const nextGridOrder =
                               sourceTileId && gridPreviewIds?.length
                                 ? gridPreviewIds
@@ -3731,9 +3838,18 @@ export function HomePage({ data }: HomePageProps) {
                             setDraggingDockId("");
                             setDockDropTargetId("");
                             setGridPreviewIds(null);
+                            setMergeTargetId("");
+                            clearMergeTimer();
 
                             if (shouldMoveIntoFolder && sourceLinkId) {
                               void handleMoveLinkIntoFolder(sourceLinkId, item.id, {
+                                removeFromDock: Boolean(sourceDockId)
+                              });
+                              return;
+                            }
+
+                            if (autoMergeFired && sourceLinkId) {
+                              void handleAutoCreateFolder(sourceLinkId, item.id, {
                                 removeFromDock: Boolean(sourceDockId)
                               });
                               return;
@@ -3754,11 +3870,14 @@ export function HomePage({ data }: HomePageProps) {
                             setDraggingDockId("");
                             setDockDropTargetId("");
                             setGridPreviewIds(null);
+                            setMergeTargetId("");
+                            clearMergeTimer();
                           }
                         }
                       : {
                           onDragStart: undefined,
                           onDragEnter: undefined,
+                          onDragLeave: undefined,
                           onDrop: undefined,
                           onDragEnd: undefined
                         };
@@ -3791,10 +3910,12 @@ export function HomePage({ data }: HomePageProps) {
                           editMode={editMode}
                           isDragging={isDragging}
                           isDropTarget={isDropTarget}
+                          isMergeTarget={isMergeTarget}
                           onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                           onLongPress={enterGlobalEditMode}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
+                          onDragLeave={dragHandlers.onDragLeave}
                           onDrop={dragHandlers.onDrop}
                           onDragEnd={dragHandlers.onDragEnd}
                         />
@@ -3814,6 +3935,7 @@ export function HomePage({ data }: HomePageProps) {
                           onLongPress={enterGlobalEditMode}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
+                          onDragLeave={dragHandlers.onDragLeave}
                           onDrop={dragHandlers.onDrop}
                           onDragEnd={dragHandlers.onDragEnd}
                         />
@@ -3828,6 +3950,7 @@ export function HomePage({ data }: HomePageProps) {
                         editMode={editMode}
                         isDragging={isDragging}
                         isDropTarget={isDropTarget}
+                        isMergeTarget={isMergeTarget}
                         onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                         onLongPress={enterGlobalEditMode}
                         onEdit={
@@ -3855,6 +3978,7 @@ export function HomePage({ data }: HomePageProps) {
                         onOpenInlineWindow={() => setInlineWindowLink(item)}
                         onDragStart={dragHandlers.onDragStart}
                         onDragEnter={dragHandlers.onDragEnter}
+                        onDragLeave={dragHandlers.onDragLeave}
                         onDrop={dragHandlers.onDrop}
                         onDragEnd={dragHandlers.onDragEnd}
                       />
