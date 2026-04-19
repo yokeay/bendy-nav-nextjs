@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>热搜榜</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #f6f7fb;
+      color: #111827;
+    }
+    .wrap {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      background: #ffffff;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+    .tab {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #f2f3f5;
+      color: #4b5563;
+      cursor: pointer;
+    }
+    .tab.active {
+      background: #111827;
+      color: #fff;
+    }
+    .refresh {
+      border: none;
+      background: #e0f2fe;
+      color: #0284c7;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .list {
+      list-style: none;
+      margin: 0;
+      padding: 16px 18px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+      text-decoration: none;
+      color: inherit;
+    }
+    .rank {
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .name {
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .hot {
+      font-size: 12px;
+      color: #ef4444;
+    }
+    .status {
+      font-size: 13px;
+      color: #6b7280;
+      padding: 0 18px 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">热搜榜</div>
+      <button class="refresh" id="refresh">刷新</button>
+      <div class="tabs" id="tabs"></div>
+    </div>
+    <div class="status" id="status"></div>
+    <ul class="list" id="list"></ul>
+  </div>
+
+  <script>
+    const sources = [
+      { type: "baidu", label: "百度" },
+      { type: "weibo", label: "微博" },
+      { type: "zhihu", label: "知乎" },
+      { type: "bilibili", label: "B站" },
+      { type: "douyin", label: "抖音" },
+      { type: "toutiao", label: "头条" }
+    ]
+
+    const tabsEl = document.getElementById('tabs')
+    const listEl = document.getElementById('list')
+    const statusEl = document.getElementById('status')
+    const refreshBtn = document.getElementById('refresh')
+
+    let currentType = localStorage.getItem('topSearch_type') || 'baidu'
+
+    function renderTabs () {
+      tabsEl.innerHTML = ''
+      sources.forEach(item => {
+        const el = document.createElement('div')
+        el.className = 'tab' + (item.type === currentType ? ' active' : '')
+        el.textContent = item.label
+        el.addEventListener('click', () => {
+          if (currentType === item.type) return
+          currentType = item.type
+          localStorage.setItem('topSearch_type', currentType)
+          renderTabs()
+          loadList()
+        })
+        tabsEl.appendChild(el)
+      })
+    }
+
+    function setStatus (text) {
+      statusEl.textContent = text || ''
+    }
+
+    function renderList (items) {
+      listEl.innerHTML = ''
+      items.forEach((item, idx) => {
+        const li = document.createElement('li')
+        const a = document.createElement('a')
+        a.className = 'item'
+        a.href = item.url || 'javascript:void(0)'
+        a.target = '_blank'
+        a.rel = 'noreferrer'
+        const rank = document.createElement('div')
+        rank.className = 'rank'
+        rank.textContent = idx + 1
+        const info = document.createElement('div')
+        info.className = 'info'
+        const name = document.createElement('div')
+        name.className = 'name'
+        name.textContent = item.title || ''
+        const hot = document.createElement('div')
+        hot.className = 'hot'
+        hot.textContent = item.hot || ''
+        info.appendChild(name)
+        if (item.hot) info.appendChild(hot)
+        a.appendChild(rank)
+        a.appendChild(info)
+        li.appendChild(a)
+        listEl.appendChild(li)
+      })
+    }
+
+    async function loadList () {
+      setStatus('加载中...')
+      try {
+        const res = await fetch(`/plugins/topSearch/api/list?type=${encodeURIComponent(currentType)}`)
+        const json = await res.json()
+        if (json.code === 1) {
+          renderList(json.data || [])
+          setStatus('')
+        } else {
+          setStatus('暂无数据')
+        }
+      } catch (e) {
+        setStatus('加载失败')
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadList)
+
+    renderTabs()
+    loadList()
+  </script>
+</body>
+</html>

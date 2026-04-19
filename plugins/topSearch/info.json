@@ -1,0 +1,9 @@
+{
+  "name": "热搜",
+  "name_en": "topSearch",
+  "version": 1,
+  "tips": "聚合多站热搜榜单",
+  "src": "/plugins/topSearch/static/ico.png",
+  "url": "/plugins/topSearch/card",
+  "window": "/plugins/topSearch/window"
+}

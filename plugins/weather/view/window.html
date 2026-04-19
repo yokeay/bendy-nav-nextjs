@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>天气详情</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-sizing: border-box;
+    }
+
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-right: 4px;
+    }
+
+    .icon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      display: none;
+    }
+
+    .search {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    input[type="text"] {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 8px 12px;
+      min-width: 250px;
+      font-size: 14px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #fff;
+      background: #2563eb;
+    }
+
+    .btn.secondary {
+      background: #0f766e;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .metric .label {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .metric .value {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #64748b;
+      min-height: 16px;
+    }
+
+    .result {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .result button {
+      text-align: left;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .result .empty {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .daily {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .dayItem {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #fff;
+    }
+
+    .dayTop {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .dayIcon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      display: none;
+    }
+
+    .dayWeather {
+      font-size: 14px;
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .dayTemp {
+      font-size: 13px;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="header">
+        <div class="title" id="city">--</div>
+        <img id="icon" class="icon" alt="weather" />
+        <div class="search">
+          <input type="text" id="locationInput" placeholder="输入经纬度，例如 30.1591,120.0732" />
+          <button class="btn" id="searchBtn">搜索</button>
+          <button class="btn secondary" id="detectBtn">定位</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="metric">
+          <div class="label">当前温度</div>
+          <div class="value" id="temp">--</div>
+        </div>
+        <div class="metric">
+          <div class="label">天气情况</div>
+          <div class="value" id="weather">--</div>
+        </div>
+        <div class="metric">
+          <div class="label">温度范围</div>
+          <div class="value" id="range">--</div>
+        </div>
+        <div class="metric">
+          <div class="label">风力风向</div>
+          <div class="value" id="wind">--</div>
+        </div>
+        <div class="metric">
+          <div class="label">湿度</div>
+          <div class="value" id="humidity">--</div>
+        </div>
+        <div class="metric">
+          <div class="label">更新时间</div>
+          <div class="value" id="time">--</div>
+        </div>
+      </div>
+
+      <div class="hint" id="status"></div>
+    </div>
+
+    <div class="panel">
+      <div class="title" style="font-size:16px;">坐标搜索结果</div>
+      <div class="result" id="result"></div>
+    </div>
+
+    <div class="panel">
+      <div class="title" style="font-size:16px;">未来天气</div>
+      <div class="daily" id="dailyList"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'weather_location'
+    const DEFAULT_LOCATION = {
+      name: '北京',
+      city: '北京',
+      latitude: 39.91,
+      longitude: 116.41
+    }
+
+    function asNumber (value) {
+      const num = Number(value)
+      return Number.isFinite(num) ? num : NaN
+    }
+
+    function normalizeLocation (value) {
+      if (!value || typeof value !== 'object') return null
+      const latitude = asNumber(value.latitude)
+      const longitude = asNumber(value.longitude)
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+      return {
+        name: String(value.name || value.city || `${latitude.toFixed(4)},${longitude.toFixed(4)}`),
+        city: String(value.city || ''),
+        latitude,
+        longitude
+      }
+    }
+
+    function getSavedLocation () {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '')
+        return normalizeLocation(saved)
+      } catch (e) {
+        return null
+      }
+    }
+
+    function saveLocation (value) {
+      const location = normalizeLocation(value)
+      if (!location) return null
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(location))
+      return location
+    }
+
+    function buildWeatherQuery (location) {
+      const params = new URLSearchParams({
+        lat: String(location.latitude),
+        lon: String(location.longitude)
+      })
+      if (location.name) params.set('name', location.name)
+      if (location.city) params.set('city', location.city)
+      return params.toString()
+    }
+
+    async function fetchCurrentLocation () {
+      try {
+        const res = await fetch('/plugins/weather/api/location')
+        const json = await res.json()
+        if (json && json.code === 1) {
+          return normalizeLocation(json.data)
+        }
+      } catch (e) {}
+      return null
+    }
+
+    async function resolveLocation () {
+      const saved = getSavedLocation()
+      if (saved) return saved
+      const detected = await fetchCurrentLocation()
+      if (detected) {
+        saveLocation(detected)
+        return detected
+      }
+      return DEFAULT_LOCATION
+    }
+
+    function setIcon (url) {
+      const icon = document.getElementById('icon')
+      const src = String(url || '')
+      if (!src) {
+        icon.style.display = 'none'
+        icon.removeAttribute('src')
+        return
+      }
+      icon.src = src
+      icon.style.display = 'block'
+    }
+
+    function formatRange (forecast) {
+      const hi = String(forecast.temp1 || '')
+      const lo = String(forecast.temp2 || '')
+      if (!hi && !lo) return '--'
+      if (hi && lo) return `低 ${lo} / 高 ${hi}`
+      return hi ? `高 ${hi}` : `低 ${lo}`
+    }
+
+    function formatUpdatedTime (value) {
+      const text = String(value || '')
+      if (!text) return '--'
+      const date = new Date(text)
+      if (Number.isNaN(date.getTime())) return text
+      return new Intl.DateTimeFormat('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date)
+    }
+
+    function renderDays (days) {
+      const dailyList = document.getElementById('dailyList')
+      dailyList.innerHTML = ''
+      const list = Array.isArray(days) ? days : []
+      if (!list.length) {
+        dailyList.innerHTML = '<div class="empty">暂无预报数据</div>'
+        return
+      }
+
+      list.slice(0, 7).forEach(item => {
+        const box = document.createElement('div')
+        box.className = 'dayItem'
+
+        const top = document.createElement('div')
+        top.className = 'dayTop'
+
+        const date = document.createElement('span')
+        date.textContent = String(item.date || '--').slice(0, 10)
+
+        const icon = document.createElement('img')
+        icon.className = 'dayIcon'
+        if (item.icon) {
+          icon.src = item.icon
+          icon.style.display = 'block'
+        }
+
+        top.appendChild(date)
+        top.appendChild(icon)
+
+        const weather = document.createElement('div')
+        weather.className = 'dayWeather'
+        weather.textContent = item.weather || '--'
+
+        const temp = document.createElement('div')
+        temp.className = 'dayTemp'
+        temp.textContent = `低 ${item.temp2 || '--'} / 高 ${item.temp1 || '--'}`
+
+        box.appendChild(top)
+        box.appendChild(weather)
+        box.appendChild(temp)
+
+        dailyList.appendChild(box)
+      })
+    }
+
+    async function loadWeather () {
+      const location = await resolveLocation()
+      document.getElementById('city').textContent = location.name || '--'
+      document.getElementById('status').textContent = '正在加载天气数据...'
+
+      try {
+        const query = buildWeatherQuery(location)
+        const [nowRes, forecastRes] = await Promise.all([
+          fetch(`/plugins/weather/api/now?${query}`),
+          fetch(`/plugins/weather/api/forecast?${query}`)
+        ])
+
+        const nowJson = await nowRes.json()
+        const forecastJson = await forecastRes.json()
+
+        const now = nowJson && nowJson.code === 1 ? (nowJson.data || {}) : {}
+        const forecast = forecastJson && forecastJson.code === 1 ? (forecastJson.data || {}) : {}
+
+        document.getElementById('city').textContent = now.city || forecast.city || location.name || '--'
+        document.getElementById('temp').textContent = now.temp ? `${now.temp} °C` : '--'
+        document.getElementById('weather').textContent = now.weather || forecast.weather || '--'
+        document.getElementById('range').textContent = formatRange(forecast)
+        document.getElementById('wind').textContent = now.wind || '--'
+        document.getElementById('humidity').textContent = now.humidity || '--'
+        document.getElementById('time').textContent = formatUpdatedTime(now.time || forecast.ptime || '--')
+        document.getElementById('status').textContent = ''
+
+        setIcon(now.icon || forecast.icon)
+        renderDays(forecast.days)
+      } catch (e) {
+        document.getElementById('status').textContent = '天气数据加载失败'
+        setIcon('')
+        renderDays([])
+      }
+    }
+
+    async function locateCurrent () {
+      const status = document.getElementById('status')
+      status.textContent = '正在定位...'
+      const location = await fetchCurrentLocation()
+      if (!location) {
+        status.textContent = '定位失败，请手动输入经纬度'
+        return
+      }
+      saveLocation(location)
+      await loadWeather()
+    }
+
+    async function searchLocation () {
+      const keyword = document.getElementById('locationInput').value.trim()
+      const resultEl = document.getElementById('result')
+      if (!keyword) {
+        resultEl.innerHTML = '<div class="empty">请输入经纬度</div>'
+        return
+      }
+
+      resultEl.innerHTML = '<div class="empty">搜索中...</div>'
+      try {
+        const res = await fetch(`/plugins/weather/api/search?city=${encodeURIComponent(keyword)}`)
+        const json = await res.json()
+        const list = json && json.code === 1 ? (json.data || []) : []
+
+        resultEl.innerHTML = ''
+        if (!Array.isArray(list) || !list.length) {
+          resultEl.innerHTML = '<div class="empty">没有匹配结果，请使用“纬度,经度”格式</div>'
+          return
+        }
+
+        list.slice(0, 10).forEach(item => {
+          const loc = normalizeLocation(item)
+          if (!loc) return
+          const btn = document.createElement('button')
+          btn.textContent = `${loc.name} (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`
+          btn.addEventListener('click', async () => {
+            saveLocation(loc)
+            await loadWeather()
+          })
+          resultEl.appendChild(btn)
+        })
+      } catch (e) {
+        resultEl.innerHTML = '<div class="empty">搜索失败</div>'
+      }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', searchLocation)
+    document.getElementById('detectBtn').addEventListener('click', locateCurrent)
+    document.getElementById('locationInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') searchLocation()
+    })
+
+    loadWeather()
+  </script>
+</body>
+</html>

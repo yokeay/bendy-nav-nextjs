@@ -1,0 +1,9 @@
+{
+  "name": "天气",
+  "name_en": "weather",
+  "version": 1,
+  "tips": "实时天气与简易预报",
+  "src": "/plugins/weather/static/ico.png",
+  "url": "/plugins/weather/card",
+  "window": "/plugins/weather/window"
+}

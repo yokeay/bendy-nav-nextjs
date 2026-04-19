@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>热搜</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: transparent;
+      color: #1a1a1a;
+    }
+    .card {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    .tab {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #f2f3f5;
+      color: #555;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: #111827;
+      color: #fff;
+    }
+    .more {
+      border: none;
+      background: #e6f0ff;
+      color: #2563eb;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow: hidden;
+    }
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.2;
+      color: #1f2937;
+      text-decoration: none;
+    }
+    .rank {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      background: #f5f5f5;
+      color: #111827;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .hot {
+      font-size: 11px;
+      color: #ef4444;
+      flex-shrink: 0;
+    }
+    .status {
+      font-size: 12px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="tabs" id="tabs"></div>
+      <button class="more" id="openWindow">更多</button>
+    </div>
+    <ul class="list" id="list"></ul>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script src="/static/js/card.js"></script>
+  <script>
+    const sources = [
+      { type: "baidu", label: "百度" },
+      { type: "weibo", label: "微博" },
+      { type: "zhihu", label: "知乎" },
+      { type: "bilibili", label: "B站" },
+      { type: "douyin", label: "抖音" },
+      { type: "toutiao", label: "头条" }
+    ]
+
+    const tabsEl = document.getElementById('tabs')
+    const listEl = document.getElementById('list')
+    const statusEl = document.getElementById('status')
+    const openWindowBtn = document.getElementById('openWindow')
+
+    let currentType = localStorage.getItem('topSearch_type') || 'baidu'
+
+    function renderTabs () {
+      tabsEl.innerHTML = ''
+      sources.forEach(item => {
+        const el = document.createElement('div')
+        el.className = 'tab' + (item.type === currentType ? ' active' : '')
+        el.textContent = item.label
+        el.addEventListener('click', () => {
+          if (currentType === item.type) return
+          currentType = item.type
+          localStorage.setItem('topSearch_type', currentType)
+          renderTabs()
+          loadList()
+        })
+        tabsEl.appendChild(el)
+      })
+    }
+
+    function setStatus (text) {
+      statusEl.textContent = text || ''
+    }
+
+    function renderList (items) {
+      listEl.innerHTML = ''
+      items.slice(0, 6).forEach((item, idx) => {
+        const li = document.createElement('li')
+        const a = document.createElement('a')
+        a.className = 'item'
+        a.href = item.url || 'javascript:void(0)'
+        a.target = '_blank'
+        a.rel = 'noreferrer'
+        const rank = document.createElement('span')
+        rank.className = 'rank'
+        rank.textContent = idx + 1
+        const title = document.createElement('span')
+        title.className = 'title'
+        title.textContent = item.title || ''
+        const hot = document.createElement('span')
+        hot.className = 'hot'
+        hot.textContent = item.hot || ''
+        a.appendChild(rank)
+        a.appendChild(title)
+        if (item.hot) a.appendChild(hot)
+        li.appendChild(a)
+        listEl.appendChild(li)
+      })
+    }
+
+    async function loadList () {
+      setStatus('加载中...')
+      try {
+        const res = await fetch(`/plugins/topSearch/api/list?type=${encodeURIComponent(currentType)}`)
+        const json = await res.json()
+        if (json.code === 1) {
+          renderList(json.data || [])
+          setStatus('')
+        } else {
+          setStatus('暂无数据')
+        }
+      } catch (e) {
+        setStatus('加载失败')
+      }
+    }
+
+    openWindowBtn.addEventListener('click', () => {
+      if (typeof openCard === 'function') {
+        openCard({
+          name: '热搜',
+          src: '/plugins/topSearch/static/ico.png',
+          url: '/plugins/topSearch/window'
+        })
+      } else {
+        window.location.href = '/plugins/topSearch/window'
+      }
+    })
+
+    renderTabs()
+    loadList()
+  </script>
+</body>
+</html>

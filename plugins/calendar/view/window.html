@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>月历</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 840px;
+      margin: 0 auto;
+      padding: 20px 20px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .header {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #64748b;
+    }
+    .nav {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      border: none;
+      background: #e2e8f0;
+      color: #1e293b;
+      border-radius: 10px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #cbd5f5; }
+    .grid {
+      background: #fff;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+    }
+    .week {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .week .weekend { color: #dc2626; }
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .day {
+      position: relative;
+      min-height: 64px;
+      border-radius: 10px;
+      padding: 6px 8px;
+      background: #f8fafc;
+      color: #1f2937;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 15px;
+      overflow: hidden;
+    }
+    .day .greg {
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .day .lunar {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.2;
+      word-break: keep-all;
+    }
+    .day.other {
+      color: #cbd5f5;
+      background: #f1f5f9;
+    }
+    .day.other .lunar { color: #cbd5f5; }
+    .day.weekend .greg { color: #dc2626; }
+    .day.holiday {
+      background: #fef2f2;
+    }
+    .day.holiday .lunar {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    .day.term .lunar {
+      color: #0ea5e9;
+      font-weight: 600;
+    }
+    .day.today {
+      background: #2563eb;
+      color: #fff;
+      font-weight: 700;
+    }
+    .day.today .greg { color: #fff; }
+    .day.today .lunar { color: rgba(255,255,255,0.88); font-weight: 600; }
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      font-size: 13px;
+      color: #334155;
+    }
+    .summary .pill {
+      background: #fff;
+      border-radius: 999px;
+      padding: 4px 12px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+    }
+    .summary .pill .label { color: #64748b; margin-right: 4px; }
+    .yiji {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px 18px;
+      box-shadow: 0 4px 14px rgba(15,23,42,0.06);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .yiji h3 {
+      margin: 0 0 6px;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 500;
+    }
+    .yiji .list {
+      font-size: 13px;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+    .yiji .yi h3 { color: #16a34a; }
+    .yiji .ji h3 { color: #dc2626; }
+    @media (max-width: 540px) {
+      .yiji { grid-template-columns: 1fr; }
+      .day { min-height: 54px; }
+      .day .greg { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title" id="title">--</div>
+      <div class="subtitle" id="subtitle"></div>
+      <div class="nav">
+        <button class="btn" id="prev">上月</button>
+        <button class="btn" id="next">下月</button>
+        <button class="btn" id="today">回到今天</button>
+      </div>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div class="grid">
+      <div class="week">
+        <div class="weekend">日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="weekend">六</div>
+      </div>
+      <div class="days" id="days"></div>
+    </div>
+    <div class="yiji" id="yiji" hidden>
+      <div class="yi"><h3>今日宜</h3><div class="list" id="yiList">—</div></div>
+      <div class="ji"><h3>今日忌</h3><div class="list" id="jiList">—</div></div>
+    </div>
+  </div>
+
+  <script src="/plugins/calendar/static/lunar.min.js"></script>
+  <script>
+    (function () {
+      var hasLunar = typeof Solar !== 'undefined'
+
+      var today = new Date()
+      var current = new Date(today.getFullYear(), today.getMonth(), 1)
+
+      function sameDay (a, b) {
+        return a.getFullYear() === b.getFullYear()
+          && a.getMonth() === b.getMonth()
+          && a.getDate() === b.getDate()
+      }
+
+      function escapeHtml (text) {
+        return String(text).replace(/[&<>"']/g, function (ch) {
+          return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[ch]
+        })
+      }
+
+      function describeDay (dt) {
+        if (!hasLunar) {
+          return { lunarText: '', isHoliday: false, isTerm: false, festivals: [], jieQi: '' }
+        }
+        var solar = Solar.fromDate(dt)
+        var lunar = solar.getLunar()
+        var festivals = (lunar.getFestivals() || []).concat((solar.getFestivals && solar.getFestivals()) || [])
+        var jieQi = lunar.getJieQi() || ''
+        var lunarText = ''
+        if (festivals.length > 0) {
+          lunarText = festivals[0]
+        } else if (jieQi) {
+          lunarText = jieQi
+        } else {
+          var dayCh = lunar.getDayInChinese()
+          if (dayCh === '初一') {
+            lunarText = lunar.getMonthInChinese() + '月'
+          } else {
+            lunarText = dayCh
+          }
+        }
+        return {
+          lunarText: lunarText,
+          isHoliday: festivals.length > 0,
+          isTerm: !festivals.length && !!jieQi,
+          festivals: festivals,
+          jieQi: jieQi,
+          lunar: lunar,
+          solar: solar
+        }
+      }
+
+      function render () {
+        var year = current.getFullYear()
+        var month = current.getMonth()
+        document.getElementById('title').textContent = year + '年' + (month + 1) + '月'
+
+        if (hasLunar) {
+          var anchor = Solar.fromYmd(year, month + 1, 1).getLunar()
+          document.getElementById('subtitle').textContent =
+            anchor.getYearInGanZhi() + '年 · 属' + anchor.getYearShengXiao()
+        } else {
+          document.getElementById('subtitle').textContent = ''
+        }
+
+        var firstDay = new Date(year, month, 1).getDay()
+        var daysInMonth = new Date(year, month + 1, 0).getDate()
+        var prevDays = new Date(year, month, 0).getDate()
+
+        var cells = []
+        for (var i = 0; i < firstDay; i++) {
+          cells.push({
+            day: prevDays - firstDay + i + 1,
+            other: true,
+            date: new Date(year, month - 1, prevDays - firstDay + i + 1)
+          })
+        }
+        for (var j = 1; j <= daysInMonth; j++) {
+          cells.push({ day: j, other: false, date: new Date(year, month, j) })
+        }
+        while (cells.length < 42) {
+          var nextDay = cells.length - (firstDay + daysInMonth) + 1
+          cells.push({
+            day: nextDay,
+            other: true,
+            date: new Date(year, month + 1, nextDay)
+          })
+        }
+
+        var daysEl = document.getElementById('days')
+        daysEl.innerHTML = ''
+        var monthHolidays = []
+        cells.forEach(function (cell) {
+          var el = document.createElement('div')
+          var classes = ['day']
+          if (cell.other) classes.push('other')
+          var dow = cell.date.getDay()
+          if (dow === 0 || dow === 6) classes.push('weekend')
+
+          var info = describeDay(cell.date)
+          if (info.isHoliday) classes.push('holiday')
+          if (info.isTerm) classes.push('term')
+          if (sameDay(cell.date, today)) classes.push('today')
+
+          el.className = classes.join(' ')
+          el.innerHTML =
+            '<div class="greg">' + cell.day + '</div>' +
+            '<div class="lunar">' + escapeHtml(info.lunarText) + '</div>'
+          daysEl.appendChild(el)
+
+          if (!cell.other && info.isHoliday) {
+            monthHolidays.push({ day: cell.day, text: info.festivals[0] })
+          }
+        })
+
+        var summary = document.getElementById('summary')
+        summary.innerHTML = ''
+        if (monthHolidays.length > 0) {
+          monthHolidays.slice(0, 6).forEach(function (h) {
+            var pill = document.createElement('span')
+            pill.className = 'pill'
+            pill.innerHTML = '<span class="label">' + h.day + '日</span>' + escapeHtml(h.text)
+            summary.appendChild(pill)
+          })
+        }
+
+        var isCurrentMonth = (today.getFullYear() === year && today.getMonth() === month)
+        var yijiEl = document.getElementById('yiji')
+        if (hasLunar && isCurrentMonth) {
+          var todayInfo = describeDay(today)
+          var yi = (todayInfo.lunar && todayInfo.lunar.getDayYi && todayInfo.lunar.getDayYi()) || []
+          var ji = (todayInfo.lunar && todayInfo.lunar.getDayJi && todayInfo.lunar.getDayJi()) || []
+          document.getElementById('yiList').textContent = yi.slice(0, 10).join(' ') || '—'
+          document.getElementById('jiList').textContent = ji.slice(0, 10).join(' ') || '—'
+          yijiEl.hidden = false
+        } else {
+          yijiEl.hidden = true
+        }
+      }
+
+      document.getElementById('prev').addEventListener('click', function () {
+        current = new Date(current.getFullYear(), current.getMonth() - 1, 1)
+        render()
+      })
+      document.getElementById('next').addEventListener('click', function () {
+        current = new Date(current.getFullYear(), current.getMonth() + 1, 1)
+        render()
+      })
+      document.getElementById('today').addEventListener('click', function () {
+        current = new Date(today.getFullYear(), today.getMonth(), 1)
+        render()
+      })
+
+      render()
+    })()
+  </script>
+</body>
+</html>

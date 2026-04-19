@@ -1,0 +1,9 @@
+{
+  "name": "纪念日",
+  "name_en": "commemorate",
+  "version": 1,
+  "tips": "管理你的纪念日",
+  "src": "/plugins/commemorate/static/ico.svg",
+  "url": "/plugins/commemorate/card",
+  "window": "/plugins/commemorate/window"
+}

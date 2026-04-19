@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>天气</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: transparent;
+      color: #1f2937;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(14, 165, 233, 0.08));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      color: #1e40af;
+    }
+
+    .cityWrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .city {
+      font-weight: 600;
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .icon {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      flex-shrink: 0;
+      display: none;
+    }
+
+    .temp {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .degree {
+      font-size: 14px;
+      color: #334155;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #475569;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .more {
+      border: none;
+      background: #e0f2fe;
+      color: #0284c7;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="cityWrap">
+        <span class="city" id="city">--</span>
+        <span id="weather">--</span>
+      </div>
+      <img id="icon" class="icon" alt="weather" />
+    </div>
+
+    <div class="temp">
+      <span id="temp">--</span>
+      <span class="degree">°C</span>
+    </div>
+
+    <div class="meta">
+      <span id="range">--</span>
+      <span id="wind">--</span>
+      <span id="humidity">--</span>
+    </div>
+
+    <div class="footer">
+      <span id="time">--</span>
+      <button class="more" id="openWindow">详情</button>
+    </div>
+  </div>
+
+  <script src="/static/js/card.js"></script>
+  <script>
+    const STORAGE_KEY = 'weather_location'
+    const DEFAULT_LOCATION = {
+      name: '北京',
+      city: '北京',
+      latitude: 39.91,
+      longitude: 116.41
+    }
+
+    function asNumber (value) {
+      const num = Number(value)
+      return Number.isFinite(num) ? num : NaN
+    }
+
+    function normalizeLocation (value) {
+      if (!value || typeof value !== 'object') return null
+      const latitude = asNumber(value.latitude)
+      const longitude = asNumber(value.longitude)
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+      return {
+        name: String(value.name || value.city || `${latitude.toFixed(4)},${longitude.toFixed(4)}`),
+        city: String(value.city || ''),
+        latitude,
+        longitude
+      }
+    }
+
+    function getSavedLocation () {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '')
+        return normalizeLocation(saved)
+      } catch (e) {
+        return null
+      }
+    }
+
+    function saveLocation (value) {
+      const location = normalizeLocation(value)
+      if (!location) return null
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(location))
+      return location
+    }
+
+    function buildWeatherQuery (location) {
+      const params = new URLSearchParams({
+        lat: String(location.latitude),
+        lon: String(location.longitude)
+      })
+      if (location.name) params.set('name', location.name)
+      if (location.city) params.set('city', location.city)
+      return params.toString()
+    }
+
+    async function fetchCurrentLocation () {
+      try {
+        const res = await fetch('/plugins/weather/api/location')
+        const json = await res.json()
+        if (json && json.code === 1) {
+          return normalizeLocation(json.data)
+        }
+      } catch (e) {}
+      return null
+    }
+
+    async function resolveLocation () {
+      const saved = getSavedLocation()
+      if (saved) return saved
+      const detected = await fetchCurrentLocation()
+      if (detected) {
+        saveLocation(detected)
+        return detected
+      }
+      return DEFAULT_LOCATION
+    }
+
+    function setIcon (url) {
+      const icon = document.getElementById('icon')
+      const src = String(url || '')
+      if (!src) {
+        icon.style.display = 'none'
+        icon.removeAttribute('src')
+        return
+      }
+      icon.src = src
+      icon.style.display = 'block'
+    }
+
+    function formatRange (forecast) {
+      const hi = String(forecast.temp1 || '')
+      const lo = String(forecast.temp2 || '')
+      if (!hi && !lo) return '--'
+      if (hi && lo) return `低 ${lo} / 高 ${hi}`
+      return hi ? `高 ${hi}` : `低 ${lo}`
+    }
+
+    function formatUpdatedTime (value) {
+      const text = String(value || '')
+      if (!text) return '--'
+      const date = new Date(text)
+      if (Number.isNaN(date.getTime())) return text
+      return new Intl.DateTimeFormat('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date)
+    }
+
+    function openDetails () {
+      const target = '/plugins/weather/window'
+      if (window.parent && window.parent !== window && typeof openCard === 'function') {
+        openCard({
+          name: '天气',
+          src: '/plugins/weather/static/ico.png',
+          url: target
+        })
+        return
+      }
+      window.location.href = target
+    }
+
+    async function loadWeather () {
+      const location = await resolveLocation()
+      document.getElementById('city').textContent = location.name || '--'
+
+      try {
+        const query = buildWeatherQuery(location)
+        const [nowRes, forecastRes] = await Promise.all([
+          fetch(`/plugins/weather/api/now?${query}`),
+          fetch(`/plugins/weather/api/forecast?${query}`)
+        ])
+
+        const nowJson = await nowRes.json()
+        const forecastJson = await forecastRes.json()
+
+        const now = nowJson && nowJson.code === 1 ? (nowJson.data || {}) : {}
+        const forecast = forecastJson && forecastJson.code === 1 ? (forecastJson.data || {}) : {}
+
+        document.getElementById('city').textContent = now.city || forecast.city || location.name || '--'
+        document.getElementById('temp').textContent = now.temp || '--'
+        document.getElementById('weather').textContent = now.weather || forecast.weather || '--'
+        document.getElementById('range').textContent = formatRange(forecast)
+        document.getElementById('wind').textContent = now.wind || '--'
+        document.getElementById('humidity').textContent = now.humidity || '--'
+        document.getElementById('time').textContent = formatUpdatedTime(now.time || forecast.ptime || '--')
+        setIcon(now.icon || forecast.icon)
+      } catch (e) {
+        document.getElementById('temp').textContent = '--'
+        setIcon('')
+      }
+    }
+
+    document.getElementById('openWindow').addEventListener('click', openDetails)
+
+    loadWeather()
+  </script>
+</body>
+</html>

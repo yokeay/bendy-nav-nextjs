@@ -1,0 +1,9 @@
+{
+  "name": "日历",
+  "name_en": "calendar",
+  "version": 1,
+  "tips": "查看当月日历",
+  "src": "/plugins/calendar/static/ico.png",
+  "url": "/plugins/calendar/card",
+  "window": "/plugins/calendar/window"
+}
