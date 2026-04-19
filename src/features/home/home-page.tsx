@@ -1365,6 +1365,10 @@ function IconTile({
 
 function InlineAppWindow({ link, onClose }: { link: HomeLink; onClose: () => void }) {
   const label = resolveTileLabel(link);
+  const frameUrl =
+    typeof link.custom?.window === "string" && link.custom.window.trim()
+      ? link.custom.window.trim()
+      : link.url;
 
   return (
     <div className={styles.inlineWindowLayer} role="dialog" aria-label={`${label} 内联窗口`}>
@@ -1379,7 +1383,7 @@ function InlineAppWindow({ link, onClose }: { link: HomeLink; onClose: () => voi
             <span>{label}</span>
           </div>
           <div className={styles.inlineWindowActions}>
-            <a href={link.url} target="_blank" rel="noreferrer">
+            <a href={frameUrl} target="_blank" rel="noreferrer">
               新窗口打开
             </a>
             <button type="button" onClick={onClose} aria-label="关闭内联窗口">
@@ -1387,7 +1391,7 @@ function InlineAppWindow({ link, onClose }: { link: HomeLink; onClose: () => voi
             </button>
           </div>
         </div>
-        <iframe className={styles.inlineWindowFrame} src={link.url} title={label} />
+        <iframe className={styles.inlineWindowFrame} src={frameUrl} title={label} />
       </div>
     </div>
   );
@@ -1491,6 +1495,7 @@ function ComponentTile({
   isMergeTarget,
   onContextMenu,
   onLongPress,
+  onOpenInlineWindow,
   onDragStart,
   onDragEnter,
   onDragLeave,
@@ -1504,6 +1509,7 @@ function ComponentTile({
   isMergeTarget?: boolean;
   onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onLongPress?: () => void;
+  onOpenInlineWindow?: (link: HomeLink) => void;
   onDragStart?: () => void;
   onDragEnter?: () => void;
   onDragLeave?: () => void;
@@ -1524,8 +1530,6 @@ function ComponentTile({
       onLongPress?.();
     }
   });
-  const windowUrl =
-    typeof link.custom?.window === "string" && link.custom.window.trim() ? link.custom.window.trim() : link.url;
 
   return (
     <div
@@ -1561,7 +1565,7 @@ function ComponentTile({
             return;
           }
           if (!editMode) {
-            window.open(windowUrl, "_blank", "noopener,noreferrer");
+            onOpenInlineWindow?.(link);
           }
         }}
       >
@@ -3913,6 +3917,7 @@ export function HomePage({ data }: HomePageProps) {
                           isMergeTarget={isMergeTarget}
                           onContextMenu={(event) => openTileContextMenu(item.id, event.clientX, event.clientY)}
                           onLongPress={enterGlobalEditMode}
+                          onOpenInlineWindow={setInlineWindowLink}
                           onDragStart={dragHandlers.onDragStart}
                           onDragEnter={dragHandlers.onDragEnter}
                           onDragLeave={dragHandlers.onDragLeave}
