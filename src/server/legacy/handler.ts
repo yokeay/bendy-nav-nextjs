@@ -43,6 +43,7 @@ import sharp from "sharp";
 import { getSmtpConfig } from "@/lib/app-config";
 
 import sql from "@/lib/db";
+import prisma from "@/server/infrastructure/db/prisma";
 import { resolveLegacyBridgeFromRequest } from "@/server/auth/legacy-bridge";
 
 import { TtlCache } from "@/lib/cache";
@@ -3063,8 +3064,13 @@ async function handleApiController(ctx: LegacyContext, action: string): Promise<
 
     case "cardimages": {
       const target = toPublicAbsPath("static/CardBackground/bg");
-      const files = await readdir(target);
-      const result: { thumbor: string; url: string; mtime: number }[] = [];
+      let files: string[] = [];
+      try {
+        files = await readdir(target);
+      } catch {
+        files = [];
+      }
+      const result: { thumbor: string; url: string; name?: string; mtime: number }[] = [];
 
       for (const file of files) {
         const abs = path.join(target, file);
@@ -3078,9 +3084,26 @@ async function handleApiController(ctx: LegacyContext, action: string): Promise<
 
       result.sort((a, b) => b.mtime - a.mtime);
 
-      return jsonSuccess(
-        result.map(({ thumbor, url }) => ({ thumbor, url }))
-      );
+      let dbItems: { thumbor: string; url: string; name: string }[] = [];
+      try {
+        const wallpapers = await prisma.wallpaper.findMany({
+          orderBy: [{ sort: "asc" }, { createdAt: "desc" }]
+        });
+        dbItems = wallpapers.map((w) => ({
+          thumbor: w.url,
+          url: w.hdUrl?.trim() || w.url,
+          name: w.name
+        }));
+      } catch {
+        dbItems = [];
+      }
+
+      const combined = [
+        ...dbItems,
+        ...result.map(({ thumbor, url }) => ({ thumbor, url }))
+      ];
+
+      return jsonSuccess(combined);
 
     }
 

@@ -635,7 +635,7 @@ function Sidebar({
       <div className={styles.sidebarGroup}>
         <div className={styles.sidebarProfile}>
           {user ? (
-            <UserMenu user={user} legacyUrl="" onNotify={onNotify} onOpenProfile={onOpenProfile} />
+            <UserMenu user={user} legacyUrl="" onNotify={onNotify} onOpenProfile={onOpenProfile} position={position} />
           ) : (
             <button
               className={styles.userButton}
