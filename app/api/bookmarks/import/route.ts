@@ -5,34 +5,34 @@ import sql from "@/server/infrastructure/db/client";
 import { ok, fail } from "@/server/shared/response";
 import { ERROR_CODES } from "@/server/shared/error-codes";
 import { writeAudit } from "@/server/admin/audit/writer";
-import { getClientIp } from "@/server/auth/middleware";
+import { getClientIp, readSession } from "@/server/auth/middleware";
 import {
+  mapBookmarkToDraft,
   mapBookmarkToHomeLink,
-  mapBookmarkToPrismaLink,
+  newBatchId,
+  parseNetscapeBookmarks,
   validateBookmarkBatch,
   type BookmarkInput,
+  type BookmarkSource,
   type HomeLinkJson
 } from "@/server/bookmarks/import-service";
 
+type RequestBody = {
+  userId?: unknown;
+  bookmarks?: unknown;
+  html?: unknown;
+  source?: unknown;
+  writeHomeTile?: unknown;
+};
+
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.BOOKMARK_IMPORT_API_KEY;
-  if (!apiKey) {
-    return fail(ERROR_CODES.FORBIDDEN, "bookmark import disabled (BOOKMARK_IMPORT_API_KEY unset)", 403);
-  }
-  const provided = req.headers.get("x-api-key");
-  if (!provided || provided !== apiKey) {
-    return fail(ERROR_CODES.FORBIDDEN, "invalid api key", 403);
-  }
+  const body = (await req.json().catch(() => ({}))) as RequestBody;
 
-  const body = (await req.json().catch(() => ({}))) as {
-    userId?: unknown;
-    bookmarks?: unknown;
-  };
-
-  if (typeof body.userId !== "string" || !body.userId.trim()) {
-    return fail(ERROR_CODES.VALIDATION, "userId is required");
+  const authResult = await resolveAuth(req, body);
+  if (authResult.ok !== true) {
+    return authResult.response;
   }
-  const userId = body.userId.trim();
+  const { userId, actor } = authResult;
 
   const user = await prisma.user.findFirst({
     where: { id: userId, deletedAt: null },
@@ -42,42 +42,127 @@ export async function POST(req: NextRequest) {
     return fail(ERROR_CODES.NOT_FOUND, "user not found", 404);
   }
 
-  const validated = validateBookmarkBatch(body.bookmarks);
+  let rawList: unknown = body.bookmarks;
+  let sourceLabel: BookmarkSource = "api";
+
+  if (typeof body.source === "string" && body.source.trim()) {
+    const s = body.source.trim().toLowerCase();
+    if (s === "extension" || s === "html" || s === "manual" || s === "api") {
+      sourceLabel = s;
+    }
+  }
+
+  if ((!Array.isArray(rawList) || rawList.length === 0) && typeof body.html === "string" && body.html.trim()) {
+    rawList = parseNetscapeBookmarks(body.html);
+    sourceLabel = "html";
+  }
+
+  const validated = validateBookmarkBatch(rawList);
   if (validated.ok !== true) {
     return fail(ERROR_CODES.VALIDATION, validated.reason);
   }
   const bookmarks: BookmarkInput[] = validated.bookmarks;
 
-  const existingMax = await prisma.link.aggregate({
+  const batchId = newBatchId(sourceLabel);
+
+  const existingMax = await prisma.bookmark.aggregate({
     where: { userId },
     _max: { sort: true }
   });
   let nextSort = (existingMax._max.sort ?? -1) + 1;
 
   const drafts = bookmarks.map((bm) => {
-    const draft = mapBookmarkToPrismaLink(bm, userId, nextSort);
+    const draft = mapBookmarkToDraft(bm, {
+      userId,
+      source: sourceLabel,
+      batchId,
+      sort: nextSort
+    });
     nextSort += 1;
     return draft;
   });
 
-  await prisma.link.createMany({ data: drafts });
+  const created = await prisma.bookmark.createMany({ data: drafts });
+
+  let homeTilesWritten = 0;
+  if (body.writeHomeTile === true) {
+    const linkExistingMax = await prisma.link.aggregate({
+      where: { userId },
+      _max: { sort: true }
+    });
+    let linkSort = (linkExistingMax._max.sort ?? -1) + 1;
+    const linkDrafts = bookmarks.map((bm) => ({
+      userId,
+      name: drafts[0] ? drafts[0].title : bm.bookmark_title || bm.url || "未命名书签",
+      url: String(bm.url ?? "").trim(),
+      meta: {
+        folder_path: bm.folder_path ?? "",
+        tags: bm.tags ?? "",
+        page_title: bm.page_title ?? "",
+        page_description: bm.page_description ?? "",
+        generated_description: bm.generated_description ?? "",
+        date_added: bm.date_added ?? "",
+        bookmark_id: bm.bookmark_id ?? "",
+        crawl_error: bm.crawl_error ?? "",
+        source: sourceLabel,
+        batchId
+      },
+      sort: linkSort++
+    }));
+    await prisma.link.createMany({ data: linkDrafts });
+    homeTilesWritten = linkDrafts.length;
+  }
 
   const legacyWritten = await writeLegacyLinks(user.email, bookmarks);
 
   await writeAudit({
-    actorId: null,
+    actorId: actor,
     action: "bookmark.import",
     targetType: "user",
     targetId: userId,
-    payload: { count: drafts.length, source: "api-key", legacyWritten },
+    payload: { count: created.count, source: sourceLabel, batchId, legacyWritten, homeTilesWritten },
     ip: getClientIp(req)
   });
 
   return ok({
-    imported: drafts.length,
-    skipped: 0,
+    imported: created.count,
+    batchId,
+    source: sourceLabel,
+    homeTilesWritten,
     legacyWritten
   });
+}
+
+type AuthResolution =
+  | { ok: true; userId: string; actor: string | null }
+  | { ok: false; response: Response };
+
+async function resolveAuth(req: NextRequest, body: RequestBody): Promise<AuthResolution> {
+  const apiKey = process.env.BOOKMARK_IMPORT_API_KEY;
+  const provided = req.headers.get("x-api-key");
+  if (apiKey && provided && provided === apiKey) {
+    if (typeof body.userId !== "string" || !body.userId.trim()) {
+      return { ok: false, response: fail(ERROR_CODES.VALIDATION, "userId is required when using api key") };
+    }
+    return { ok: true, userId: body.userId.trim(), actor: null };
+  }
+
+  const session = await readSession();
+  if (session) {
+    const fallbackUserId = typeof body.userId === "string" && body.userId.trim() ? body.userId.trim() : session.sub;
+    if (fallbackUserId !== session.sub && session.role !== "admin" && session.role !== "superadmin") {
+      return { ok: false, response: fail(ERROR_CODES.FORBIDDEN, "cannot import for another user", 403) };
+    }
+    return { ok: true, userId: fallbackUserId, actor: session.sub };
+  }
+
+  if (provided) {
+    return { ok: false, response: fail(ERROR_CODES.FORBIDDEN, "invalid api key", 403) };
+  }
+  if (!apiKey) {
+    return { ok: false, response: fail(ERROR_CODES.FORBIDDEN, "bookmark import disabled (BOOKMARK_IMPORT_API_KEY unset or no session)", 403) };
+  }
+  return { ok: false, response: fail(ERROR_CODES.UNAUTHORIZED, "authentication required", 401) };
 }
 
 async function writeLegacyLinks(email: string, bookmarks: BookmarkInput[]): Promise<boolean> {

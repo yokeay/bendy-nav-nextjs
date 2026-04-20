@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildBookmarkMeta,
+  mapBookmarkToDraft,
   mapBookmarkToHomeLink,
   mapBookmarkToPrismaLink,
+  parseNetscapeBookmarks,
   pickBookmarkName,
   validateBookmarkBatch,
   type BookmarkInput
@@ -78,8 +80,8 @@ describe("bookmarks import-service", () => {
     expect(res.ok).toBe(false);
   });
 
-  it("rejects batches larger than 1000", () => {
-    const many = Array.from({ length: 1001 }, () => ({ url: "https://a" }));
+  it("rejects batches larger than 2000", () => {
+    const many = Array.from({ length: 2001 }, () => ({ url: "https://a" }));
     const res = validateBookmarkBatch(many);
     expect(res.ok).toBe(false);
   });
@@ -90,5 +92,48 @@ describe("bookmarks import-service", () => {
     if (res.ok === true) {
       expect(res.bookmarks).toHaveLength(1);
     }
+  });
+
+  it("maps to a unified Bookmark draft", () => {
+    const draft = mapBookmarkToDraft(sample, {
+      userId: "u_123",
+      source: "extension",
+      batchId: "batch-1",
+      sort: 11
+    });
+    expect(draft.userId).toBe("u_123");
+    expect(draft.url).toBe("https://example.com");
+    expect(draft.title).toBe("我的书签");
+    expect(draft.folderPath).toBe("Bookmarks bar/前端");
+    expect(draft.tags).toBe("web,example");
+    expect(draft.source).toBe("extension");
+    expect(draft.sourceBatchId).toBe("batch-1");
+    expect(draft.sort).toBe(11);
+    expect(draft.addDate).toBeInstanceOf(Date);
+  });
+
+  it("parses a Netscape bookmarks.html document", () => {
+    const html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+    <DT><H3 ADD_DATE="1714000000">技术</H3>
+    <DL><p>
+        <DT><A HREF="https://example.com" ADD_DATE="1714000000" ICON_URI="https://example.com/favicon.ico">Example</A>
+        <DT><A HREF="https://news.example.com" ADD_DATE="1714000100" TAGS="news,daily" PRIVATE="1">News</A>
+    </DL><p>
+    <DT><A HREF="https://top-level.example.com">Top level</A>
+</DL><p>`;
+    const parsed = parseNetscapeBookmarks(html);
+    expect(parsed.length).toBe(3);
+    const nested = parsed[0];
+    expect(nested?.url).toBe("https://example.com");
+    expect(nested?.folder_path).toBe("技术");
+    expect(nested?.icon_url).toBe("https://example.com/favicon.ico");
+    const priv = parsed[1];
+    expect(priv?.tags).toBe("news,daily");
+    expect(priv?.is_private).toBe(true);
+    expect(parsed[2]?.folder_path).toBe("");
   });
 });
