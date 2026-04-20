@@ -43,6 +43,7 @@ import sharp from "sharp";
 import { getSmtpConfig } from "@/lib/app-config";
 
 import sql from "@/lib/db";
+import { resolveLegacyBridgeFromRequest } from "@/server/auth/legacy-bridge";
 
 import { TtlCache } from "@/lib/cache";
 
@@ -1000,6 +1001,42 @@ async function getUser(ctx: LegacyContext, must = false): Promise<AuthUser | nul
 
 
   if (!userId || !token) {
+
+    const bridge = await resolveLegacyBridgeFromRequest(ctx.request);
+
+    if (bridge) {
+
+      const bridgedUserRows = await sql<{ id: number; status: number; group_id: number }[]>`
+
+        SELECT id, status, group_id
+
+        FROM "user"
+
+        WHERE id = ${bridge.user_id}
+
+        LIMIT 1
+
+      `;
+
+      if (bridgedUserRows.length > 0 && bridgedUserRows[0].status === 0) {
+
+        ctx.cachedUser = {
+
+          user_id: bridge.user_id,
+
+          token: bridge.token,
+
+          create_time: bridge.create_time,
+
+          group_id: parseNumber(bridgedUserRows[0].group_id, 0)
+
+        };
+
+        return ctx.cachedUser;
+
+      }
+
+    }
 
     ctx.cachedUser = null;
 
