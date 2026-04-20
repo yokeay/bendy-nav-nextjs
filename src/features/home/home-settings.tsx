@@ -299,21 +299,19 @@ export function HomeSettingsDialog({
           >
             {loggedIn && user ? (
               <>
-                <div className={styles.controlUserCardHead}>
-                  {user.avatar ? (
-                    <img
-                      className={styles.controlUserCardAvatarImg}
-                      src={user.avatar}
-                      alt={user.nickname || user.email || "用户"}
-                    />
-                  ) : (
-                    <div className={styles.controlUserCardAvatar}>{site.title.slice(0, 1)}</div>
-                  )}
+                {user.avatar ? (
+                  <img
+                    className={styles.controlUserCardAvatarImg}
+                    src={user.avatar}
+                    alt={user.nickname || user.email || "用户"}
+                  />
+                ) : (
+                  <div className={styles.controlUserCardAvatar}>{site.title.slice(0, 1)}</div>
+                )}
+                <div className={styles.controlUserCardMeta}>
                   <strong className={styles.controlUserCardSite}>{site.title}</strong>
+                  <span>{user.nickname || user.email || "已登录用户"}</span>
                 </div>
-                <span className={styles.controlUserCardNickname}>
-                  {user.nickname || user.email || "已登录用户"}
-                </span>
               </>
             ) : (
               <>
