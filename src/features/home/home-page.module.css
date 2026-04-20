@@ -225,12 +225,21 @@
   width: auto;
   align-items: center;
   gap: 6px;
+  padding: 0;
+}
+
+.sidebarBottom .sidebarProfile {
+  padding: 0;
 }
 
 .sidebarBottom .sidebarFooter {
   margin-left: 8px;
-  padding-left: 10px;
+  padding: 0 0 0 10px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebarBottom .sidebarRow {
+  width: auto;
 }
 
 .sidebarBottom .sidebarText,
@@ -242,6 +251,7 @@
 .sidebarBottom .userButton {
   width: 44px;
   height: 44px;
+  min-height: 0;
   padding: 0;
   justify-content: center;
 }
@@ -252,11 +262,20 @@
 }
 
 .sidebarBottom.sidebarAutoHide {
-  transform: translate(-50%, calc(100% + 20px));
+  transform: translate(-50%, calc(100% + 8px));
 }
 
 .sidebarBottom.sidebarAutoHide:hover {
   transform: translateX(-50%);
+}
+
+.sidebarBottom.sidebarAutoHide::after {
+  top: -14px;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: 14px;
 }
 
 .sidebarGroup {
@@ -675,8 +694,9 @@
   background: transparent;
   color: #747474;
   padding: 0;
-  width: 22px;
+  width: auto;
   height: 22px;
+  gap: 4px;
   cursor: pointer;
   margin-right: 10px;
 }
