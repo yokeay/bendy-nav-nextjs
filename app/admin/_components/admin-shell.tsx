@@ -27,7 +27,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <span className={styles.brandMark}>B</span>
+          <img className={styles.brandMark} src="/brand/logo-192.png" alt="笨迪导航" />
           <div className={styles.brandInfo}>
             <span className={styles.brandText}>笨迪导航</span>
             <span className={styles.brandUser}>{user.login}</span>

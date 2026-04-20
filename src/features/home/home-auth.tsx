@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import type { HomeSiteInfo, HomeUser } from "@/server/home/types";
 import styles from "./home-page.module.css";
 
@@ -76,8 +77,13 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile, position = 
   void legacyUrl;
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -107,7 +113,8 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile, position = 
           left: "50%",
           top: "auto",
           right: "auto",
-          transform: "translateX(-50%)"
+          transform: "translateX(-50%)",
+          zIndex: 9999
         });
       } else if (position === "right") {
         setPanelStyle({
@@ -116,7 +123,8 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile, position = 
           right: Math.max(12, viewportWidth - rect.left + gap),
           left: "auto",
           bottom: "auto",
-          transform: "none"
+          transform: "none",
+          zIndex: 9999
         });
       } else {
         setPanelStyle({
@@ -125,7 +133,8 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile, position = 
           left: rect.right + gap,
           right: "auto",
           bottom: "auto",
-          transform: "none"
+          transform: "none",
+          zIndex: 9999
         });
       }
     }
@@ -166,42 +175,45 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile, position = 
         <span className={styles.userButtonText}>{user.nickname || user.email || `用户 #${user.userId}`}</span>
       </button>
 
-      {open ? (
-        <div className={styles.userPanel} style={panelStyle} data-home-user-menu="true">
-          <div className={styles.userPanelHeader}>
-            <img className={styles.userAvatarLarge} src={user.avatar} alt={user.nickname || user.email || "用户"} />
-            <div>
-              <p className={styles.userPanelName}>{user.nickname || `用户 #${user.userId}`}</p>
-              <p className={styles.userPanelMeta}>{user.email || `ID ${user.userId}`}</p>
-            </div>
-          </div>
-          <div className={styles.userPanelActions}>
-            {user.manager ? (
-              <a className={styles.userPanelAction} href="/admin">进入管理后台</a>
-            ) : null}
-            {onOpenProfile ? (
-              <button
-                className={styles.userPanelAction}
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onOpenProfile();
-                }}
-              >
-                修改资料
-              </button>
-            ) : null}
-            <button
-              className={styles.userPanelAction}
-              type="button"
-              onClick={handleLogout}
-              disabled={pending}
-            >
-              {pending ? "退出中..." : "退出登录"}
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {open && mounted
+        ? createPortal(
+            <div className={styles.userPanel} style={panelStyle} data-home-user-menu="true">
+              <div className={styles.userPanelHeader}>
+                <img className={styles.userAvatarLarge} src={user.avatar} alt={user.nickname || user.email || "用户"} />
+                <div>
+                  <p className={styles.userPanelName}>{user.nickname || `用户 #${user.userId}`}</p>
+                  <p className={styles.userPanelMeta}>{user.email || `ID ${user.userId}`}</p>
+                </div>
+              </div>
+              <div className={styles.userPanelActions}>
+                {user.manager ? (
+                  <a className={styles.userPanelAction} href="/admin">进入管理后台</a>
+                ) : null}
+                {onOpenProfile ? (
+                  <button
+                    className={styles.userPanelAction}
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      onOpenProfile();
+                    }}
+                  >
+                    修改资料
+                  </button>
+                ) : null}
+                <button
+                  className={styles.userPanelAction}
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={pending}
+                >
+                  {pending ? "退出中..." : "退出登录"}
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
