@@ -156,6 +156,58 @@ model Link {
   @@map("bendy_link")
 }
 
+// Unified bookmark table used by browser-extension import, Google Chrome /
+// Edge / Firefox / Safari Netscape bookmarks.html import, and manual entry.
+// One row = one bookmark. Columns are deliberately flat so imports from any
+// source land in a consistent shape. Anything that does not fit is stashed
+// in `meta` to keep the column count bounded.
+model Bookmark {
+  id                   String   @id @default(cuid())
+  userId               String
+  extBookmarkId        String?
+  url                  String
+  title                String
+  folderPath           String?
+  tags                 String?
+  lang                 String?
+  pageTitle            String?
+  pageDescription      String?
+  pageText             String?
+  generatedTitle       String?
+  generatedDescription String?
+  crawlError           String?
+  iconUrl              String?
+  iconData             String?
+  thumbnailUrl         String?
+  addDate              DateTime?
+  lastModifiedAt       DateTime?
+  lastVisitedAt        DateTime?
+  isPrivate            Boolean  @default(false)
+  source               String   @default("manual")
+  sourceBatchId        String?
+  sourceMeta           Json?
+  isRecommended        Boolean  @default(false)
+  recommendTitle       String?
+  recommendDesc        String?
+  recommendSort        Int      @default(0)
+  recommendedAt        DateTime?
+  recommendedBy        String?
+  isPublic             Boolean  @default(false)
+  status               String   @default("active")
+  sort                 Int      @default(0)
+  meta                 Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  deletedAt            DateTime?
+
+  @@index([userId])
+  @@index([url])
+  @@index([isRecommended, recommendSort])
+  @@index([isPublic, createdAt])
+  @@index([status])
+  @@map("bendy_bookmark")
+}
+
 model Dock {
   id        String   @id @default(cuid())
   userId    String

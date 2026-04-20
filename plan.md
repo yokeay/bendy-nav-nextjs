@@ -300,3 +300,108 @@
 - README 与 maintain.md 记录所有新增 `.env` 配置项
 
 - [ ] `npm run build` 是否通过。
+
+---
+
+## Phase 6：统一书签表 / 推荐中心 / 卡片规范（2026-04-20 批次）
+
+### 已落地
+
+- [x] 新增 `Bookmark` 模型（`bendy_bookmark`，36 列上限），支持浏览器扩展 JSON 导入与 Netscape `bookmarks.html` 直接解析。字段涵盖 URL、标题、文件夹路径、标签、页面元数据、AI 生成文案、抓取错误、图标、私有标记、来源批次、推荐元信息、软删除、排序、扩展 JSON。
+- [x] `POST /api/bookmarks/import` 保留 `x-api-key` 模式供插件调用，同时兼容 session Cookie；可传 `bookmarks[]` 或原始 `html` 文本；自动解析 Netscape 格式；可选 `writeHomeTile` 附带写 `Link` 瓦片；兼容已有 legacy `link` JSONB 写入。
+- [x] 后台新增「推荐中心」`/admin/content/recommendations`，支持筛选、勾选推荐、设置推荐标题 / 描述 / 排序、设置是否公开。
+- [x] C 端 `/api/home/recommendations` 公共只读接口，供首页「添加标签 → 推荐标签」Tab 拉取（先读新表，空时降级读 legacy `/LinkStore/list`）。
+- [x] `AddLinkDialog` 的「推荐标签 / 添加卡片」Tab 能力保持，已可被新接口复用。
+- [x] C 端主题改为黑白灰，所有原 iOS 蓝（`#007aff`/`#1570ef`/`#0084ff`/`#164dae`/`#2e68ff`/`#4f9df7`/`#2764c5`/`#eef4ff`）统一替换为灰阶主色。
+- [x] 修复「页面管理」弹窗：左栏项宽度不再超出边界；右侧页面图标网格统一放大为 44px 单元 + 图标 26px；操作按钮 wrap 回退时不再压到页面名称。
+
+### 未落地（卡片规范技术方案）
+
+> 范围：卡片由用户通过「卡片编辑器」制作 → 提交收录 → 后台审核通过 → 出现在所有人的「添加卡片」Tab。本节只出方案，本迭代不实现代码。
+
+#### 卡片数据形态
+
+卡片本质是"在首页瓦片区加载的小型 Web 应用"。规范主体字段如下（对齐现有 `/card/index` legacy 返回结构，便于两侧并行）：
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `id` | cuid | 卡片主键 |
+| `slug` | string | URL 友好唯一短名（例如 `weather-hub`） |
+| `name` | string | 展示名 |
+| `nameEn` | string? | 英文名 |
+| `tips` | string | 一句话简介 |
+| `description` | string | 详情（Markdown 允许） |
+| `icon` | string | 图标 URL |
+| `coverUrl` | string? | 预览封面 |
+| `entryUrl` | string | 卡片页面可嵌入地址（iframe/new window 两种宿主） |
+| `host` | enum `iframe` / `window` / `inline` | 运行宿主形态 |
+| `size` | enum `1x1` `1x2` `2x2` `2x4` | 初始网格尺寸 |
+| `resizable` | boolean | 是否允许用户在宿主里调整尺寸 |
+| `permissions` | string[] | 请求的能力（`clipboard` `location` `storage` `network.example.com`） |
+| `schemaVersion` | number | 规范版本号，向前兼容用 |
+| `sandbox` | string | iframe `sandbox` 属性白名单（默认 `allow-scripts allow-forms`） |
+| `contentSecurityPolicy` | string? | 声明自身 CSP，上架后 Proxy 层会校验 |
+| `author` | `{ userId, displayName, contact }` | 提交者信息 |
+| `version` | semver string | 卡片版本 |
+| `changelog` | string? | 本版更新说明 |
+| `status` | enum `draft` `submitted` `reviewing` `approved` `rejected` `deprecated` | 收录流程状态 |
+| `rejectReason` | string? | 审核驳回理由 |
+| `installNum` | number | 公共安装量 |
+| `isFeatured` | boolean | 首页推荐位 |
+| `tags` | string[] | 分类标签 |
+| `createdAt` / `updatedAt` / `publishedAt` | DateTime | 时间戳 |
+
+后续落地时新建 `BendyCard` 与 `BendyCardSubmission` 两张表：`BendyCard` 只保存当前上架版本，`BendyCardSubmission` 保留全部历史版本与审核动作。
+
+#### 卡片编辑器规范
+
+提供给用户的「卡片编辑器」不是完整代码编辑器，而是表单 + HTML/JS 片段面板的集合：
+
+1. **基础信息表单**：name / slug / tips / description / 图标上传 / 封面上传 / 尺寸预设 / 分类标签。
+2. **运行宿主选择**：
+   - `iframe`：用户只提交 `entryUrl`，必须是 HTTPS，必须返回 `X-Frame-Options: SAMEORIGIN` 或省略该头，CSP 合规。
+   - `inline`：用户直接粘贴 HTML/JS（上限 64KB），发布时由系统打包为独立 HTML 文件托管在 `/cards/<slug>/<version>/index.html`。
+   - `window`：与 `iframe` 一致，但首页以弹出式窗口容器打开，适合工具型应用。
+3. **能力声明面板**：勾选 `permissions`、`sandbox` 白名单、是否需要用户登录态 token。未勾选的能力在运行时由宿主 Proxy 拦截。
+4. **实时预览**：编辑器右侧以当前首页尺寸（1x1 / 2x2 / 2x4）预览卡片渲染效果。
+5. **提交入口**：表单通过 `POST /api/cards/submissions` 生成 `BendyCardSubmission` 记录，状态置为 `submitted`，进入审核队列。
+
+#### 审核流程
+
+1. 用户提交 → 后台「推荐中心 / 卡片审核」列表新增一条。
+2. 管理员在后台预览（iframe/inline 在隔离域下加载，window 直接在新标签验证），检查：
+   - 是否包含恶意脚本（自动化：`serialize-javascript` + 静态扫描常见危险模式 `eval`/`Function("` 等）。
+   - CSP 是否合规。
+   - 权限声明是否真实必要。
+   - 文案是否合规（广告 / 违法内容）。
+3. 审核动作：`approved` / `rejected(原因)` / `request-changes(提示)`。
+4. `approved` 后：
+   - 生成公共版本号（semver bump rule：首次 `1.0.0`）。
+   - `BendyCard.status = approved`，`publishedAt = now`。
+   - 自动同步到公共目录 `/api/cards/public` 与首页「添加卡片」Tab。
+5. `rejected` / `request-changes` 后用户可修改再提交（新 `BendyCardSubmission` 记录，不覆盖历史）。
+
+#### 安全与运行时约束
+
+- 所有 iframe 宿主强制 `sandbox="allow-scripts allow-forms allow-popups allow-same-origin"`（后两项按卡片声明开关）。
+- inline 宿主打包后的 HTML 统一注入 CSP：`default-src 'self'; script-src 'self' 'unsafe-inline'; img-src * data:; style-src 'self' 'unsafe-inline'`。
+- `network` 权限通过服务端代理转发，禁止直接跨域访问未声明的 Host。
+- 卡片内无法读取宿主 localStorage；只能通过 `postMessage` 与宿主通信，宿主仅暴露白名单 API（`getSession` `readSetting` `writeSetting` 限定 key）。
+- 日志：所有 `approve` / `reject` / `deprecate` 动作写入 `bendy_audit_log`。
+
+#### 对接 C 端
+
+- C 端「添加卡片」Tab 改读 `GET /api/cards/public`，按 `installNum` 与 `isFeatured` 排序。
+- 安装即写入 `Link.meta.cardId` 并记录安装事件（匿名 installNum +1）。
+- 卸载即解绑，不减 installNum（简化统计）。
+
+#### 实施顺序（后续迭代）
+
+1. Prisma schema 新增 `BendyCard` + `BendyCardSubmission`。
+2. `/api/cards/submissions`（POST 创建）、`/api/cards/submissions/[id]`（GET 详情 / PATCH 更新状态）。
+3. 后台「卡片审核」页（沿用推荐中心的框架）。
+4. 「卡片编辑器」前端页面（基于现有 AddLinkDialog 抽出的通用表单组件）。
+5. 卡片打包服务（inline 模式的 HTML 组装与托管）。
+6. 静态安全扫描（serialize / CSP 校验）。
+7. C 端「添加卡片」Tab 切换数据源。
+8. 分版本迁移 legacy `/card/index` 数据到 `BendyCard`。
