@@ -77,6 +77,20 @@ export function HomeProfileDialog({ open, user, onClose, onSaved, onNotify }: Ho
       <div className={styles.authCard}>
         <h2 className={styles.authTitle}>修改资料</h2>
         <p className={styles.authSubtitle}>调整你的显示昵称与头像。</p>
+        <div className={styles.profileAvatarRow}>
+          <img
+            className={styles.profileAvatarPreview}
+            src={avatarUrl.trim() || user.avatar}
+            alt={user.nickname || "当前头像"}
+            onError={(event) => {
+              (event.currentTarget as HTMLImageElement).src = user.avatar;
+            }}
+          />
+          <div className={styles.profileAvatarHint}>
+            <p className={styles.profileAvatarHintTitle}>当前头像</p>
+            <p className={styles.profileAvatarHintMeta}>修改下方 URL 后此处会实时预览。</p>
+          </div>
+        </div>
         <label className={styles.profileField}>
           <span className={styles.profileFieldLabel}>昵称</span>
           <input

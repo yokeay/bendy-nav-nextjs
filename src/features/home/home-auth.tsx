@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { HomeSiteInfo, HomeUser } from "@/server/home/types";
 import styles from "./home-page.module.css";
 
@@ -13,11 +13,14 @@ type AuthDialogProps = {
   onNotify: ToastDispatcher;
 };
 
+type SidebarPosition = "left" | "right" | "bottom";
+
 type UserMenuProps = {
   user: HomeUser;
   legacyUrl: string;
   onNotify: ToastDispatcher;
   onOpenProfile?: () => void;
+  position?: SidebarPosition;
 };
 
 function buildReturnTo(): string {
@@ -69,10 +72,12 @@ export function AuthDialog({ open, site, onClose, onNotify }: AuthDialogProps) {
   );
 }
 
-export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile }: UserMenuProps) {
+export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile, position = "left" }: UserMenuProps) {
   void legacyUrl;
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
 
   useEffect(() => {
     if (!open) return;
@@ -85,6 +90,53 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile }: UserMenuP
     window.addEventListener("mousedown", handlePointerDown);
     return () => window.removeEventListener("mousedown", handlePointerDown);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function computePanelStyle() {
+      const button = buttonRef.current;
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const gap = 10;
+      if (position === "bottom") {
+        setPanelStyle({
+          position: "fixed",
+          bottom: Math.max(12, viewportHeight - rect.top + gap),
+          left: "50%",
+          top: "auto",
+          right: "auto",
+          transform: "translateX(-50%)"
+        });
+      } else if (position === "right") {
+        setPanelStyle({
+          position: "fixed",
+          top: Math.max(12, rect.top),
+          right: Math.max(12, viewportWidth - rect.left + gap),
+          left: "auto",
+          bottom: "auto",
+          transform: "none"
+        });
+      } else {
+        setPanelStyle({
+          position: "fixed",
+          top: Math.max(12, rect.top),
+          left: rect.right + gap,
+          right: "auto",
+          bottom: "auto",
+          transform: "none"
+        });
+      }
+    }
+    computePanelStyle();
+    window.addEventListener("resize", computePanelStyle);
+    window.addEventListener("scroll", computePanelStyle, true);
+    return () => {
+      window.removeEventListener("resize", computePanelStyle);
+      window.removeEventListener("scroll", computePanelStyle, true);
+    };
+  }, [open, position]);
 
   async function handleLogout() {
     if (pending) return;
@@ -103,6 +155,7 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile }: UserMenuP
   return (
     <div className={styles.userMenuRoot} data-home-user-menu="true">
       <button
+        ref={buttonRef}
         className={styles.userButton}
         type="button"
         title="打开账户菜单"
@@ -114,7 +167,7 @@ export function UserMenu({ user, legacyUrl, onNotify, onOpenProfile }: UserMenuP
       </button>
 
       {open ? (
-        <div className={styles.userPanel}>
+        <div className={styles.userPanel} style={panelStyle} data-home-user-menu="true">
           <div className={styles.userPanelHeader}>
             <img className={styles.userAvatarLarge} src={user.avatar} alt={user.nickname || user.email || "用户"} />
             <div>

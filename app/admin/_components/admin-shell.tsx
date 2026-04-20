@@ -28,7 +28,10 @@ export function AdminShell({ children, user }: AdminShellProps) {
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
           <span className={styles.brandMark}>B</span>
-          <span className={styles.brandText}>Bendy Admin</span>
+          <div className={styles.brandInfo}>
+            <span className={styles.brandText}>笨迪导航</span>
+            <span className={styles.brandUser}>{user.login}</span>
+          </div>
         </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => {

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { HomePage } from "@/features/home/home-page";
 import { getHomeMetadata, getHomePageData } from "@/server/home/home-data";
 import { readSession } from "@/server/auth/middleware";
+import { bridgeSessionToLegacy } from "@/server/auth/legacy-bridge";
 import prisma from "@/server/infrastructure/db/prisma";
 import type { HomeUser } from "@/server/home/types";
 
@@ -37,8 +38,9 @@ export default async function Page() {
     });
     const avatar = profile?.avatarUrl?.trim() || AVATAR_FALLBACK;
     const nickname = profile?.name?.trim() || session.login;
+    const bridge = await bridgeSessionToLegacy(session);
     sessionUser = {
-      userId: 0,
+      userId: bridge?.user_id ?? 0,
       id: session.sub,
       groupId: 0,
       manager: session.role === "admin" || session.role === "superadmin",

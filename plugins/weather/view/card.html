@@ -83,21 +83,8 @@
 
     .footer {
       margin-top: auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       font-size: 12px;
       color: #64748b;
-    }
-
-    .more {
-      border: none;
-      background: #e0f2fe;
-      color: #0284c7;
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 8px;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -124,11 +111,9 @@
 
     <div class="footer">
       <span id="time">--</span>
-      <button class="more" id="openWindow">详情</button>
     </div>
   </div>
 
-  <script src="/static/js/card.js"></script>
   <script>
     const STORAGE_KEY = 'weather_location'
     const DEFAULT_LOCATION = {
@@ -182,7 +167,37 @@
       return params.toString()
     }
 
-    async function fetchCurrentLocation () {
+    function detectBrowserLocation () {
+      if (!('geolocation' in navigator)) return Promise.resolve(null)
+      return new Promise((resolve) => {
+        let done = false
+        const finish = (value) => {
+          if (done) return
+          done = true
+          resolve(value)
+        }
+        try {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const loc = normalizeLocation({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                name: '当前位置',
+                city: ''
+              })
+              finish(loc)
+            },
+            () => finish(null),
+            { enableHighAccuracy: true, timeout: 6000, maximumAge: 600000 }
+          )
+        } catch (e) {
+          finish(null)
+        }
+        setTimeout(() => finish(null), 7000)
+      })
+    }
+
+    async function fetchServerLocation () {
       try {
         const res = await fetch('/plugins/weather/api/location')
         const json = await res.json()
@@ -196,10 +211,15 @@
     async function resolveLocation () {
       const saved = getSavedLocation()
       if (saved) return saved
-      const detected = await fetchCurrentLocation()
-      if (detected) {
-        saveLocation(detected)
-        return detected
+      const browser = await detectBrowserLocation()
+      if (browser) {
+        saveLocation(browser)
+        return browser
+      }
+      const server = await fetchServerLocation()
+      if (server) {
+        saveLocation(server)
+        return server
       }
       return DEFAULT_LOCATION
     }
@@ -237,19 +257,6 @@
       }).format(date)
     }
 
-    function openDetails () {
-      const target = '/plugins/weather/window'
-      if (window.parent && window.parent !== window && typeof openCard === 'function') {
-        openCard({
-          name: '天气',
-          src: '/plugins/weather/static/ico.png',
-          url: target
-        })
-        return
-      }
-      window.location.href = target
-    }
-
     async function loadWeather () {
       const location = await resolveLocation()
       document.getElementById('city').textContent = location.name || '--'
@@ -267,7 +274,7 @@
         const now = nowJson && nowJson.code === 1 ? (nowJson.data || {}) : {}
         const forecast = forecastJson && forecastJson.code === 1 ? (forecastJson.data || {}) : {}
 
-        document.getElementById('city').textContent = now.city || forecast.city || location.name || '--'
+        document.getElementById('city').textContent = location.name || now.city || forecast.city || '--'
         document.getElementById('temp').textContent = now.temp || '--'
         document.getElementById('weather').textContent = now.weather || forecast.weather || '--'
         document.getElementById('range').textContent = formatRange(forecast)
@@ -280,8 +287,6 @@
         setIcon('')
       }
     }
-
-    document.getElementById('openWindow').addEventListener('click', openDetails)
 
     loadWeather()
   </script>
