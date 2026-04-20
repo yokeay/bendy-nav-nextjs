@@ -1,20 +1,12 @@
 BEGIN;
 
+DELETE FROM card WHERE name_en NOT IN ('weather', 'topSearch', 'calendar');
+
 INSERT INTO card (name, name_en, status, version, tips, src, url, "window")
 VALUES
-  ('今天吃什么', 'food', 1, 3, '吃什么是个很麻烦的事情', '/plugins/food/static/ico.png', '/plugins/food/card', '/plugins/food/window'),
   ('天气', 'weather', 1, 13, '获取您所在地的实时天气', '/plugins/weather/static/ico.png', '/plugins/weather/card', '/plugins/weather/window'),
-  ('电子木鱼', 'muyu', 1, 5, '木鱼一敲 烦恼丢掉', '/plugins/muyu/static/ico.png', '/plugins/muyu/card', '/plugins/muyu/window'),
   ('热搜', 'topSearch', 1, 15, '聚合百度、哔站、微博、知乎、头条等热搜', '/plugins/topSearch/static/ico.png', '/plugins/topSearch/card', '/plugins/topSearch/window'),
-  ('记事本', 'noteApp', 1, 15, '快捷记录您的灵感', '/plugins/noteApp/static/ico.png', '/plugins/noteApp/card', '/noteApp'),
-  ('每日诗词', 'poetry', 1, 8, '精选每日诗词', '/plugins/poetry/static/ico.png', '/plugins/poetry/card', '/plugins/poetry/window'),
-  ('日历', 'calendar', 1, 1, '日历', '/plugins/calendar/static/ico.png', '/plugins/calendar/card', '/plugins/calendar/window'),
-  ('待办事项', 'todo', 1, 8, '快捷添加待办事项', '/plugins/todo/static/ico.png', '/plugins/todo/card', '/plugins/todo/window'),
-  ('倒计时', 'countdown', 1, 8, '个性化自定义事件倒计时组件', '/plugins/countdown/static/ico.png', '/plugins/countdown/card', '/plugins/countdown/window'),
-  ('纪念日', 'commemorate', 1, 8, '个性化自定义事件纪念日组件', '/plugins/commemorate/static/ico.png', '/plugins/commemorate/card', '/plugins/commemorate/window'),
-  ('AI助手', 'ai', 1, 1, '您的随身AI助手', '/plugins/ai/static/ico.png', '/plugins/ai/card', '/plugins/ai/window'),
-  ('图片格式转换', 'imageConversion', 1, 1, '图片格式快速转换', '/plugins/imageConversion/static/ico.png', '/plugins/imageConversion/card', '/plugins/imageConversion/window'),
-  ('金额换算', 'amountConversion', 1, 1, '金额快速换算', '/plugins/amountConversion/static/ico.png', '/plugins/amountConversion/card', '/plugins/amountConversion/window')
+  ('日历', 'calendar', 1, 1, '日历', '/plugins/calendar/static/ico.png', '/plugins/calendar/card', '/plugins/calendar/window')
 ON CONFLICT (name_en) DO UPDATE SET
   name = EXCLUDED.name,
   status = EXCLUDED.status,

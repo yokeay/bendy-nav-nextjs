@@ -225,12 +225,21 @@
   width: auto;
   align-items: center;
   gap: 6px;
+  padding: 0;
+}
+
+.sidebarBottom .sidebarProfile {
+  padding: 0;
 }
 
 .sidebarBottom .sidebarFooter {
   margin-left: 8px;
-  padding-left: 10px;
+  padding: 0 0 0 10px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebarBottom .sidebarRow {
+  width: auto;
 }
 
 .sidebarBottom .sidebarText,
@@ -242,6 +251,7 @@
 .sidebarBottom .userButton {
   width: 44px;
   height: 44px;
+  min-height: 0;
   padding: 0;
   justify-content: center;
 }
@@ -252,11 +262,20 @@
 }
 
 .sidebarBottom.sidebarAutoHide {
-  transform: translate(-50%, calc(100% + 20px));
+  transform: translate(-50%, calc(100% + 8px));
 }
 
 .sidebarBottom.sidebarAutoHide:hover {
   transform: translateX(-50%);
+}
+
+.sidebarBottom.sidebarAutoHide::after {
+  top: -14px;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: 14px;
 }
 
 .sidebarGroup {
@@ -467,8 +486,8 @@
 }
 
 .userButton:hover {
-  background: rgba(148, 148, 148, 0.2);
-  backdrop-filter: blur(5px);
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .userAvatar {
@@ -508,7 +527,7 @@
   height: 44px;
   border-radius: 999px;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.12);
+  background: transparent;
 }
 
 .userPanelName {
@@ -675,8 +694,9 @@
   background: transparent;
   color: #747474;
   padding: 0;
-  width: 22px;
+  width: auto;
   height: 22px;
+  gap: 4px;
   cursor: pointer;
   margin-right: 10px;
 }
@@ -1393,9 +1413,9 @@
   z-index: 80;
   padding: 5px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
-  box-shadow: 0 0 1px rgba(104, 104, 104, 0.72);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18), 0 0 1px rgba(15, 23, 42, 0.32);
 }
 
 .contextMenuDesktop {
@@ -1403,12 +1423,12 @@
 }
 
 .contextMenuTile {
-  width: 150px;
+  width: 160px;
 }
 
 .contextMenuSectionLabel {
   padding: 2px 10px 8px;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(15, 23, 42, 0.58);
   font-size: 12px;
 }
 
@@ -1446,28 +1466,28 @@
 
 .contextMenuItem {
   width: calc(100% - 10px);
-  min-height: 35px;
+  min-height: 32px;
   margin: 0 5px;
   padding: 0 10px;
   display: flex;
   align-items: center;
   border-radius: 8px;
   background: transparent;
-  color: #fff;
+  color: #0f172a;
   font-size: 13px;
   text-align: left;
   transition: background-color 180ms ease, color 180ms ease;
 }
 
 .contextMenuItem:hover {
-  background: rgba(255, 255, 255, 0.37);
-  color: #000;
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
 }
 
 .contextMenuDivider {
   height: 1px;
   margin: 4px 8px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.12);
 }
 
 .contextMenuSubmenuWrap {
@@ -1477,12 +1497,12 @@
 .contextMenuSubmenu {
   position: absolute;
   top: -5px;
-  width: 120px;
+  width: 140px;
   padding: 5px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
-  box-shadow: 0 0 1px rgba(104, 104, 104, 0.72);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18), 0 0 1px rgba(15, 23, 42, 0.32);
 }
 
 .contextMenuSubmenuRight {
@@ -2301,13 +2321,13 @@
   overflow: hidden;
   background: #f3f3f3;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px #ececec;
+  box-shadow: none;
 }
 
 .actionGalleryItemActive {
   box-shadow:
-    inset 0 0 0 2px rgba(21, 112, 239, 0.8),
-    0 8px 18px rgba(21, 112, 239, 0.16);
+    0 6px 16px rgba(15, 23, 42, 0.14),
+    inset 0 0 0 2px rgba(15, 23, 42, 0.12);
 }
 
 .actionGalleryItem img {
@@ -4056,6 +4076,41 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.profileAvatarRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 4px;
+}
+
+.profileAvatarPreview {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.profileAvatarHint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profileAvatarHintTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1e27;
+}
+
+.profileAvatarHintMeta {
+  margin: 0;
+  font-size: 12px;
+  color: #5b6378;
 }
 
 .profileFieldLabel {

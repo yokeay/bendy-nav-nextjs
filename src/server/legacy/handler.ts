@@ -43,6 +43,8 @@ import sharp from "sharp";
 import { getSmtpConfig } from "@/lib/app-config";
 
 import sql from "@/lib/db";
+import prisma from "@/server/infrastructure/db/prisma";
+import { resolveLegacyBridgeFromRequest } from "@/server/auth/legacy-bridge";
 
 import { TtlCache } from "@/lib/cache";
 
@@ -1000,6 +1002,42 @@ async function getUser(ctx: LegacyContext, must = false): Promise<AuthUser | nul
 
 
   if (!userId || !token) {
+
+    const bridge = await resolveLegacyBridgeFromRequest(ctx.request);
+
+    if (bridge) {
+
+      const bridgedUserRows = await sql<{ id: number; status: number; group_id: number }[]>`
+
+        SELECT id, status, group_id
+
+        FROM "user"
+
+        WHERE id = ${bridge.user_id}
+
+        LIMIT 1
+
+      `;
+
+      if (bridgedUserRows.length > 0 && bridgedUserRows[0].status === 0) {
+
+        ctx.cachedUser = {
+
+          user_id: bridge.user_id,
+
+          token: bridge.token,
+
+          create_time: bridge.create_time,
+
+          group_id: parseNumber(bridgedUserRows[0].group_id, 0)
+
+        };
+
+        return ctx.cachedUser;
+
+      }
+
+    }
 
     ctx.cachedUser = null;
 
@@ -3026,8 +3064,13 @@ async function handleApiController(ctx: LegacyContext, action: string): Promise<
 
     case "cardimages": {
       const target = toPublicAbsPath("static/CardBackground/bg");
-      const files = await readdir(target);
-      const result: { thumbor: string; url: string; mtime: number }[] = [];
+      let files: string[] = [];
+      try {
+        files = await readdir(target);
+      } catch {
+        files = [];
+      }
+      const result: { thumbor: string; url: string; name?: string; mtime: number }[] = [];
 
       for (const file of files) {
         const abs = path.join(target, file);
@@ -3041,9 +3084,26 @@ async function handleApiController(ctx: LegacyContext, action: string): Promise<
 
       result.sort((a, b) => b.mtime - a.mtime);
 
-      return jsonSuccess(
-        result.map(({ thumbor, url }) => ({ thumbor, url }))
-      );
+      let dbItems: { thumbor: string; url: string; name: string }[] = [];
+      try {
+        const wallpapers = await prisma.wallpaper.findMany({
+          orderBy: [{ sort: "asc" }, { createdAt: "desc" }]
+        });
+        dbItems = wallpapers.map((w) => ({
+          thumbor: w.url,
+          url: w.hdUrl?.trim() || w.url,
+          name: w.name
+        }));
+      } catch {
+        dbItems = [];
+      }
+
+      const combined = [
+        ...dbItems,
+        ...result.map(({ thumbor, url }) => ({ thumbor, url }))
+      ];
+
+      return jsonSuccess(combined);
 
     }
 
@@ -8588,6 +8648,8 @@ async function syncLocalPluginCards(forceEnable = true): Promise<void> {
 
 
 
+  const localNameEns = new Set<string>();
+
   for (const entry of entries) {
 
     if (!entry.isDirectory()) {
@@ -8648,6 +8710,16 @@ async function syncLocalPluginCards(forceEnable = true): Promise<void> {
 
 
 
+    const nameEn = toStringValue(info.name_en, "").trim();
+
+    if (nameEn) {
+
+      localNameEns.add(nameEn);
+
+    }
+
+
+
     try {
 
       await upsertCardFromInfo(info, { forceEnable });
@@ -8662,7 +8734,145 @@ async function syncLocalPluginCards(forceEnable = true): Promise<void> {
 
 
 
+  if (localNameEns.size > 0) {
+
+    try {
+
+      await sql`
+
+        UPDATE card
+
+        SET status = 0
+
+        WHERE status <> 0
+
+          AND name_en <> ALL(${sql.array(Array.from(localNameEns))})
+
+      `;
+
+    } catch {
+
+      // ignore cleanup failure
+
+    }
+
+
+
+    try {
+
+      await pruneStalePluginTiles(localNameEns);
+
+    } catch {
+
+      // ignore cleanup failure
+
+    }
+
+  }
+
+
+
   memoryCache.set(cacheKey, true, 60);
+
+}
+
+
+
+async function pruneStalePluginTiles(localNameEns: Set<string>): Promise<void> {
+
+  const rows = await sql<{ user_id: number; link: unknown }[]>`
+
+    SELECT user_id, link FROM link
+
+  `;
+
+  for (const row of rows) {
+
+    const list = Array.isArray(row.link) ? (row.link as AnyObject[]) : [];
+
+    if (list.length === 0) {
+
+      continue;
+
+    }
+
+    const filtered = list.filter((item) => !isStalePluginTile(item, localNameEns));
+
+    if (filtered.length === list.length) {
+
+      continue;
+
+    }
+
+    try {
+
+      await sql`
+
+        UPDATE link
+
+        SET link = ${JSON.stringify(filtered)},
+
+            update_time = ${nowDateTimeString()}
+
+        WHERE user_id = ${row.user_id}
+
+      `;
+
+      memoryCache.delete(`Link.${row.user_id}`);
+
+    } catch {
+
+      // ignore single-user failure
+
+    }
+
+  }
+
+}
+
+
+
+function isStalePluginTile(item: AnyObject, localNameEns: Set<string>): boolean {
+
+  if (!item || typeof item !== "object") {
+
+    return false;
+
+  }
+
+  if (toStringValue(item.type, "") !== "component") {
+
+    return false;
+
+  }
+
+  if (toStringValue(item.component, "") !== "plugins") {
+
+    return false;
+
+  }
+
+  const custom = (item.custom && typeof item.custom === "object" ? item.custom : {}) as AnyObject;
+
+  const nameEn = toStringValue(custom.name_en, "").trim() || extractPluginNameFromUrl(toStringValue(item.url, ""));
+
+  if (!nameEn) {
+
+    return false;
+
+  }
+
+  return !localNameEns.has(nameEn);
+
+}
+
+
+
+function extractPluginNameFromUrl(url: string): string {
+
+  const match = /^\/plugins\/([^/]+)/i.exec(url);
+
+  return match ? match[1] : "";
 
 }
 
@@ -11417,17 +11627,19 @@ async function handleMsnWeatherPluginApi(
     }
 
     const coords = parseCoordinateText(city);
-    if (!coords) {
-      return jsonSuccess("ok", []);
+    if (coords) {
+      const item = {
+        id: `${coords.latitude.toFixed(6)},${coords.longitude.toFixed(6)}`,
+        name: `${coords.latitude.toFixed(4)},${coords.longitude.toFixed(4)}`,
+        city: "",
+        latitude: coords.latitude,
+        longitude: coords.longitude
+      };
+      return jsonSuccess("ok", [item]);
     }
 
-    const item = {
-      id: `${coords.latitude.toFixed(6)},${coords.longitude.toFixed(6)}`,
-      name: `${coords.latitude.toFixed(4)},${coords.longitude.toFixed(4)}`,
-      latitude: coords.latitude,
-      longitude: coords.longitude
-    };
-    return jsonSuccess("ok", [item]);
+    const matches = await fetchCityNameSearch(city);
+    return jsonSuccess("ok", matches);
   }
 
   if (method === "location" || method === "ip") {
@@ -11450,6 +11662,73 @@ async function handleMsnWeatherPluginApi(
   }
 
   return jsonSuccess("ok", mapMsnForecastResponse(location, overview));
+}
+
+async function fetchCityNameSearch(keyword: string): Promise<AnyObject[]> {
+  const cacheKey = `weather:search:${keyword.toLowerCase()}`;
+  const cached = memoryCache.get(cacheKey);
+  if (Array.isArray(cached)) {
+    return cached as AnyObject[];
+  }
+
+  try {
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("accept-language", "zh-CN");
+    url.searchParams.set("q", keyword);
+    url.searchParams.set("limit", "10");
+    url.searchParams.set("addressdetails", "1");
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "bendy-nav/1.0 (weather plugin)"
+      }
+    });
+    if (!response.ok) {
+      memoryCache.set(cacheKey, [], 60);
+      return [];
+    }
+
+    const payload = await response.json();
+    const list = toArray<AnyObject>(payload);
+    const mapped = list
+      .map((raw) => normalizeNominatimLocation(raw))
+      .filter((item): item is AnyObject => item !== null);
+    memoryCache.set(cacheKey, mapped, 300);
+    return mapped;
+  } catch {
+    memoryCache.set(cacheKey, [], 60);
+    return [];
+  }
+}
+
+function normalizeNominatimLocation(raw: AnyObject): AnyObject | null {
+  const latitude = parseNumber(raw.lat, Number.NaN);
+  const longitude = parseNumber(raw.lon, Number.NaN);
+  const coords = normalizeWeatherCoords(latitude, longitude);
+  if (!coords) {
+    return null;
+  }
+
+  const address = (raw.address && typeof raw.address === "object" ? raw.address : {}) as AnyObject;
+  const city =
+    toStringValue(address.city, "") ||
+    toStringValue(address.town, "") ||
+    toStringValue(address.village, "") ||
+    toStringValue(address.county, "") ||
+    toStringValue(address.state, "");
+  const displayName = toStringValue(raw.display_name, "").trim();
+  const name = city || displayName || `${coords.latitude.toFixed(4)},${coords.longitude.toFixed(4)}`;
+
+  return {
+    id: `${coords.latitude.toFixed(6)},${coords.longitude.toFixed(6)}`,
+    name,
+    city: city || name,
+    fullName: displayName,
+    latitude: coords.latitude,
+    longitude: coords.longitude
+  };
 }
 async function mapWeatherNowResponse(ctx: LegacyContext): Promise<NextResponse> {
   const response = await handleAppsWeatherController(ctx, "now");
