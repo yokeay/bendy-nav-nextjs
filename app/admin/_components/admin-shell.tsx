@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "概览" },
   { href: "/admin/users", label: "用户管理" },
   { href: "/admin/content/links", label: "书签与页面" },
+  { href: "/admin/content/recommendations", label: "推荐中心" },
   { href: "/admin/content/wallpapers", label: "壁纸库" },
   { href: "/admin/content/templates", label: "默认模板" },
   { href: "/admin/audit", label: "审计日志" },

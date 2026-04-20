@@ -1,4 +1,4 @@
-{
+[{
   "bookmark_id": "uuid-v4",
   "url": "https://example.com",
   "bookmark_title": "用户设定的书签名",
@@ -11,4 +11,4 @@
   "generated_description": "AI 生成的内容摘要",
   "crawl_error": "抓取失败时的错误信息",
   "tags": "标签1,标签2,标签3"
-}
+}]

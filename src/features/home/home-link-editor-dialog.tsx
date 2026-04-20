@@ -58,7 +58,7 @@ type CardCatalogItem = {
 };
 
 type RecommendedLinkItem = {
-  id: number;
+  id: number | string;
   name: string;
   src: string;
   url: string;
@@ -238,18 +238,38 @@ export function AddLinkDialog({
         });
 
       setRecommendLoading(true);
-      requestLegacy<RecommendedLinkPage>("/LinkStore/list", {
-        method: "POST",
-        data: {
-          page: 1,
-          limit: 36
-        }
-      })
-        .then((response) => {
-          setRecommendedLinks(Array.isArray(response.data?.data) ? response.data.data : []);
+      fetch("/api/home/recommendations?limit=36", { credentials: "same-origin" })
+        .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+        .then((payload) => {
+          const items = Array.isArray(payload?.data?.items) ? (payload.data.items as RecommendedLinkItem[]) : [];
+          if (items.length > 0) {
+            setRecommendedLinks(items);
+            return;
+          }
+          return requestLegacy<RecommendedLinkPage>("/LinkStore/list", {
+            method: "POST",
+            data: {
+              page: 1,
+              limit: 36
+            }
+          }).then((legacy) => {
+            setRecommendedLinks(Array.isArray(legacy.data?.data) ? legacy.data.data : []);
+          });
         })
         .catch(() => {
-          setRecommendedLinks([]);
+          requestLegacy<RecommendedLinkPage>("/LinkStore/list", {
+            method: "POST",
+            data: {
+              page: 1,
+              limit: 36
+            }
+          })
+            .then((legacy) => {
+              setRecommendedLinks(Array.isArray(legacy.data?.data) ? legacy.data.data : []);
+            })
+            .catch(() => {
+              setRecommendedLinks([]);
+            });
         })
         .finally(() => {
           setRecommendLoading(false);

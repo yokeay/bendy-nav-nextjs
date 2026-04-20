@@ -1,0 +1,127 @@
+.filterCheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #1a1e27;
+  padding: 0 12px;
+}
+
+.linkCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 320px;
+}
+
+.linkIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #f2f2f2;
+  flex-shrink: 0;
+}
+
+.tagsCell,
+.textCell {
+  max-width: 220px;
+  font-size: 12px;
+  color: #5b6378;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusOk {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 11px;
+}
+
+.statusOff {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #e6e6e6;
+  color: #5b6378;
+  font-size: 11px;
+}
+
+.actionRow {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btnPrimary,
+.btnGhost {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  color: #1a1e27;
+}
+
+.btnPrimary {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+.btnPrimary:hover {
+  background: #000;
+}
+
+.btnGhost:hover {
+  background: #f5f5f5;
+}
+
+.btnPrimary:disabled,
+.btnGhost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+}
+
+.editorField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #5b6378;
+}
+
+.editorField input {
+  padding: 6px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #1a1e27;
+  background: #fff;
+}
+
+.editorInline {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: #1a1e27;
+}
+
+.errorText {
+  font-size: 12px;
+  color: #c41d25;
+}
