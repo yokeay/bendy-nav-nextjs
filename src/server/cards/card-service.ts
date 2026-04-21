@@ -71,8 +71,10 @@ export async function getCardBySlug(slug: string): Promise<CardDto | null> {
   return row ? cardToDto(row) : null;
 }
 
-// Project a BendyCard into the legacy `/card/index` item shape. Kept here so the
-// future C-side switch (plan.md Phase 6 step 7) needs zero frontend changes.
+// Project a BendyCard into the legacy `/card/index` item shape. Kept here so
+// the C-side switch needs zero frontend changes. inline cards now carry a
+// packaged entryUrl, so `window` mirrors it for the host component that uses
+// the legacy shape to render iframe/window previews.
 export function toLegacyCatalogItem(card: CardDto): LegacyCardCatalogItem {
   return {
     id: card.id,
@@ -81,7 +83,7 @@ export function toLegacyCatalogItem(card: CardDto): LegacyCardCatalogItem {
     tips: card.tips,
     src: card.icon,
     url: card.entryUrl,
-    window: card.host === "window" ? card.entryUrl : card.host === "inline" ? "" : card.entryUrl,
+    window: card.host === "window" || card.host === "inline" ? card.entryUrl : card.entryUrl,
     version: card.version,
     install_num: card.installNum
   };

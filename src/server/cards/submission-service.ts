@@ -17,6 +17,8 @@ import {
   type CardSubmissionInput,
   type ValidationResult
 } from "./types";
+import { scanInlineSource, formatScanForReason } from "./security-scan";
+import { buildInlineEntryUrl, ensureInlineEntryUrl } from "./packaging";
 
 type NormalizedSubmission = {
   slug: string;
@@ -81,6 +83,14 @@ function normalize(input: CardSubmissionInput): ValidationResult<NormalizedSubmi
     }
     if (Buffer.byteLength(inlineSource, "utf8") > INLINE_SOURCE_MAX_BYTES) {
       return { ok: false, field: "inlineSource", reason: "inline 源码超过 64KB 上限" };
+    }
+    const scan = scanInlineSource(inlineSource);
+    if (scan.blockers.length > 0) {
+      return {
+        ok: false,
+        field: "inlineSource",
+        reason: `inline 源码静态扫描未通过：${formatScanForReason(scan)}`
+      };
     }
   }
 
@@ -325,6 +335,19 @@ export async function reviewSubmission(
     return { ok: false, field: "note", reason: "request_changes 必须提供备注" };
   }
 
+  // Re-run the security scan at approve time so a stale submission that predates
+  // a new scanner rule is still blocked from shipping.
+  if (input.action === "approve" && existing.host === "inline") {
+    const scan = scanInlineSource(existing.inlineSource);
+    if (scan.blockers.length > 0) {
+      return {
+        ok: false,
+        field: "inlineSource",
+        reason: `inline 源码静态扫描未通过：${formatScanForReason(scan)}`
+      };
+    }
+  }
+
   const now = new Date();
   let publishedCard: BendyCard | null = null;
 
@@ -406,6 +429,10 @@ async function publishCardFromSubmission(
 ): Promise<BendyCard> {
   const version = nextVersion(existingCard?.version ?? null, requestedVersion ?? submission.version);
   const now = new Date();
+  const isInline = submission.host === "inline";
+  const entryUrl = isInline
+    ? buildInlineEntryUrl(submission.slug, version)
+    : submission.entryUrl;
   const payload: Prisma.BendyCardUncheckedCreateInput = {
     slug: submission.slug,
     name: submission.name,
@@ -415,7 +442,7 @@ async function publishCardFromSubmission(
     icon: submission.icon,
     coverUrl: submission.coverUrl,
     host: submission.host,
-    entryUrl: submission.entryUrl,
+    entryUrl,
     size: submission.size,
     resizable: submission.resizable,
     permissions: submission.permissions ?? [],
@@ -491,6 +518,7 @@ export async function getSubmission(submissionId: string): Promise<CardSubmissio
 }
 
 export function submissionToDto(row: BendyCardSubmission): CardSubmissionDto {
+  const scan = row.host === "inline" ? scanInlineSource(row.inlineSource) : { blockers: [], warnings: [] };
   return {
     id: row.id,
     cardId: row.cardId,
@@ -520,6 +548,8 @@ export function submissionToDto(row: BendyCardSubmission): CardSubmissionDto {
     authorId: row.authorId,
     authorName: row.authorName,
     authorContact: row.authorContact,
+    scanBlockers: scan.blockers,
+    scanWarnings: scan.warnings,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null
@@ -527,6 +557,12 @@ export function submissionToDto(row: BendyCardSubmission): CardSubmissionDto {
 }
 
 export function cardToDto(row: BendyCard): CardDto {
+  const entryUrl = ensureInlineEntryUrl({
+    host: row.host,
+    entryUrl: row.entryUrl,
+    slug: row.slug,
+    version: row.version
+  });
   return {
     id: row.id,
     slug: row.slug,
@@ -537,7 +573,7 @@ export function cardToDto(row: BendyCard): CardDto {
     icon: row.icon,
     coverUrl: row.coverUrl,
     host: (row.host as CardHost) ?? "iframe",
-    entryUrl: row.entryUrl,
+    entryUrl,
     size: row.size,
     resizable: row.resizable,
     permissions: toStringArray(row.permissions),

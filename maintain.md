@@ -1,5 +1,46 @@
 # Maintain
 
+## v2.4.43
+
+- Date: 2026-04-21
+- Iteration type: small version
+- Goal: 落地 plan.md Phase 6 剩余两步——inline 卡片的 HTML 打包 / 托管链路（步骤 5）和静态安全扫描（步骤 6）——让 inline 宿主卡片首次具备 entryUrl 并能真正被首页 iframe 加载。
+
+### Changes
+
+- 新增 `src/server/cards/security-scan.ts`：14 条静态扫描规则，覆盖 `eval` / `new Function` / `document.write` / 字符串 `setTimeout` / `javascript:` 协议 / 外部 http 脚本等阻断项，以及内联事件处理器、`atob`、`document.cookie`、`postMessage` 通配目标等告警项。规则按 `blocker`（阻止提交 / 审批）与 `warning`（仅告警）分级。
+- 新增 `src/server/cards/packaging.ts`：
+  - `packInlineSource(source, {title, csp})` 把用户源码包裹为独立 HTML 文档，自动注入默认 CSP meta（`default-src 'self'; script-src 'self' 'unsafe-inline'; img-src * data: blob:; connect-src 'self'; frame-ancestors 'self'`）。若作者提交的已是完整文档，会剥掉其自带的 CSP meta 以防止策略被放宽。
+  - `buildInlineEntryUrl(slug, version)` 生成 `/api/cards/host/<slug>/<version>/index.html` 形式的托管 URL。
+  - `ensureInlineEntryUrl(card)` 为旧数据做懒填充：历史 inline 卡片 entryUrl 为空时，在 DTO 投影层自动补出托管 URL，避免还要写迁移脚本。
+- 新增路由 `app/api/cards/host/[slug]/[version]/index.html/route.ts`：按 slug + version 精确匹配查当前 BendyCard，命中时返回 `packInlineSource` 结果，并带上 `Content-Security-Policy`、`X-Frame-Options: SAMEORIGIN`、`X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、短期 `Cache-Control` 头。version 不匹配或卡片非 approved/inline 时 404，避免 URL 静默升级到新版本。
+- `submission-service.ts`：
+  - `normalize()` 在 inline 源码通过尺寸校验后追加 `scanInlineSource` 阻断项检查；命中任意 blocker 即在 `VALIDATION` 错误中返回首条原因，带上 `[field]` 标签。
+  - `reviewSubmission()` 的 approve 分支新增二次扫描，兜住旧提交在扫描规则扩展后仍能被拦下的场景。
+  - `publishCardFromSubmission()` 在 inline 卡片入库时把 `entryUrl` 改写为 `buildInlineEntryUrl(slug, newVersion)`，不再依赖作者填写。
+  - `submissionToDto()` 给每条 submission 附加 `scanBlockers` / `scanWarnings` 数组（即时计算，不入库），审核页可直接读。
+  - `cardToDto()` 统一走 `ensureInlineEntryUrl`，保证 legacy 数据也有 URL。
+- `CardSubmissionDto` 类型同步加入 `scanBlockers` / `scanWarnings` 字段；`toLegacyCatalogItem` 把 inline 卡片的 `window` 字段指向 entryUrl，C 端以 iframe 宿主打开时和 iframe 卡片行为一致。
+- 审核页 `/admin/content/cards`：
+  - 表格新增「打开托管」外链（仅 approved inline 卡片）、扫描阻断 / 告警的行内提示。
+  - `CardReviewActions` 接收 `scanBlockers` / `scanWarnings` / `hostedUrl`；阻断项存在时「通过」按钮禁用并给出 title 提示；approve 面板替换原「打包能力未落地」提示为托管路径说明，并展示告警列表。
+- 卡片工作室 `/cards/new` / `/cards/[id]/edit`：编辑器实时扫描 inline 源码，把阻断 / 告警显示在源码下方；客户端校验在阻断项存在时直接阻止提交。
+- 新增测试 `tests/card-security.test.ts`：20 条用例，覆盖 12 条扫描规则 + 打包注入 / CSP 覆盖 / 转义 / entryUrl 编码。
+
+### Result
+
+- inline 宿主卡片首次具备完整链路：提交 → 阻断项扫描 → 审核 → 托管 HTML 带 CSP 头对外服务 → 首页按 entryUrl 用 iframe 加载。
+- 提交端、审批端、编辑器端三处都能看到扫描结果；阻断项在任何一处都能拦下。
+- 历史 inline 卡片（entryUrl 为空）通过 `ensureInlineEntryUrl` 懒填充，C 端立即可用。
+- `npm run typecheck`、`npm run build`、`npm run test`（38/38）全绿。
+
+### Risks And Next
+
+- 静态扫描是正则级别的首道防御，只能挡住低悬果实；真正的隔离依赖托管响应的 CSP 头 + 宿主 iframe 的 sandbox。若后续要提升强度，可接入 `htmlparser2` 做 DOM 级检查（例如 `<script>` 内嵌解析后再匹配）。
+- 托管 URL 绑定了 version，如果首页持久化保存的是 entryUrl 而非 slug + version，升级版本时旧瓦片会变 404；建议后续把瓦片记住 slug，动态拼 URL，或提供一个 `latest` 别名。
+- 打包 HTML 是即时生成，未落盘；若未来需要支持更大 source 或 CDN 缓存，可以改为后台任务生成并写入对象存储。
+- Phase 6 至此收尾，inline 宿主打包与静态安全扫描两步均已落地。标签推荐（bookmark）「管理员直通」规则仍等新接口接入时统一落位。
+
 ## v2.4.42
 
 - Date: 2026-04-21

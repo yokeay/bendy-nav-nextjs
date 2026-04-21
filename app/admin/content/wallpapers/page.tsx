@@ -21,7 +21,21 @@ export default async function WallpapersPage({ searchParams }: Props) {
   const colorMode =
     colorModeParam === "day" || colorModeParam === "night" ? colorModeParam : undefined;
   const page = Math.max(1, Number(readString(params, "page")) || 1);
-  const { items, total, pageSize } = await listWallpapers({ colorMode, page });
+
+  let items: Awaited<ReturnType<typeof listWallpapers>>["items"] = [];
+  let total = 0;
+  let pageSize = 40;
+  let dbError = "";
+
+  try {
+    const result = await listWallpapers({ colorMode, page });
+    items = result.items;
+    total = result.total;
+    pageSize = result.pageSize;
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : String(err);
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
@@ -30,6 +44,13 @@ export default async function WallpapersPage({ searchParams }: Props) {
         <h1 className={rootStyles.pageTitle}>壁纸库</h1>
         <span className={styles.stat}>共 {total} 张</span>
       </div>
+
+      {dbError ? (
+        <div style={{ color: "#c41d25", padding: "20px 0" }}>
+          数据加载失败：{dbError}。请确认数据库迁移已执行（<code>npx prisma db push</code>）。
+        </div>
+      ) : (
+        <>
 
       <WallpaperUploader />
 
@@ -78,6 +99,8 @@ export default async function WallpapersPage({ searchParams }: Props) {
           </a>
         ) : null}
       </div>
+        </>
+      )}
     </div>
   );
 }

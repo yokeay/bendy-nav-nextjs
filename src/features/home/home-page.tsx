@@ -2000,7 +2000,7 @@ function Dock({
                 : undefined
             }
           >
-            <img src="/icons/lajitong.png" alt="" />
+            <img src="/icons/trash.svg" alt="" />
           </button>
         </div>
       ) : null}

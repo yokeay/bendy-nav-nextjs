@@ -21,19 +21,38 @@ export default async function RecommendationsPage({ searchParams }: Props) {
   const onlyRecommended = readString(params, "onlyRecommended") === "1";
   const page = Math.max(1, Number(readString(params, "page")) || 1);
 
-  const { items, total, pageSize } = await listRecommendations({
-    keyword: keyword || undefined,
-    onlyRecommended,
-    page
-  });
+  let items: Awaited<ReturnType<typeof listRecommendations>>["items"] = [];
+  let total = 0;
+  let pageSize = 30;
+  let dbError = "";
+
+  try {
+    const result = await listRecommendations({
+      keyword: keyword || undefined,
+      onlyRecommended,
+      page
+    });
+    items = result.items;
+    total = result.total;
+    pageSize = result.pageSize;
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : String(err);
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className={rootStyles.content}>
       <h1 className={rootStyles.pageTitle}>推荐中心</h1>
-      <p className={rootStyles.pageHint}>
-        勾选&quot;推荐&quot;后，该标签将出现在所有用户 C 端&quot;添加标签&quot;弹窗的推荐标签 Tab 中。卡片推荐流程详见 plan.md。
-      </p>
+      {dbError ? (
+        <div className={rootStyles.pageHint} style={{ color: "#c41d25" }}>
+          数据加载失败：{dbError}。请确认数据库迁移已执行（<code>npx prisma db push</code>）。
+        </div>
+      ) : (
+        <>
+          <p className={rootStyles.pageHint}>
+            勾选&quot;推荐&quot;后，该标签将出现在所有用户 C 端&quot;添加标签&quot;弹窗的推荐标签 Tab 中。
+          </p>
 
       <form method="get" className={usersStyles.filterForm}>
         <input
@@ -128,6 +147,8 @@ export default async function RecommendationsPage({ searchParams }: Props) {
           </a>
         ) : null}
       </div>
+        </>
+      )}
     </div>
   );
 }

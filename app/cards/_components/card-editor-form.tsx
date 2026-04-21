@@ -13,6 +13,7 @@ import {
   type CardHost,
   type CardSize
 } from "@/server/cards/types";
+import { scanInlineSource } from "@/server/cards/security-scan";
 
 const PERMISSION_PRESETS = [
   { value: "clipboard", label: "访问剪贴板" },
@@ -92,6 +93,10 @@ export function CardEditorForm({ mode, initial, defaultAuthorName }: Props) {
 
   const effectiveSlug = useMemo(() => (slugTouched ? slug : slugifyName(name)), [slug, slugTouched, name]);
   const inlineSize = useMemo(() => new Blob([inlineSource]).size, [inlineSource]);
+  const inlineScan = useMemo(
+    () => (host === "inline" ? scanInlineSource(inlineSource) : { blockers: [], warnings: [] }),
+    [host, inlineSource]
+  );
 
   function togglePermission(value: string, on: boolean) {
     const next = new Set(permissions);
@@ -144,6 +149,9 @@ export function CardEditorForm({ mode, initial, defaultAuthorName }: Props) {
       }
       if (inlineSize > INLINE_SOURCE_MAX_BYTES) {
         return `inline 源码 ${(inlineSize / 1024).toFixed(1)}KB 已超过 64KB 上限`;
+      }
+      if (inlineScan.blockers.length > 0) {
+        return `静态扫描未通过：${inlineScan.blockers[0].message}`;
       }
     }
     if (mode === "edit" && !changelog.trim()) {
@@ -352,8 +360,22 @@ export function CardEditorForm({ mode, initial, defaultAuthorName }: Props) {
                 maxLength={INLINE_SOURCE_MAX_BYTES * 2}
               />
               <div className={styles.hint}>
-                {(inlineSize / 1024).toFixed(1)}KB / 64KB 上限 — 发布时会由系统自动注入默认 CSP。
+                {(inlineSize / 1024).toFixed(1)}KB / 64KB 上限 — 通过审核后由系统托管在 <code>/api/cards/host/&lt;slug&gt;/&lt;version&gt;/index.html</code>，自动注入默认 CSP。
               </div>
+              {inlineScan.blockers.length > 0 ? (
+                <div className={styles.scanBlock}>
+                  {inlineScan.blockers.map((hit) => (
+                    <div key={hit.code}>阻断 · {hit.message}</div>
+                  ))}
+                </div>
+              ) : null}
+              {inlineScan.warnings.length > 0 ? (
+                <div className={styles.scanWarn}>
+                  {inlineScan.warnings.map((hit) => (
+                    <div key={hit.code}>告警 · {hit.message}</div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         )}

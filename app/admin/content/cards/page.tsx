@@ -32,19 +32,38 @@ export default async function AdminCardsPage({ searchParams }: Props) {
   const status = readString(params, "status");
   const page = Math.max(1, Number(readString(params, "page")) || 1);
 
-  const { items, total, pageSize } = await listSubmissions({
-    keyword: keyword || undefined,
-    status: status || undefined,
-    page
-  });
+  let items: Awaited<ReturnType<typeof listSubmissions>>["items"] = [];
+  let total = 0;
+  let pageSize = 30;
+  let dbError = "";
+
+  try {
+    const result = await listSubmissions({
+      keyword: keyword || undefined,
+      status: status || undefined,
+      page
+    });
+    items = result.items;
+    total = result.total;
+    pageSize = result.pageSize;
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : String(err);
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div className={rootStyles.content}>
       <h1 className={rootStyles.pageTitle}>卡片审核</h1>
-      <p className={rootStyles.pageHint}>
-        用户提交的卡片在此审核。管理员账户直接提交的卡片已自动通过（`auto-approve`）。
-      </p>
+      {dbError ? (
+        <div className={rootStyles.pageHint} style={{ color: "#c41d25" }}>
+          数据加载失败：{dbError}。请确认数据库迁移已执行（<code>npx prisma db push</code>）。
+        </div>
+      ) : (
+        <>
+          <p className={rootStyles.pageHint}>
+            用户提交的卡片在此审核。管理员账户直接提交的卡片已自动通过。
+          </p>
 
       <form method="get" className={usersStyles.filterForm}>
         <input
@@ -81,49 +100,77 @@ export default async function AdminCardsPage({ searchParams }: Props) {
             {items.length === 0 ? (
               <tr><td colSpan={7} className={usersStyles.empty}>暂无提交</td></tr>
             ) : null}
-            {items.map((sub) => (
-              <tr key={sub.id}>
-                <td>
-                  <div className={usersStyles.userCell}>
-                    {sub.icon ? <img src={sub.icon} alt="" style={{ width: 32, height: 32, borderRadius: 6 }} /> : null}
-                    <div>
-                      <div>{sub.name}</div>
-                      <div className={styles.metaCell}>{sub.slug}</div>
+            {items.map((sub) => {
+              const hostedUrl =
+                sub.host === "inline" && sub.status === "approved"
+                  ? `/api/cards/host/${encodeURIComponent(sub.slug)}/${encodeURIComponent(sub.version)}/index.html`
+                  : "";
+              return (
+                <tr key={sub.id}>
+                  <td>
+                    <div className={usersStyles.userCell}>
+                      {sub.icon ? <img src={sub.icon} alt="" style={{ width: 32, height: 32, borderRadius: 6 }} /> : null}
+                      <div>
+                        <div>{sub.name}</div>
+                        <div className={styles.metaCell}>{sub.slug}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <span className={styles.hostBadge}>{sub.host}</span>
-                  {sub.entryUrl ? (
-                    <a className={styles.previewLink} href={sub.entryUrl} target="_blank" rel="noreferrer">
-                      预览
-                    </a>
-                  ) : null}
-                </td>
-                <td>{sub.version}</td>
-                <td className={styles.metaCell}>{sub.authorName || sub.authorId.slice(0, 8)}</td>
-                <td>
-                  <span className={`${styles.statusCell} ${styles[sub.status] ?? ""}`}>
-                    {STATUS_OPTIONS.find((o) => o.value === sub.status)?.label ?? sub.status}
-                  </span>
-                  {sub.rejectReason ? (
-                    <div className={styles.rejectReason}>{sub.rejectReason}</div>
-                  ) : null}
-                </td>
-                <td className={styles.metaCell}>
-                  {new Date(sub.updatedAt).toLocaleString("zh-CN", { hour12: false })}
-                </td>
-                <td>
-                  <CardReviewActions
-                    submissionId={sub.id}
-                    initialStatus={sub.status}
-                    host={sub.host}
-                    entryUrl={sub.entryUrl}
-                    currentVersion={sub.version}
-                  />
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td>
+                    <span className={styles.hostBadge}>{sub.host}</span>
+                    {sub.entryUrl ? (
+                      <a className={styles.previewLink} href={sub.entryUrl} target="_blank" rel="noreferrer">
+                        预览
+                      </a>
+                    ) : null}
+                    {hostedUrl ? (
+                      <a className={styles.previewLink} href={hostedUrl} target="_blank" rel="noreferrer">
+                        打开托管
+                      </a>
+                    ) : null}
+                  </td>
+                  <td>{sub.version}</td>
+                  <td className={styles.metaCell}>{sub.authorName || sub.authorId.slice(0, 8)}</td>
+                  <td>
+                    <span className={`${styles.statusCell} ${styles[sub.status] ?? ""}`}>
+                      {STATUS_OPTIONS.find((o) => o.value === sub.status)?.label ?? sub.status}
+                    </span>
+                    {sub.rejectReason ? (
+                      <div className={styles.rejectReason}>{sub.rejectReason}</div>
+                    ) : null}
+                    {sub.scanBlockers.length > 0 ? (
+                      <div className={styles.scanBlock}>
+                        {sub.scanBlockers.map((hit) => (
+                          <div key={hit.code}>阻断 · {hit.message}</div>
+                        ))}
+                      </div>
+                    ) : null}
+                    {sub.scanWarnings.length > 0 ? (
+                      <div className={styles.scanWarn}>
+                        {sub.scanWarnings.map((hit) => (
+                          <div key={hit.code}>告警 · {hit.message}</div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className={styles.metaCell}>
+                    {new Date(sub.updatedAt).toLocaleString("zh-CN", { hour12: false })}
+                  </td>
+                  <td>
+                    <CardReviewActions
+                      submissionId={sub.id}
+                      initialStatus={sub.status}
+                      host={sub.host}
+                      entryUrl={sub.entryUrl}
+                      currentVersion={sub.version}
+                      scanBlockers={sub.scanBlockers}
+                      scanWarnings={sub.scanWarnings}
+                      hostedUrl={hostedUrl}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -142,6 +189,8 @@ export default async function AdminCardsPage({ searchParams }: Props) {
           </Link>
         ) : null}
       </div>
+        </>
+      )}
     </div>
   );
 }

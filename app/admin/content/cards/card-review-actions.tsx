@@ -4,12 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./cards.module.css";
 
+interface ScanHit {
+  code: string;
+  message: string;
+  excerpt?: string;
+}
+
 interface Props {
   submissionId: string;
   initialStatus: string;
   host: string;
   entryUrl: string;
   currentVersion: string;
+  scanBlockers: ScanHit[];
+  scanWarnings: ScanHit[];
+  hostedUrl: string;
 }
 
 type Mode = "idle" | "approve" | "reject" | "request_changes" | "deprecate";
@@ -19,7 +28,10 @@ export function CardReviewActions({
   initialStatus,
   host,
   entryUrl,
-  currentVersion
+  currentVersion,
+  scanBlockers,
+  scanWarnings,
+  hostedUrl
 }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("idle");
@@ -33,6 +45,7 @@ export function CardReviewActions({
   const canReject = canApprove;
   const canRequestChanges = canApprove;
   const canDeprecate = initialStatus === "approved";
+  const hasBlockers = scanBlockers.length > 0;
 
   async function submit(action: "approve" | "reject" | "request_changes" | "deprecate") {
     setSaving(true);
@@ -67,7 +80,13 @@ export function CardReviewActions({
     return (
       <div className={styles.actionRow}>
         {canApprove ? (
-          <button type="button" className={styles.btnPrimary} onClick={() => setMode("approve")}>
+          <button
+            type="button"
+            className={styles.btnPrimary}
+            onClick={() => setMode("approve")}
+            disabled={hasBlockers}
+            title={hasBlockers ? "静态扫描发现阻断项，不能直接通过" : undefined}
+          >
             通过
           </button>
         ) : null}
@@ -89,6 +108,11 @@ export function CardReviewActions({
         {host === "iframe" && entryUrl ? (
           <a className={styles.previewLink} href={entryUrl} target="_blank" rel="noreferrer">
             打开预览
+          </a>
+        ) : null}
+        {host === "inline" && hostedUrl ? (
+          <a className={styles.previewLink} href={hostedUrl} target="_blank" rel="noreferrer">
+            查看托管页
           </a>
         ) : null}
       </div>
@@ -114,7 +138,14 @@ export function CardReviewActions({
           </label>
           {host === "inline" ? (
             <div className={styles.previewHint}>
-              注意：inline 宿主打包能力尚未落地（见 plan.md 步骤 5）。批准后卡片已入库，但 entryUrl 为空，C 端不会显示。
+              inline 卡片通过后会托管到 <code>/api/cards/host/&lt;slug&gt;/&lt;version&gt;/index.html</code>，首页以 iframe 宿主加载。
+            </div>
+          ) : null}
+          {scanWarnings.length > 0 ? (
+            <div className={styles.scanWarn}>
+              {scanWarnings.map((hit) => (
+                <div key={hit.code}>告警 · {hit.message}</div>
+              ))}
             </div>
           ) : null}
         </>

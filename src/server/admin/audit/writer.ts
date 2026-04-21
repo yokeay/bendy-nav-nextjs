@@ -15,6 +15,7 @@ export type AuditAction =
   | "system.config.update"
   | "system.maintenance.toggle"
   | "system.backup.trigger"
+  | "system.backup.cron"
   | "system.backup.restore"
   | "user.profile.update"
   | "bookmark.import"
