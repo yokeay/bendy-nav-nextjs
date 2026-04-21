@@ -2244,6 +2244,21 @@
   font-size: 13px;
 }
 
+.addCardStudioLink {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.addCardStudioLink a {
+  color: #1a1a1a;
+  text-decoration: underline;
+}
+
+.addCardStudioLink a:hover {
+  color: #000;
+}
+
 .actionIcon,
 .actionIconActive {
   width: 100%;

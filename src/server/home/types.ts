@@ -18,7 +18,7 @@ export type HomeLink = {
   component: string | null;
   tips: string;
   custom: Record<string, unknown> | null;
-  originId: number | null;
+  originId: string | number | null;
 };
 
 export type HomeOpenType = {

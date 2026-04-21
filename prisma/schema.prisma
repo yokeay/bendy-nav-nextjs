@@ -344,3 +344,89 @@ model PluginTodo {
   @@index([folderId])
   @@map("bendy_plugin_todo")
 }
+
+// ---------- Cards: user-submitted, admin-reviewed mini web apps ----------
+// host:   iframe | window | inline (runtime host type)
+// status: draft | submitted | reviewing | approved | rejected | deprecated
+// permissions / tags stored as Json arrays of strings for SQLite compat.
+
+model BendyCard {
+  id                     String    @id @default(cuid())
+  slug                   String    @unique
+  name                   String
+  nameEn                 String?
+  tips                   String    @default("")
+  description            String    @default("")
+  icon                   String    @default("")
+  coverUrl               String?
+  host                   String    @default("iframe")
+  entryUrl               String    @default("")
+  size                   String    @default("2x4")
+  resizable              Boolean   @default(false)
+  permissions            Json?
+  sandbox                String    @default("allow-scripts allow-forms")
+  contentSecurityPolicy  String?
+  schemaVersion          Int       @default(1)
+  inlineSource           String?
+  tags                   Json?
+  version                String    @default("1.0.0")
+  changelog              String?
+  status                 String    @default("approved")
+  isFeatured             Boolean   @default(false)
+  installNum             Int       @default(0)
+  authorId               String?
+  authorName             String?
+  authorContact          String?
+  publishedAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  deletedAt              DateTime?
+
+  submissions BendyCardSubmission[]
+
+  @@index([status, isFeatured])
+  @@index([slug])
+  @@map("bendy_card")
+}
+
+model BendyCardSubmission {
+  id                     String    @id @default(cuid())
+  cardId                 String?
+  slug                   String
+  name                   String
+  nameEn                 String?
+  tips                   String    @default("")
+  description            String    @default("")
+  icon                   String    @default("")
+  coverUrl               String?
+  host                   String    @default("iframe")
+  entryUrl               String    @default("")
+  size                   String    @default("2x4")
+  resizable              Boolean   @default(false)
+  permissions            Json?
+  sandbox                String    @default("allow-scripts allow-forms")
+  contentSecurityPolicy  String?
+  schemaVersion          Int       @default(1)
+  inlineSource           String?
+  tags                   Json?
+  version                String    @default("1.0.0")
+  changelog              String?
+  status                 String    @default("submitted")
+  rejectReason           String?
+  action                 String    @default("submit")
+  reviewerId             String?
+  reviewerNote           String?
+  authorId               String
+  authorName             String?
+  authorContact          String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  reviewedAt             DateTime?
+
+  card BendyCard? @relation(fields: [cardId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([authorId])
+  @@index([slug])
+  @@map("bendy_card_submission")
+}

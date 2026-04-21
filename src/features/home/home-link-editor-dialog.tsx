@@ -17,14 +17,14 @@ type LinkEditorPayload = {
 };
 
 type AddCardPayload = {
-  id: number;
+  id: string | number;
   name: string;
   name_en: string;
   tips: string;
   src: string;
   url: string;
   window: string;
-  version: number;
+  version: string | number;
   pageGroup: string;
 };
 
@@ -46,14 +46,14 @@ type FolderIcon = {
 };
 
 type CardCatalogItem = {
-  id: number;
+  id: string | number;
   name: string;
   name_en: string;
   tips: string;
   src: string;
   url: string;
   window: string;
-  version: number;
+  version: string | number;
   install_num: number;
 };
 
@@ -226,12 +226,27 @@ export function AddLinkDialog({
 
     if (mode === "create" && onAddCard) {
       setCardsLoading(true);
-      requestLegacy<CardCatalogItem[]>(`/card/index?_t=${Date.now()}`)
-        .then((response) => {
-          setCards(Array.isArray(response.data) ? response.data : []);
+      fetch(`/api/cards/public?format=legacy&limit=200&_t=${Date.now()}`, { credentials: "same-origin" })
+        .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+        .then((payload) => {
+          const items = Array.isArray(payload?.data?.items) ? (payload.data.items as CardCatalogItem[]) : [];
+          if (items.length > 0) {
+            setCards(items);
+            return;
+          }
+          return requestLegacy<CardCatalogItem[]>(`/card/index?_t=${Date.now()}`)
+            .then((response) => {
+              setCards(Array.isArray(response.data) ? response.data : []);
+            });
         })
         .catch(() => {
-          setCards([]);
+          requestLegacy<CardCatalogItem[]>(`/card/index?_t=${Date.now()}`)
+            .then((response) => {
+              setCards(Array.isArray(response.data) ? response.data : []);
+            })
+            .catch(() => {
+              setCards([]);
+            });
         })
         .finally(() => {
           setCardsLoading(false);
@@ -844,6 +859,11 @@ export function AddLinkDialog({
                 ) : (
                   <div className={styles.addCardEmpty}>{cardEmptyLabel}</div>
                 )}
+              </div>
+              <div className={styles.addCardStudioLink}>
+                <a href="/cards/new" target="_blank" rel="noreferrer">
+                  提交自己的卡片到公共目录 →
+                </a>
               </div>
             </div>
           </div>

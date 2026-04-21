@@ -397,11 +397,16 @@
 
 #### 实施顺序（后续迭代）
 
-1. Prisma schema 新增 `BendyCard` + `BendyCardSubmission`。
-2. `/api/cards/submissions`（POST 创建）、`/api/cards/submissions/[id]`（GET 详情 / PATCH 更新状态）。
-3. 后台「卡片审核」页（沿用推荐中心的框架）。
-4. 「卡片编辑器」前端页面（基于现有 AddLinkDialog 抽出的通用表单组件）。
+1. ~~Prisma schema 新增 `BendyCard` + `BendyCardSubmission`。~~ ✅ v2.4.41
+2. ~~`/api/cards/submissions`（POST 创建）、`/api/cards/submissions/[id]`（GET 详情 / PATCH 更新状态）。~~ ✅ v2.4.41（含 `/api/admin/cards` 与 `/api/cards/public`）
+3. ~~后台「卡片审核」页（沿用推荐中心的框架）。~~ ✅ v2.4.41
+4. ~~「卡片编辑器」前端页面（基于现有 AddLinkDialog 抽出的通用表单组件）。~~ ✅ v2.4.41（新建 `/cards/new`、`/cards/my`、`/cards/[id]/edit`）
 5. 卡片打包服务（inline 模式的 HTML 组装与托管）。
 6. 静态安全扫描（serialize / CSP 校验）。
-7. C 端「添加卡片」Tab 切换数据源。
-8. 分版本迁移 legacy `/card/index` 数据到 `BendyCard`。
+7. ~~C 端「添加卡片」Tab 切换数据源到 `/api/cards/public`。~~ ✅ v2.4.42
+8. ~~Legacy `/card/index` 数据迁移到 `BendyCard`。~~ ✅ v2.4.42
+
+#### v2.4.41 额外约定
+
+- 管理员账户（`role ∈ admin/superadmin`）直接提交卡片会被自动审批通过，跳过审核队列，直接 upsert BendyCard。审计事件为 `card.auto_approve`。
+- 标签推荐（bookmark）目前仍走 legacy `/LinkStore/push`；「管理员直通」规则等到该路径接入新表时一并落。

@@ -17,7 +17,14 @@ export type AuditAction =
   | "system.backup.trigger"
   | "system.backup.restore"
   | "user.profile.update"
-  | "bookmark.import";
+  | "bookmark.import"
+  | "card.submit"
+  | "card.update"
+  | "card.approve"
+  | "card.auto_approve"
+  | "card.reject"
+  | "card.request_changes"
+  | "card.deprecate";
 
 export interface AuditInput {
   actorId?: string | null;
