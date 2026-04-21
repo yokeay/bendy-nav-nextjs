@@ -2930,14 +2930,14 @@ export function HomePage({ data }: HomePageProps) {
   }
 
   async function handleAddCard(payload: {
-    id: number;
+    id: string | number;
     name: string;
     name_en: string;
     tips: string;
     src: string;
     url: string;
     window: string;
-    version: number;
+    version: string | number;
     pageGroup: string;
   }) {
     const cardId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -2963,10 +2963,19 @@ export function HomePage({ data }: HomePageProps) {
 
     await persistLinks([...currentLinks, nextLink]);
     try {
-      await requestLegacy<unknown>("/card/install_num", {
-        method: "POST",
-        data: { id: payload.id }
-      });
+      if (typeof payload.id === "string") {
+        await fetch("/api/cards/install", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cardId: payload.id }),
+          credentials: "same-origin"
+        });
+      } else {
+        await requestLegacy<unknown>("/card/install_num", {
+          method: "POST",
+          data: { id: payload.id }
+        });
+      }
     } catch {
       // ignore install count failures for local UX
     }

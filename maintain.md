@@ -1,5 +1,80 @@
 # Maintain
 
+## v2.4.42
+
+- Date: 2026-04-21
+- Iteration type: small version
+- Goal: 完成 plan.md Phase 6 步骤 7 与 8——C 端「添加卡片」Tab 切换数据源到 `/api/cards/public`，并提供 legacy `/card/index` 数据一键迁移到 `BendyCard` 的管理员端点。
+
+### Changes
+
+- `/api/cards/public` 新增 `?format=legacy` 查询参数，调用 `toLegacyCatalogItem` 把 `CardDto` 投影成 legacy `/card/index` 条目形状，前端零结构改动即可切换。
+- `home-link-editor-dialog.tsx` 的「添加卡片」Tab 数据源从 `requestLegacy('/card/index')` 切换为 `fetch('/api/cards/public?format=legacy')`；新接口返回空时自动降级到 legacy `/card/index`，保证旧部署环境不断链。
+- 新增 `POST /api/cards/install`：接受 `cardId`（cuid string）的安装计数 +1 端点；`home-page.tsx` 的 `handleAddCard` 根据 `payload.id` 类型分流——string 走新端点，number 走 legacy `/card/install_num`。
+- 新增 `POST /api/admin/cards/migrate`：管理员一键把 legacy `card` 表中 `status=1` 的条目 upsert 到 `bendy_card`；slug 由 `name_en` 自动生成；已有 slug 跳过创建改为更新；写入 `card.migrate_legacy` 审计。
+- `HomeLink.originId` 类型从 `number | null` 放宽到 `string | number | null`，兼容 legacy 数字 ID 与新 cuid 字符串 ID；`AddCardPayload` 与 `CardCatalogItem` 的 `id`、`version` 同步放宽。
+- `home-data.ts` 的 app-link 查找对 `originId` 类型做了类型守卫：`typeof originId === 'number'` 时才走 `appMap.get()`，新 cuid ID 的 app-link 回退由后续 inline-window 能力承接。
+
+### Result
+
+- C 端「添加卡片」Tab 现在优先从新 `bendy_card` 表拉取已审核卡片，不再直接依赖 legacy `card` SQL 表。
+- 管理员可一键触发迁移，确保新部署实例的「添加卡片」Tab 有数据可用。
+- 安装计数对新旧两种 ID 都能正确递增。
+
+### Risks And Next
+
+- 步骤 5（inline 宿主的 HTML 打包与静态托管）与步骤 6（静态安全扫描）仍未落地，inline 卡片 `entryUrl=""` 的问题延续。
+- Legacy 迁移依赖 `card` 表存在；纯新部署实例不需要迁移，端点会正常返回空结果。
+- 标签推荐（bookmark）仍走 legacy `/LinkStore/push`；「管理员直通」规则等新表接入时一并落位。
+- 后续可在 `/admin/content/cards` 审核页补充「迁移 legacy 卡片」按钮，调用 migrate 端点。
+
+## v2.4.41
+
+- Date: 2026-04-21
+- Iteration type: small version
+- Goal: 落地 plan.md Phase 6 卡片规范的前四步——Prisma schema、提交 API、后台审核页、卡片编辑器前端——使「用户提交 → 管理员审核 → 卡片入库」形成闭环；管理员账户直接提交的卡片跳过审核。
+
+### Changes
+
+- Prisma schema 新增 `BendyCard`（`bendy_card`）与 `BendyCardSubmission`（`bendy_card_submission`）。字段涵盖 slug / host(iframe/window/inline) / entryUrl / size / resizable / permissions(Json) / sandbox / csp / inlineSource / version / changelog / status / 作者与审核元信息；为兼容双 provider，数组字段用 `Json?` 而非 `String[]`，enum 用 `String + TS 联合类型`。
+- 新增服务层 `src/server/cards/{types.ts, submission-service.ts, card-service.ts}`：
+  - `createSubmission`：管理员作者 + `status=submitted` 时自动 approve 并 upsert BendyCard；普通用户进入审核队列。
+  - `updateSubmission`：作者可重复编辑 draft/submitted/reviewing/rejected 状态的提交；已定稿的拒绝写入。
+  - `reviewSubmission`：approve / reject / request_changes / deprecate 四个动作；approve 时 semver 自动 bump patch 或采纳大于当前版本的请求值，upsert BendyCard、写 `card.approve` 审计。
+  - `listPublicCards` / `listAdminCards` / `listSubmissions` / `getCardBySlug` 供页面与 API 调用。
+  - `toLegacyCatalogItem`：把新 BendyCard 投影成 legacy `/card/index` 条目形状，为下一轮 C 端切换预留零改动路径。
+- 新增 API：
+  - `POST /api/cards/submissions` — 用户提交；`GET` 列出我的提交。
+  - `GET/PATCH /api/cards/submissions/[id]` — 作者查看/编辑；管理员也可查看。
+  - `GET /api/admin/cards?scope=submissions|cards` — 后台列表。
+  - `PATCH /api/admin/cards/submissions/[id]` — 审核动作入口。
+  - `GET /api/cards/public` — 公共目录（C 端下一轮接入）。
+  - 所有写动作走 `writeAudit`，新增审计动作 `card.submit / card.update / card.approve / card.auto_approve / card.reject / card.request_changes / card.deprecate`。
+- 后台新增「卡片审核」页 `/admin/content/cards`：
+  - 复用推荐中心 table/filterForm/pagination 结构；状态下拉筛选 + 关键词搜索。
+  - 行内审核动作组件支持通过（可填版本号与备注）/ 驳回（必填原因）/ 要求修改（必填建议）/ 下架。
+  - iframe 宿主提供「打开预览」外链；inline 宿主显式提示「打包能力未落地」。
+  - `admin-shell.tsx` NAV_ITEMS 在「推荐中心」后插入「卡片审核」。
+- 用户侧新增「卡片工作室」：
+  - 布局 `/cards` 带独立顶栏 + 鉴权守卫；未登录跳首页。
+  - `/cards/new` 卡片编辑器：基础信息 + 宿主/入口 + 尺寸 + 权限清单 + sandbox + 版本与作者 + 实时预览；slug 自动从名称生成但可覆盖；inline 源码 64KB 限制；编辑模式 changelog 必填。
+  - `/cards/[id]/edit` 作者（或管理员）可回到 draft/submitted/reviewing/rejected 状态继续修改。
+  - `/cards/my` 我的提交列表。
+- 首页「添加标签 → 添加卡片」Tab 底部追加一行「提交自己的卡片到公共目录 →」链接，新开 `/cards/new`。本轮不改 Tab 的数据源，仍读 legacy `/card/index`。
+
+### Result
+
+- 管理员账户直接提交卡片会被自动批准并入库，无需经过审核队列。
+- 普通用户提交进入审核队列，可在 `/admin/content/cards` 预览、批准、驳回或要求修改。
+- BendyCard 与 BendyCardSubmission 作为未来「添加卡片」Tab 与插件市场的唯一数据源；legacy `/card/index` 暂继续生效，下一轮切换数据源只改一行 fetch。
+
+### Risks And Next
+
+- 步骤 5（inline 宿主的 HTML 打包与静态托管）未落地，批准的 inline 卡片 `entryUrl=""`，即便接入 C 端也会被跳过；UI 与审核页已显式打标。
+- 步骤 6（静态安全扫描）未接入，当前 inline 提交只做尺寸与基础格式校验，不做 eval/危险 API 检测。
+- 步骤 7（C 端「添加卡片」Tab 换源到 `/api/cards/public`）与步骤 8（legacy `/card/index` 迁移到 BendyCard）留到下一轮。
+- 推荐标签（bookmark）目前仍走 legacy `/LinkStore/push`；「管理员直通」规则仅对 BendyCardSubmission 生效，标签侧需等新接口接入时统一落位。
+
 ## Discussion Record — 2026-04-17（后台与登录体系重设计）
 
 - Type: design decision（尚未落码，记录用户与助手达成的技术方案共识）

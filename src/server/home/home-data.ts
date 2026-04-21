@@ -340,7 +340,7 @@ async function decorateLinks(links: HomeLink[]): Promise<HomeLink[]> {
       return item;
     }
 
-    const mapped = appMap.get(item.originId);
+    const mapped = typeof item.originId === "number" ? appMap.get(item.originId) : undefined;
     if (!mapped) {
       return item;
     }
