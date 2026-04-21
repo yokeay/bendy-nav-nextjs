@@ -907,6 +907,11 @@ export function AddLinkDialog({
                   <div className={styles.addCardEmpty}>{cardEmptyLabel}</div>
                 )}
               </div>
+              <div className={styles.addCardStudioLink}>
+                <a href="/cards/new" target="_blank" rel="noopener noreferrer">制作我的卡片 →</a>
+                <span style={{ margin: "0 8px", color: "#8790a3" }}>·</span>
+                <a href="/cards/my" target="_blank" rel="noopener noreferrer">我的提交</a>
+              </div>
             </div>
           </div>
         ) : null}
@@ -942,6 +947,11 @@ export function AddLinkDialog({
                 ) : (
                   <div className={styles.addCardEmpty}>{recommendCardEmptyLabel}</div>
                 )}
+              </div>
+              <div className={styles.addCardStudioLink}>
+                <a href="/cards/new" target="_blank" rel="noopener noreferrer">没看到想要的？来做一个 →</a>
+                <span style={{ margin: "0 8px", color: "#8790a3" }}>·</span>
+                <a href="/cards/my" target="_blank" rel="noopener noreferrer">我的提交</a>
               </div>
             </div>
           </div>
