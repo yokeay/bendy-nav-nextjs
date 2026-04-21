@@ -16,21 +16,40 @@ function readString(params: Record<string, string | string[] | undefined>, key: 
 }
 
 export default async function MyCardsPage({ searchParams }: Props) {
-  const session = await readSession();
+  const session = await readSession().catch(() => null);
   if (!session) redirect("/");
   const params = await searchParams;
   const page = Math.max(1, Number(readString(params, "page")) || 1);
 
-  const { items, total, pageSize } = await listSubmissions({
-    authorId: session.sub,
-    page
-  });
+  let items: Awaited<ReturnType<typeof listSubmissions>>["items"] = [];
+  let total = 0;
+  let pageSize = 30;
+  let dbError = "";
+
+  try {
+    const result = await listSubmissions({
+      authorId: session.sub,
+      page
+    });
+    items = result.items;
+    total = result.total;
+    pageSize = result.pageSize;
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : String(err);
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <>
       <h1 className={styles.pageTitle}>我的提交</h1>
-      <p className={styles.pageHint}>共 {total} 条提交 · 第 {page} / {totalPages} 页</p>
+      {dbError ? (
+        <div style={{ color: "#c41d25", padding: 20 }}>
+          数据加载失败：{dbError}。请确认数据库迁移已执行（<code>npx prisma db push</code>）。
+        </div>
+      ) : (
+        <>
+          <p className={styles.pageHint}>共 {total} 条提交 · 第 {page} / {totalPages} 页</p>
 
       {items.length === 0 ? (
         <div className={styles.emptyState}>
@@ -81,6 +100,8 @@ export default async function MyCardsPage({ searchParams }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+        </>
       )}
     </>
   );

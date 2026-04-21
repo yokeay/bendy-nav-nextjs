@@ -128,6 +128,8 @@ export interface CardSubmissionDto {
   authorId: string;
   authorName: string | null;
   authorContact: string | null;
+  scanBlockers: Array<{ code: string; message: string; excerpt?: string }>;
+  scanWarnings: Array<{ code: string; message: string; excerpt?: string }>;
   createdAt: string;
   updatedAt: string;
   reviewedAt: string | null;

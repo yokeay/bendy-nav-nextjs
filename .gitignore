@@ -702,3 +702,6 @@ CLAUDE.md
 docs/errors/202604200908/QQ_1776649280446.png
 docs/errors/202604200947/QQ_1776649647883.png
 .gitignore
+claude-facai.bat
+claude-cli.bat
+claude-ik.bat

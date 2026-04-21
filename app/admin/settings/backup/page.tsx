@@ -6,8 +6,16 @@ import rootStyles from "../../admin.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function BackupPage() {
-  const snapshots = await listSnapshots();
-  const enabled = isBackupEnabled();
+  let snapshots: Awaited<ReturnType<typeof listSnapshots>> = [];
+  let enabled: boolean = false;
+  let dbError = "";
+
+  try {
+    snapshots = await listSnapshots();
+    enabled = isBackupEnabled();
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : String(err);
+  }
 
   return (
     <div className={rootStyles.content}>
@@ -16,10 +24,16 @@ export default async function BackupPage() {
         <BackupTrigger />
       </div>
       <p className={rootStyles.pageHint}>
-        手动触发会导出核心数据为 JSON 快照并写入对象存储。仅 superadmin 可触发，需要通过 re-auth。
-        {enabled ? " 计划任务模式已启用。" : " 计划任务未启用（BACKUP_ENABLED=false）。"}
+        系统每日 18:00 自动备份核心数据为 JSON 快照并写入对象存储。也可手动触发即时备份，仅 superadmin 可操作。
+        {enabled ? " 自动备份已启用。" : " 自动备份未启用（BACKUP_ENABLED=false）。"}
       </p>
 
+      {dbError ? (
+        <div style={{ color: "#c41d25", padding: "20px 0" }}>
+          数据加载失败：{dbError}。请确认数据库迁移已执行（<code>npx prisma db push</code>）。
+        </div>
+      ) : (
+        <>
       {snapshots.length === 0 ? (
         <div className={styles.snapshotItem} style={{ justifyContent: "center", color: "#8790a3" }}>
           还没有任何快照
@@ -41,6 +55,8 @@ export default async function BackupPage() {
             </div>
           ))}
         </div>
+      )}
+        </>
       )}
 
       <div className={styles.backupNote}>

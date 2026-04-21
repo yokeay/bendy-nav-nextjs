@@ -401,8 +401,8 @@
 2. ~~`/api/cards/submissions`（POST 创建）、`/api/cards/submissions/[id]`（GET 详情 / PATCH 更新状态）。~~ ✅ v2.4.41（含 `/api/admin/cards` 与 `/api/cards/public`）
 3. ~~后台「卡片审核」页（沿用推荐中心的框架）。~~ ✅ v2.4.41
 4. ~~「卡片编辑器」前端页面（基于现有 AddLinkDialog 抽出的通用表单组件）。~~ ✅ v2.4.41（新建 `/cards/new`、`/cards/my`、`/cards/[id]/edit`）
-5. 卡片打包服务（inline 模式的 HTML 组装与托管）。
-6. 静态安全扫描（serialize / CSP 校验）。
+5. ~~卡片打包服务（inline 模式的 HTML 组装与托管）。~~ ✅ v2.4.43（`/api/cards/host/<slug>/<version>/index.html` + `packInlineSource`）
+6. ~~静态安全扫描（serialize / CSP 校验）。~~ ✅ v2.4.43（`scanInlineSource` 规则 + 提交 / 审核双重拦截）
 7. ~~C 端「添加卡片」Tab 切换数据源到 `/api/cards/public`。~~ ✅ v2.4.42
 8. ~~Legacy `/card/index` 数据迁移到 `BendyCard`。~~ ✅ v2.4.42
 

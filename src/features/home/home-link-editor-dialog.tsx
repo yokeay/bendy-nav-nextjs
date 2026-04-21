@@ -153,11 +153,14 @@ export function AddLinkDialog({
   onAddCard
 }: AddLinkDialogProps) {
   const folderIcons = useFolderIcons(open);
-  const [editorTab, setEditorTab] = useState<"link" | "recommend" | "card">("link");
+  const [topTab, setTopTab] = useState<"self" | "recommend">("self");
+  const [subTab, setSubTab] = useState<"link" | "card">("link");
   const [cards, setCards] = useState<CardCatalogItem[]>([]);
   const [recommendedLinks, setRecommendedLinks] = useState<RecommendedLinkItem[]>([]);
+  const [recommendedCards, setRecommendedCards] = useState<CardCatalogItem[]>([]);
   const [cardsLoading, setCardsLoading] = useState(false);
   const [recommendLoading, setRecommendLoading] = useState(false);
+  const [recommendCardsLoading, setRecommendCardsLoading] = useState(false);
   const [catalogQuery, setCatalogQuery] = useState("");
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
@@ -196,11 +199,14 @@ export function AddLinkDialog({
 
   useEffect(() => {
     if (!open) {
-      setEditorTab("link");
+      setTopTab("self");
+      setSubTab("link");
       setCards([]);
       setRecommendedLinks([]);
+      setRecommendedCards([]);
       setCardsLoading(false);
       setRecommendLoading(false);
+      setRecommendCardsLoading(false);
       setCatalogQuery("");
       setName("");
       setUrl("");
@@ -250,6 +256,20 @@ export function AddLinkDialog({
         })
         .finally(() => {
           setCardsLoading(false);
+        });
+
+      setRecommendCardsLoading(true);
+      fetch(`/api/cards/public?format=legacy&limit=200&_t=${Date.now()}`, { credentials: "same-origin" })
+        .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+        .then((payload) => {
+          const items = Array.isArray(payload?.data?.items) ? (payload.data.items as CardCatalogItem[]) : [];
+          setRecommendedCards(items);
+        })
+        .catch(() => {
+          setRecommendedCards([]);
+        })
+        .finally(() => {
+          setRecommendCardsLoading(false);
         });
 
       setRecommendLoading(true);
@@ -341,6 +361,20 @@ export function AddLinkDialog({
         .includes(keyword)
     );
   }, [catalogQuery, recommendedLinks]);
+
+  const filteredRecommendedCards = useMemo(() => {
+    const keyword = catalogQuery.trim().toLowerCase();
+    if (!keyword) {
+      return recommendedCards;
+    }
+
+    return recommendedCards.filter((card) =>
+      [card.name, card.name_en, card.tips]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [catalogQuery, recommendedCards]);
 
   const generatedIcon = useMemo(() => {
     const normalizedUrl = normalizeUrl(url);
@@ -578,6 +612,9 @@ export function AddLinkDialog({
   const recommendEmptyLabel = catalogQuery.trim()
     ? "没有找到匹配的推荐标签。"
     : "当前还没有推荐标签。";
+  const recommendCardEmptyLabel = catalogQuery.trim()
+    ? "没有找到匹配的推荐卡片。"
+    : "当前还没有推荐卡片。";
   const cardEmptyLabel = catalogQuery.trim() ? "没有找到匹配的卡片应用。" : "目前还没有卡片应用哟！";
 
   return (
@@ -596,32 +633,42 @@ export function AddLinkDialog({
         {showTabbedCreate ? (
           <div className={styles.actionTabs}>
             <button
-              className={editorTab === "link" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
+              className={topTab === "self" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
               type="button"
-              onClick={() => setEditorTab("link")}
+              onClick={() => { setTopTab("self"); setSubTab("link"); }}
             >
-              添加标签
+              自建
             </button>
             <button
-              className={
-                editorTab === "recommend" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem
-              }
+              className={topTab === "recommend" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
               type="button"
-              onClick={() => setEditorTab("recommend")}
+              onClick={() => { setTopTab("recommend"); setSubTab("link"); }}
             >
-              推荐标签
-            </button>
-            <button
-              className={editorTab === "card" ? `${styles.segmentedItem} ${styles.segmentedItemActive}` : styles.segmentedItem}
-              type="button"
-              onClick={() => setEditorTab("card")}
-            >
-              添加卡片
+              推荐
             </button>
           </div>
         ) : null}
 
-        {editorTab === "link" ? (
+        {showTabbedCreate ? (
+          <div className={styles.actionSubTabs}>
+            <button
+              className={subTab === "link" ? `${styles.subTabItem} ${styles.subTabItemActive}` : styles.subTabItem}
+              type="button"
+              onClick={() => setSubTab("link")}
+            >
+              标签
+            </button>
+            <button
+              className={subTab === "card" ? `${styles.subTabItem} ${styles.subTabItemActive}` : styles.subTabItem}
+              type="button"
+              onClick={() => setSubTab("card")}
+            >
+              卡片
+            </button>
+          </div>
+        ) : null}
+
+        {topTab === "self" && subTab === "link" ? (
           <div className={styles.linkEditorBody}>
             <div className={styles.linkEditorForm}>
               <EditorFieldRow label="归属页面">{renderPageGroupSelect()}</EditorFieldRow>
@@ -790,7 +837,7 @@ export function AddLinkDialog({
           </div>
         ) : null}
 
-        {editorTab === "recommend" ? (
+        {topTab === "recommend" && subTab === "link" ? (
           <div className={styles.catalogPanel}>
             {renderCatalogToolbar("推荐标签")}
             <div className={styles.recommendList}>
@@ -808,17 +855,17 @@ export function AddLinkDialog({
                         <p>{item.tips || item.url}</p>
                       </div>
                     </div>
-                    <div className={styles.recommendFooter}>
-                      <span className={styles.recommendUrl}>{item.url}</span>
-                      <button
-                        className={styles.actionPrimary}
-                        type="button"
-                        onClick={() => void handleAddRecommended(item)}
-                        disabled={submitting}
-                      >
-                        添加标签
-                      </button>
-                    </div>
+                      <div className={styles.recommendFooter}>
+                        <span className={styles.recommendUrl}>{item.url}</span>
+                        <button
+                          className={styles.actionPrimary}
+                          type="button"
+                          onClick={() => void handleAddRecommended(item)}
+                          disabled={submitting}
+                        >
+                          添加标签
+                        </button>
+                      </div>
                   </div>
                 ))
               ) : (
@@ -828,7 +875,7 @@ export function AddLinkDialog({
           </div>
         ) : null}
 
-        {editorTab === "card" ? (
+        {(topTab === "self" && subTab === "card") ? (
           <div className={styles.catalogPanel}>
             {renderCatalogToolbar("卡片应用")}
             <div className={styles.addCardWindow}>
@@ -860,10 +907,41 @@ export function AddLinkDialog({
                   <div className={styles.addCardEmpty}>{cardEmptyLabel}</div>
                 )}
               </div>
-              <div className={styles.addCardStudioLink}>
-                <a href="/cards/new" target="_blank" rel="noreferrer">
-                  提交自己的卡片到公共目录 →
-                </a>
+            </div>
+          </div>
+        ) : null}
+
+        {(topTab === "recommend" && subTab === "card") ? (
+          <div className={styles.catalogPanel}>
+            {renderCatalogToolbar("推荐卡片")}
+            <div className={styles.addCardWindow}>
+              <div className={styles.addCardList}>
+                {recommendCardsLoading ? (
+                  <div className={styles.addCardEmpty}>正在加载推荐卡片...</div>
+                ) : filteredRecommendedCards.length > 0 ? (
+                  filteredRecommendedCards.map((card) => (
+                    <div className={styles.addCardItem} key={`rec-${card.name_en}-${card.id}`}>
+                      <h3 className={styles.addCardTitle}>{card.name}</h3>
+                      <p className={styles.addCardTips}>{card.tips}</p>
+                      <div className={styles.addCardPreview}>
+                        <iframe
+                          className={styles.addCardPreviewFrame}
+                          src={card.url}
+                          title={card.name}
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className={styles.addCardFooter}>
+                        <span className={styles.addCardMeta}>安装量 {card.install_num}</span>
+                        <button className={styles.actionPrimary} type="button" onClick={() => void handleAddCard(card)}>
+                          添加
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.addCardEmpty}>{recommendCardEmptyLabel}</div>
+                )}
               </div>
             </div>
           </div>
@@ -873,12 +951,12 @@ export function AddLinkDialog({
           <button className={styles.actionSecondary} type="button" onClick={onClose}>
             取消
           </button>
-          {editorTab === "link" && mode === "create" ? (
+          {topTab === "self" && subTab === "link" && mode === "create" ? (
             <button className={styles.actionSecondary} type="button" onClick={() => void handleSubmit(false)} disabled={submitting}>
               {submitting ? "保存中..." : "保存并继续"}
             </button>
           ) : null}
-          {editorTab === "link" ? (
+          {topTab === "self" && subTab === "link" ? (
             <button className={styles.actionPrimary} type="button" onClick={() => void handleSubmit(true)} disabled={submitting}>
               {submitting ? "保存中..." : "保存"}
             </button>
