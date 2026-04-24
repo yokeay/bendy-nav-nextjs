@@ -209,6 +209,123 @@ function ActionRow({
   );
 }
 
+type ImportTokenPanelProps = { loggedIn: boolean };
+
+function ImportTokenPanel({ loggedIn }: ImportTokenPanelProps) {
+  const [state, setState] = useState<"idle" | "loading" | "has-token" | "no-token">("idle");
+  const [token, setToken] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    setState("loading");
+    fetch("/api/me/import-token")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data?.hasToken) {
+          setToken(d.data.token || "");
+          setState("has-token");
+        } else {
+          setToken("");
+          setState("no-token");
+        }
+      })
+      .catch(() => setState("no-token"));
+  }, [loggedIn]);
+
+  async function handleGenerate() {
+    setState("loading");
+    setError("");
+    try {
+      const res = await fetch("/api/me/import-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate" })
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setToken(d.data.token);
+        setState("has-token");
+      } else {
+        setError(d.message || "生成失败");
+        setState("no-token");
+      }
+    } catch {
+      setError("请求失败");
+      setState("no-token");
+    }
+  }
+
+  async function handleRevoke() {
+    if (!confirm("确认撤销 Token？撤销后原 Token 将立即失效。")) return;
+    setState("loading");
+    setError("");
+    try {
+      const res = await fetch("/api/me/import-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "revoke" })
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setToken("");
+        setState("no-token");
+      } else {
+        setError(d.message || "撤销失败");
+      }
+    } catch {
+      setError("请求失败");
+    }
+  }
+
+  async function handleCopy() {
+    if (!token) return;
+    await navigator.clipboard.writeText(token).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (state === "loading") {
+    return <div className={styles.importTokenPanel}><p className={styles.importTokenHint}>加载中...</p></div>;
+  }
+
+  return (
+    <div className={styles.importTokenPanel}>
+      {state === "has-token" ? (
+        <div className={styles.importTokenRow}>
+          <div className={styles.importTokenDisplay}>
+            <span className={styles.importTokenValue}>{token}</span>
+          </div>
+          <div className={styles.importTokenBtns}>
+            <button className={styles.importTokenCopyBtn} type="button" onClick={handleCopy}>
+              {copied ? "已复制" : "复制 Token"}
+            </button>
+            <button className={styles.importTokenDangerBtn} type="button" onClick={handleRevoke}>
+              撤销
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.importTokenRow}>
+          <p className={styles.importTokenHint}>你还没有生成个人导入 Token。生成后可使用该 Token 远程导入书签数据。</p>
+          <button className={styles.importTokenGenerateBtn} type="button" onClick={handleGenerate}>
+            生成 Token
+          </button>
+        </div>
+      )}
+      {error && <p className={styles.importTokenError}>{error}</p>}
+      <div className={styles.importTokenUsage}>
+        <p className={styles.importTokenUsageTitle}>使用方式</p>
+        <p className={styles.importTokenUsageDesc}>
+          调用 <code>/api/bookmarks/import</code> 接口时，在 HTTP Header 中添加：
+        </p>
+        <pre className={styles.importTokenUsageCode}>X-User-Import-Token: &lt;your-token&gt;</pre>
+      </div>
+    </div>
+  );
+}
+
 function mergeSectionValue(
   config: HomeConfig,
   section: keyof HomeConfig,
@@ -678,6 +795,14 @@ export function HomeSettingsDialog({
                     onChange={(value) => updateThemeBoolean("LinkTitle", value)}
                   />
                 </section>
+
+                {loggedIn && (
+                  <section className={styles.controlSectionCard}>
+                    <h3 className={styles.controlSectionTitle}>标签远程导入 API</h3>
+                    <p className={styles.controlSectionHint}>生成个人 Token 用于远程导入书签数据。Token 仅显示一次，请妥善保管。</p>
+                    <ImportTokenPanel loggedIn={loggedIn} />
+                  </section>
+                )}
               </div>
             ) : null}
 

@@ -165,6 +165,7 @@ export function PageManagerPanel({
           <div className={styles.pageManagerModal}>
             <div className={styles.pageManagerEditorHeader}>
               <span>{editingId ? "编辑页面" : "新建页面"}</span>
+              <button className={styles.pageManagerEditorClose} type="button" onClick={closeModal} aria-label="关闭">×</button>
             </div>
             <div className={styles.pageManagerEditorForm}>
               <label className={styles.pageManagerField}>

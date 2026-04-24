@@ -6,6 +6,16 @@ import { ERROR_CODES } from "@/server/shared/error-codes";
 
 const PAGE_SIZE = 30;
 
+function parseTags(tags: string | null): string[] {
+  if (!tags || typeof tags !== "string") {
+    return [];
+  }
+  return tags
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
 export async function GET(req: NextRequest) {
   const session = await readSession();
   if (!session) {
@@ -72,7 +82,7 @@ export async function GET(req: NextRequest) {
     categoryId,
     sources: {
       links: links.map(l => ({ id: l.id, name: l.name, url: l.url, icon: l.icon, bgColor: l.bgColor, sort: l.sort, categoryId: l.categoryId, size: l.size, app: l.app, _type: "link" })),
-      bookmarks: bookmarks.map(b => ({ id: b.id, name: b.title, url: b.url, icon: b.iconUrl, tags: b.tags, sort: b.sort, categoryId: b.categoryId, createdAt: b.createdAt, _type: "bookmark" }))
+      bookmarks: bookmarks.map(b => ({ id: b.id, name: b.title, url: b.url, icon: b.iconUrl, tags: parseTags(b.tags), sort: b.sort, categoryId: b.categoryId, createdAt: b.createdAt, _type: "bookmark" }))
     },
     categories,
     pagination: { page, pageSize, total, totalPages, hasMore: page < totalPages }

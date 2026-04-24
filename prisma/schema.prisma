@@ -33,6 +33,7 @@ model User {
   login       String
   name        String?
   avatarUrl   String?
+  importToken String?    @unique
   role        Role       @default(user)
   status      UserStatus @default(active)
   createdAt   DateTime   @default(now())

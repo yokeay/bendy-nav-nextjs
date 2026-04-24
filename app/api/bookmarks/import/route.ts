@@ -138,6 +138,7 @@ type AuthResolution =
   | { ok: false; response: Response };
 
 async function resolveAuth(req: NextRequest, body: RequestBody): Promise<AuthResolution> {
+  // 1. 系统级 API key (env)
   const apiKey = process.env.BOOKMARK_IMPORT_API_KEY;
   const provided = req.headers.get("x-api-key");
   if (apiKey && provided && provided === apiKey) {
@@ -147,6 +148,20 @@ async function resolveAuth(req: NextRequest, body: RequestBody): Promise<AuthRes
     return { ok: true, userId: body.userId.trim(), actor: null };
   }
 
+  // 2. 用户级导入 token (x-user-import-token header)
+  const userToken = req.headers.get("x-user-import-token");
+  if (userToken && userToken.trim()) {
+    const user = await prisma.user.findFirst({
+      where: { importToken: userToken.trim(), deletedAt: null },
+      select: { id: true }
+    });
+    if (user) {
+      return { ok: true, userId: user.id, actor: null };
+    }
+    return { ok: false, response: fail(ERROR_CODES.FORBIDDEN, "invalid import token", 403) };
+  }
+
+  // 3. Session auth (登录用户)
   const session = await readSession();
   if (session) {
     const fallbackUserId = typeof body.userId === "string" && body.userId.trim() ? body.userId.trim() : session.sub;
