@@ -2,13 +2,13 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import prisma from "@/server/infrastructure/db/prisma";
 import {
+  GitHubNetworkError,
   exchangeCodeForToken,
   fetchGitHubEmails,
   fetchGitHubUser,
   pickPrimaryEmail,
   readGitHubConfig
 } from "@/server/auth/github";
-import { getCache, cacheKey } from "@/server/infrastructure/cache";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { getClientIp, writeSessionCookies } from "@/server/auth/middleware";
 import { fail } from "@/server/shared/response";
@@ -32,6 +32,8 @@ function resolveRole(email: string): SessionRole {
   return "user";
 }
 
+const baseUrl = process.env.APP_BASE_URL ?? "http://127.0.0.1:3000";
+
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
   const rl = await rateLimit("oauth:callback", ip, 30, 60);
@@ -39,9 +41,8 @@ export async function GET(req: NextRequest) {
     return fail(ERROR_CODES.RATE_LIMITED, "too many requests", 429);
   }
 
-  const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
+  const code = req.nextUrl.searchParams.get("code");
+  const state = req.nextUrl.searchParams.get("state");
   if (!code || !state) {
     return fail(ERROR_CODES.OAUTH_FAILED, "missing code/state");
   }
@@ -54,11 +55,6 @@ export async function GET(req: NextRequest) {
   if (!cookieState || cookieState !== state) {
     return fail(ERROR_CODES.OAUTH_FAILED, "state mismatch");
   }
-  const cached = await getCache().get(cacheKey("oauth:state", state));
-  if (!cached) {
-    return fail(ERROR_CODES.OAUTH_FAILED, "state expired");
-  }
-  await getCache().delete(cacheKey("oauth:state", state));
 
   let config;
   try {
@@ -71,38 +67,54 @@ export async function GET(req: NextRequest) {
   try {
     accessToken = await exchangeCodeForToken(config, code);
   } catch (err) {
-    return fail(ERROR_CODES.OAUTH_FAILED, (err as Error).message, 502);
+    const msg = err instanceof GitHubNetworkError
+      ? "无法连接 GitHub 服务，请检查网络后重试。"
+      : (err as Error).message;
+    return NextResponse.redirect(new URL(`/?oauth_error=${encodeURIComponent(msg)}`, baseUrl).toString());
   }
 
-  const ghUser = await fetchGitHubUser(accessToken);
-  const emails = await fetchGitHubEmails(accessToken);
+  let ghUser, emails;
+  try {
+    ghUser = await fetchGitHubUser(accessToken);
+    emails = await fetchGitHubEmails(accessToken);
+  } catch (err) {
+    const msg = err instanceof GitHubNetworkError
+      ? "无法连接 GitHub 服务，请检查网络后重试。"
+      : (err as Error).message;
+    return NextResponse.redirect(new URL(`/?oauth_error=${encodeURIComponent(msg)}`, baseUrl).toString());
+  }
   const email = ghUser.email ?? pickPrimaryEmail(emails);
   if (!email) {
-    return fail(ERROR_CODES.OAUTH_FAILED, "no verified email on GitHub account");
+    return NextResponse.redirect(new URL("/?oauth_error=无法获取邮箱，请确认 GitHub 账号已验证邮箱后重试。", baseUrl).toString());
   }
 
   const role = resolveRole(email);
 
-  const user = await prisma.user.upsert({
-    where: { githubId: String(ghUser.id) },
-    update: {
-      email,
-      login: ghUser.login,
-      name: ghUser.name ?? undefined,
-      avatarUrl: ghUser.avatarUrl ?? undefined,
-      role,
-      lastLoginAt: new Date()
-    },
-    create: {
-      githubId: String(ghUser.id),
-      email,
-      login: ghUser.login,
-      name: ghUser.name ?? undefined,
-      avatarUrl: ghUser.avatarUrl ?? undefined,
-      role,
-      lastLoginAt: new Date()
-    }
-  });
+  let user;
+  try {
+    user = await prisma.user.upsert({
+      where: { githubId: String(ghUser.id) },
+      update: {
+        email,
+        login: ghUser.login,
+        name: ghUser.name ?? undefined,
+        avatarUrl: ghUser.avatarUrl ?? undefined,
+        role,
+        lastLoginAt: new Date()
+      },
+      create: {
+        githubId: String(ghUser.id),
+        email,
+        login: ghUser.login,
+        name: ghUser.name ?? undefined,
+        avatarUrl: ghUser.avatarUrl ?? undefined,
+        role,
+        lastLoginAt: new Date()
+      }
+    });
+  } catch (err) {
+    return NextResponse.redirect(new URL(`/?oauth_error=${encodeURIComponent("数据库写入失败，请重试。")}`, baseUrl).toString());
+  }
 
   const reauthAt = mode === "reauth" ? Math.floor(Date.now() / 1000) : undefined;
 
@@ -114,7 +126,7 @@ export async function GET(req: NextRequest) {
     reauthAt
   });
 
-  const res = NextResponse.redirect(new URL(returnTo, url).toString());
+  const res = NextResponse.redirect(new URL(returnTo, baseUrl).toString());
   res.cookies.delete(OAUTH_STATE_COOKIE);
   res.cookies.delete(OAUTH_MODE_COOKIE);
   res.cookies.delete(OAUTH_RETURN_COOKIE);

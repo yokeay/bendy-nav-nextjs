@@ -1,7 +1,7 @@
 [{
   "bookmark_id": "uuid-v4",
   "url": "https://example.com",
-  "bookmark_title": "用户设定的书签名",
+  "bookmark_title": "用户设定的书签名", 
   "folder_path": "Bookmarks bar/技术/前端",
   "date_added": "1714000000000",
   "page_title": "页面 <title> 标签内容",

@@ -5,11 +5,24 @@ import dashStyles from "./dashboard.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [metrics, series, audits] = await Promise.all([
-    getDashboardMetrics(),
-    getRegistrationSeries(30),
-    getRecentAudits(20)
-  ]);
+  let metrics, series, audits;
+  try {
+    [metrics, series, audits] = await Promise.all([
+      getDashboardMetrics(),
+      getRegistrationSeries(30),
+      getRecentAudits(20)
+    ]);
+  } catch (err) {
+    return (
+      <div className={styles.content}>
+        <h1 className={styles.pageTitle}>概览</h1>
+        <div className={dashStyles.card} style={{ gridColumn: "1 / -1", textAlign: "center", padding: "2rem" }}>
+          <p>数据库连接失败，请刷新页面重试。</p>
+          <p style={{ fontSize: "0.8em", opacity: 0.6 }}>{(err as Error).message}</p>
+        </div>
+      </div>
+    );
+  }
 
   const max = Math.max(1, ...series.map((p) => p.count));
 

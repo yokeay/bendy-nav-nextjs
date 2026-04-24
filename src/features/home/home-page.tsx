@@ -2,6 +2,7 @@
 
 import type { CSSProperties, FormEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { HomeConfig, HomeData, HomeLink, HomeSearchEngine, HomeTheme } from "@/server/home/types";
 import { AddLinkDialog, BackgroundDialog, buildActionLink } from "./home-actions";
 import { AuthDialog, UserMenu } from "./home-auth";
@@ -2410,6 +2411,7 @@ function TileContextMenu({
 
 export function HomePage({ data }: HomePageProps) {
   const [activeGroupId, setActiveGroupId] = useState("");
+  const searchParams = useSearchParams();
   const [currentConfig, setCurrentConfig] = useState<HomeConfig>(data.config);
   const [currentLinks, setCurrentLinks] = useState<HomeLink[]>(data.links);
   const [currentTabbar, setCurrentTabbar] = useState<HomeLink[]>(normalizeTabbarOrder(data.tabbar));
@@ -2448,6 +2450,7 @@ export function HomePage({ data }: HomePageProps) {
   const [snapshotTrackingReady, setSnapshotTrackingReady] = useState(false);
   const snapshotSignatureRef = useRef("");
   const importBackupInputRef = useRef<HTMLInputElement | null>(null);
+  const browserBookmarkInputRef = useRef<HTMLInputElement | null>(null);
 
   const notify = useCallback((message: string, tone: HomeToastTone = "info") => {
     setToasts((current) => [
@@ -2459,6 +2462,14 @@ export function HomePage({ data }: HomePageProps) {
       }
     ]);
   }, []);
+
+  useEffect(() => {
+    const err = searchParams.get("oauth_error");
+    if (err) {
+      notify(decodeURIComponent(err), "error");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [searchParams]);
 
   const dismissToast = useCallback((id: number) => {
     setToasts((current) => current.filter((item) => item.id !== id));
@@ -2788,6 +2799,31 @@ export function HomePage({ data }: HomePageProps) {
       notify("书签备份已导入。", "success");
     } catch (error) {
       notify(error instanceof Error ? error.message : "备份导入失败。", "error");
+    }
+  }
+
+  async function handleBrowserBookmarkImport(file: File) {
+    if (!data.user) {
+      notify("请先登录后再导入浏览器书签。", "error");
+      return;
+    }
+    notify("正在导入浏览器书签…", "info");
+    try {
+      const text = await file.text();
+      const response = await fetch("/api/bookmarks/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html: text, source: "html", writeHomeTile: true }),
+        signal: AbortSignal.timeout(60_000)
+      });
+      const result = await response.json() as { code: number; message: string; data?: { imported: number } };
+      if (result.code === 0 && result.data) {
+        notify(`成功从浏览器书签导入 ${result.data.imported} 个标签。`, "success");
+      } else {
+        notify(result.message || "浏览器书签导入失败。", "error");
+      }
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "浏览器书签导入失败。", "error");
     }
   }
 
@@ -3630,6 +3666,20 @@ export function HomePage({ data }: HomePageProps) {
           event.currentTarget.value = "";
         }}
       />
+      <input
+        ref={browserBookmarkInputRef}
+        type="file"
+        accept=".html,text/html"
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (!file) {
+            return;
+          }
+          void handleBrowserBookmarkImport(file);
+          event.currentTarget.value = "";
+        }}
+      />
       <div className={styles.shell}>
         <HomeToastViewport items={toasts} onDismiss={dismissToast} />
         {sidebarVisible ? (
@@ -4286,6 +4336,9 @@ export function HomePage({ data }: HomePageProps) {
           }}
           onImportBackup={() => {
             importBackupInputRef.current?.click();
+          }}
+          onBrowserImport={() => {
+            browserBookmarkInputRef.current?.click();
           }}
           onOpenPageManager={() => {
             setSettingsOpen(false);

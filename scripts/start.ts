@@ -1,12 +1,15 @@
-﻿import path from "node:path";
+import path from "node:path";
 import { spawn } from "node:child_process";
 import { loadRuntimeConfig, getConfiguredPort } from "./runtime/config";
 import { resolvePort } from "./runtime/port";
 import { initOnStart } from "./runtime/init-on-start";
+import { bootstrapGlobalProxy } from "../src/server/infrastructure/proxy/global-proxy";
 
 async function main(): Promise<void> {
   const { config, configPath } = loadRuntimeConfig();
   const preferredPort = getConfiguredPort(config);
+
+  bootstrapGlobalProxy();
 
   await initOnStart();
   const { port, reason } = await resolvePort(preferredPort);
@@ -24,9 +27,14 @@ async function main(): Promise<void> {
       ? path.join(process.cwd(), "node_modules", ".bin", "next.cmd")
       : path.join(process.cwd(), "node_modules", ".bin", "next");
 
+  const preloadPath = path.resolve(process.cwd(), "scripts", "runtime", "proxy-preload.cjs");
   const child = spawn(nextBin, ["start", "-p", String(port)], {
     stdio: "inherit",
-    shell: process.platform === "win32"
+    shell: process.platform === "win32",
+    env: {
+      ...process.env,
+      NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require ${preloadPath}`].filter(Boolean).join(' ')
+    }
   });
 
   child.on("exit", (code) => {
