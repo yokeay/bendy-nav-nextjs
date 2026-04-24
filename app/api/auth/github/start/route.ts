@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
     return fail(ERROR_CODES.OAUTH_FAILED, (err as Error).message, 500);
   }
 
-  const url = new URL(req.url);
-  const mode = url.searchParams.get("mode") === "reauth" ? "reauth" : "login";
-  const returnTo = url.searchParams.get("returnTo") ?? "/";
+  const baseUrl = process.env.APP_BASE_URL ?? "http://127.0.0.1:3000";
+  const mode = req.nextUrl.searchParams.get("mode") === "reauth" ? "reauth" : "login";
+  const returnTo = req.nextUrl.searchParams.get("returnTo") ?? "/";
 
   const state = randomBytes(24).toString("hex");
 

@@ -29,6 +29,7 @@ import {
 import { requestLegacy } from "./home-client";
 import { PageManagerDialog } from "./home-page-manager";
 import { HomeSettingsDialog } from "./home-settings";
+import { IconBottomUser, IconBottomHome, IconBottomLaunchpad } from "./home-settings-icons";
 import { HomeToastViewport, type HomeToastItem, type HomeToastTone } from "./home-toast";
 import { usePressAndHold } from "./use-press-and-hold";
 import styles from "./home-page.module.css";
@@ -596,6 +597,7 @@ function Sidebar({
   autoHide,
   editMode,
   user,
+  homeGroupId,
   onOpenAuth,
   onSelectGroup,
   onOpenGroupManager,
@@ -603,7 +605,8 @@ function Sidebar({
   onEditGroup,
   onDeleteGroup,
   onNotify,
-  onOpenProfile
+  onOpenProfile,
+  onOpenLaunchpad
 }: {
   data: HomeData;
   pageGroups: HomeLink[];
@@ -612,6 +615,7 @@ function Sidebar({
   autoHide: boolean;
   editMode: boolean;
   user: HomeData["user"];
+  homeGroupId: string;
   onOpenAuth: () => void;
   onSelectGroup: (groupId: string) => void;
   onOpenGroupManager: () => void;
@@ -620,6 +624,7 @@ function Sidebar({
   onDeleteGroup: (groupId: string) => void;
   onNotify: (message: string, tone?: HomeToastTone) => void;
   onOpenProfile?: () => void;
+  onOpenLaunchpad: () => void;
 }) {
   const sidebarLinks = buildSidebarLinks({
     ...data,
@@ -650,7 +655,7 @@ function Sidebar({
             </button>
           )}
         </div>
-        {sidebarLinks.map((item) => {
+        {position !== 'bottom' && sidebarLinks.map((item) => {
           const isActive = activeGroupId === item.id;
           const className = isActive
             ? `${styles.sidebarLink} ${styles.sidebarLinkActive}`
@@ -692,29 +697,62 @@ function Sidebar({
             </div>
           );
         })}
-        <button
-          className={styles.sidebarLink}
-          type="button"
-          onClick={onOpenGroupManager}
-          title={editMode ? "页面管理" : "新增页面"}
-          aria-label={editMode ? "页面管理" : "新增页面"}
-        >
-          <img className={styles.sidebarIcon} src="/icons/add.svg" alt="" />
-          <span className={styles.sidebarText}>页面</span>
-        </button>
+        {position !== 'bottom' && (
+          <button
+            className={styles.sidebarLink}
+            type="button"
+            onClick={onOpenGroupManager}
+            title={editMode ? "页面管理" : "新增页面"}
+            aria-label={editMode ? "页面管理" : "新增页面"}
+          >
+            <img className={styles.sidebarIcon} src="/icons/add.svg" alt="" />
+            <span className={styles.sidebarText}>页面</span>
+          </button>
+        )}
       </div>
-      <div className={`${styles.sidebarGroup} ${styles.sidebarFooter}`}>
-        <button
-          className={styles.sidebarFooterButton}
-          type="button"
-          onMouseDown={onOpenSettings}
-          onClick={onOpenSettings}
-          title="打开设置中心"
-          aria-label="打开设置中心"
-        >
-          <img className={styles.sidebarFooterIcon} src="/icons/setting.svg" alt="" />
-        </button>
-      </div>
+      {position === "bottom" ? (
+        <div className={`${styles.sidebarGroup} ${styles.sidebarFooter}`}>
+          <button
+            className={styles.sidebarFooterButton}
+            type="button"
+            onClick={() => onSelectGroup(homeGroupId || "")}
+            title="首页"
+            aria-label="首页"
+          >
+            <IconBottomHome className={styles.sidebarFooterIcon} />
+          </button>
+          <button
+            className={styles.sidebarFooterButton}
+            type="button"
+            onClick={onOpenLaunchpad}
+            title="启动台"
+            aria-label="启动台"
+          >
+            <IconBottomLaunchpad className={styles.sidebarFooterIcon} />
+          </button>
+          <button
+            className={styles.sidebarFooterButton}
+            type="button"
+            onClick={onOpenSettings}
+            title="打开设置中心"
+            aria-label="打开设置中心"
+          >
+            <img className={styles.sidebarFooterIcon} src="/icons/setting.svg" alt="" />
+          </button>
+        </div>
+      ) : (
+        <div className={`${styles.sidebarGroup} ${styles.sidebarFooter}`}>
+          <button
+            className={styles.sidebarFooterButton}
+            type="button"
+            onClick={onOpenSettings}
+            title="打开设置中心"
+            aria-label="打开设置中心"
+          >
+            <img className={styles.sidebarFooterIcon} src="/icons/setting.svg" alt="" />
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
@@ -2423,6 +2461,7 @@ export function HomePage({ data }: HomePageProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileUser, setProfileUser] = useState(data.user);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showLaunchpad, setShowLaunchpad] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [linkEditorOpen, setLinkEditorOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<HomeLink | null>(null);
@@ -3637,15 +3676,17 @@ export function HomePage({ data }: HomePageProps) {
   const pageClassName = [
     styles.page,
     themeModeClassName,
+    showLaunchpad ? styles.pageSlideLeft : "",
     currentConfig.theme.LinkTitle ? "" : styles.pageLinkTitleHidden
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <div className={pageClassName} style={cssVariables}>
-      <div
-        className={styles.background}
+    <div className={styles.pageWrapper} style={cssVariables}>
+      <div className={pageClassName}>
+        <div
+          className={styles.background}
         style={{
           backgroundImage: `url("${currentConfig.theme.backgroundImage}")`,
           filter: `blur(${currentConfig.theme.blur}px)`
@@ -3691,6 +3732,7 @@ export function HomePage({ data }: HomePageProps) {
             autoHide={currentConfig.theme.pageGroupStatus}
             editMode={editMode}
             user={profileUser}
+            homeGroupId={homeGroupId}
             onOpenAuth={() => setAuthOpen(true)}
             onSelectGroup={setActiveGroupId}
             onOpenGroupManager={() => {
@@ -3704,6 +3746,7 @@ export function HomePage({ data }: HomePageProps) {
             }}
             onNotify={notify}
             onOpenProfile={() => setProfileOpen(true)}
+            onOpenLaunchpad={() => setShowLaunchpad(true)}
           />
         ) : null}
 
@@ -4397,6 +4440,13 @@ export function HomePage({ data }: HomePageProps) {
             }
           }}
           onConfigChange={setCurrentConfig}
+          pages={currentPageGroups}
+          activePageId={activeGroupId}
+          homePageId={homeGroupId}
+          onSavePage={handleSaveGroup}
+          onDeletePage={handleDeleteGroup}
+          onSelectPage={(pageId) => setActiveGroupId(pageId)}
+          onMovePage={(pageId, direction) => handleMoveGroup(pageId, direction)}
         />
         <AddLinkDialog
           open={linkEditorOpen}
@@ -4436,6 +4486,161 @@ export function HomePage({ data }: HomePageProps) {
           onMovePage={(pageId, direction) => handleMoveGroup(pageId, direction)}
         />
       </div>
+      </div>
+      <LaunchpadPage
+        open={showLaunchpad}
+        onClose={() => setShowLaunchpad(false)}
+      />
+    </div>
+  );
+}
+
+type LaunchpadPageProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+function LaunchpadPage({ open, onClose }: LaunchpadPageProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [tiles, setTiles] = useState<{ id: string; name: string; url: string; icon: string | null }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const TILES_PER_PAGE = 18;
+
+  useEffect(() => {
+    if (!open) return;
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("q", searchQuery);
+    params.set("page", "1");
+    params.set("pageSize", "100");
+
+    setLoading(true);
+    fetch(`/api/launchpad?${params.toString()}`)
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.code === 200 && result.data) {
+          const allItems = [
+            ...result.data.sources.links,
+            ...result.data.sources.bookmarks,
+          ];
+          setTiles(allItems);
+        }
+      })
+      .catch(() => setTiles([]))
+      .finally(() => setLoading(false));
+  }, [open, searchQuery]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(0);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setCurrentPage(0);
+  };
+
+  const totalPages = Math.ceil(tiles.length / TILES_PER_PAGE);
+  const start = currentPage * TILES_PER_PAGE;
+  const end = start + TILES_PER_PAGE;
+  const pageTiles = tiles.slice(start, end);
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) setCurrentPage((p) => p - 1);
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) setCurrentPage((p) => p + 1);
+  };
+
+  const handleIconClick = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className={`${styles.launchpadPage} ${open ? styles.launchpadPageActive : ""}`}>
+      <button className={styles.launchpadBackBtn} onClick={onClose} title="返回首页">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
+
+      <div className={styles.launchpadHeader}>
+        <div className={styles.launchpadTitle}>启动台</div>
+        <div className={styles.launchpadSearchContainer}>
+          <svg className={styles.launchpadSearchIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            className={styles.launchpadSearchInput}
+            placeholder="搜索标签..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            autoFocus={open}
+          />
+          <button
+            className={`${styles.launchpadSearchClear} ${searchQuery ? "" : styles.launchpadSearchClearHidden}`}
+            onClick={handleClearSearch}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.launchpadGridContainer}>
+        <button
+          className={`${styles.pageArrow} ${styles.pageArrowLeft} ${currentPage === 0 || totalPages <= 1 ? styles.pageArrowHidden : ""}`}
+          onClick={handlePrevPage}
+        >‹</button>
+        <button
+          className={`${styles.pageArrow} ${styles.pageArrowRight} ${currentPage >= totalPages - 1 || totalPages <= 1 ? styles.pageArrowHidden : ""}`}
+          onClick={handleNextPage}
+        >›</button>
+
+        <div className={styles.launchpadGrid}>
+          {loading ? (
+            <div className={styles.launchpadEmpty}>加载中...</div>
+          ) : pageTiles.length === 0 ? (
+            <div className={styles.launchpadEmpty}>
+              <svg className={styles.launchpadEmptyIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+                <path d="M8 11h6"/>
+              </svg>
+              <p>没有找到匹配的标签</p>
+            </div>
+          ) : (
+            pageTiles.map((tile) => (
+              <button
+                key={tile.id}
+                className={styles.launchpadTile}
+                onClick={() => handleIconClick(tile.url)}
+              >
+                {tile.icon ? (
+                  <img className={styles.launchpadTileImg} src={tile.icon} alt={tile.name} loading="lazy" />
+                ) : (
+                  <div className={styles.launchpadTileText} style={{ fontSize: "28px", background: "rgba(255,255,255,0.12)", width: 44, height: 44, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {tile.name.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <span className={styles.launchpadTileText}>{tile.name}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {totalPages > 1 && (
+        <div className={styles.launchpadPageIndicator}>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <div key={i} className={`${styles.pageDot} ${i === currentPage ? styles.pageDotActive : ""}`} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

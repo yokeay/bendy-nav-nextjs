@@ -1,0 +1,98 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.2.0
+
+jobs:
+  install-deps:
+    docker:
+      - image: node:20-alpine
+    steps:
+      - checkout
+      - node/install-packages:
+          app-root: .
+          include-node-modules: true
+
+  typecheck:
+    docker:
+      - image: node:20-alpine
+    steps:
+      - checkout
+      - node/install-packages:
+          app-root: .
+          include-node-modules: true
+      - run:
+          name: Run TypeScript type check
+          command: npm run typecheck
+
+  test:
+    docker:
+      - image: node:20-alpine
+    steps:
+      - checkout
+      - node/install-packages:
+          app-root: .
+          include-node-modules: true
+      - run:
+          name: Run tests
+          command: npm run test
+
+  build:
+    docker:
+      - image: node:20-alpine
+    steps:
+      - checkout
+      - node/install-packages:
+          app-root: .
+          include-node-modules: true
+      - run:
+          name: Build Next.js application
+          command: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .next
+
+  deploy:
+    docker:
+      - image: node:20-alpine
+    environment:
+      VERCEL_TOKEN: << pipeline.parameters.VERCEL_TOKEN >>
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Deploy to Vercel
+          command: |
+            npm install -g vercel
+            vercel --prod --token=$VERCEL_TOKEN
+
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - install-deps
+      - typecheck:
+          requires:
+            - install-deps
+      - test:
+          requires:
+            - install-deps
+      - build:
+          requires:
+            - typecheck
+            - test
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - main
+                - dev-clo
+
+parameters:
+  VERCEL_TOKEN:
+    type: string
+    default: ""
