@@ -37,7 +37,7 @@ export interface GitHubEmail {
 export function readGitHubConfig(): GitHubConfig {
   const clientId = process.env.GITHUB_OAUTH_CLIENT_ID;
   const clientSecret = process.env.GITHUB_OAUTH_CLIENT_SECRET;
-  const baseUrl = process.env.APP_BASE_URL ?? "http://127.0.0.1:3000";
+  const baseUrl = process.env.APP_BASE_URL ?? "http://138.199.165.36:3000";
   const path = process.env.GITHUB_OAUTH_CALLBACK_PATH ?? "/api/auth/github/callback";
   if (!clientId || !clientSecret) {
     throw new Error("GITHUB_OAUTH_CLIENT_ID / GITHUB_OAUTH_CLIENT_SECRET not configured.");
