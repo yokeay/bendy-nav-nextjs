@@ -1,8 +1,9 @@
 "use client";
+import { PageManagerPanel } from "./home-page-manager-panel";
 
 import type { ReactElement } from "react";
 import { useEffect, useMemo, useState } from "react";
-import type { HomeConfig, HomeSiteInfo, HomeUser } from "@/server/home/types";
+import type { HomeConfig, HomeSiteInfo, HomeUser, HomeLink } from "@/server/home/types";
 import {
   IconAbout,
   IconBrowserImport,
@@ -13,13 +14,14 @@ import {
   IconReset,
   IconTags,
   IconTime,
+  IconPages,
   IconWallpaper
 } from "./home-settings-icons";
 import styles from "./home-page.module.css";
 
 type IconComponent = (p: { className?: string }) => ReactElement;
 
-type SettingsSection = "profile" | "general" | "tags" | "wallpaper" | "time" | "data" | "about";
+type SettingsSection = "profile" | "general" | "pages" | "tags" | "wallpaper" | "time" | "data" | "about";
 
 type HomeSettingsDialogProps = {
   open: boolean;
@@ -34,6 +36,14 @@ type HomeSettingsDialogProps = {
     id: string;
     createdAt: string;
   }>;
+  // Page management props
+  pages: HomeLink[];
+  activePageId: string;
+  homePageId: string;
+  onSavePage: (payload: { id?: string; name: string; src: string; pageType: "normal" | "geek" }) => Promise<string | void>;
+  onDeletePage: (pageId: string) => Promise<void>;
+  onSelectPage: (pageId: string) => void;
+  onMovePage: (pageId: string, direction: "up" | "down") => Promise<void>;
   onClose: () => void;
   onSave: () => void;
   onOpenPageManager: () => void;
@@ -90,13 +100,13 @@ type ActionRowProps = {
 
 const SECTION_OPTIONS: Array<{ id: SettingsSection; label: string; Icon: IconComponent }> = [
   { id: "general", label: "常规设置", Icon: IconGeneral },
+  { id: "pages", label: "页面管理", Icon: IconPages },
   { id: "tags", label: "主题标签", Icon: IconTags },
   { id: "wallpaper", label: "壁纸设置", Icon: IconWallpaper },
   { id: "time", label: "时间日期", Icon: IconTime },
   { id: "data", label: "数据变动记录", Icon: IconData },
   { id: "about", label: "关于我们", Icon: IconAbout }
 ];
-
 function ToggleRow({ label, description, checked, onChange, showDescription = false }: ToggleRowProps) {
   return (
     <div className={styles.settingRow}>
@@ -224,6 +234,14 @@ export function HomeSettingsDialog({
   pageCount,
   searchHistoryEnabled,
   snapshots,
+  // Page management props
+  pages,
+  activePageId,
+  homePageId,
+  onSavePage,
+  onDeletePage,
+  onSelectPage,
+  onMovePage,
   onClose,
   onSave,
   onOpenPageManager,
@@ -460,6 +478,25 @@ export function HomeSettingsDialog({
               </div>
             ) : null}
 
+            {activeSection === "pages" ? (
+              <div className={styles.controlSectionStack}>
+                <section className={styles.controlSectionCard}>
+                  <h3 className={styles.controlSectionTitle}>页面管理</h3>
+                  <p className={styles.controlSectionHint}>管理你的桌面页面，可以新增、编辑、删除和调整排序。</p>
+                  <PageManagerPanel
+                    pages={pages || []}
+                    activePageId={activePageId || ""}
+                    homePageId={homePageId || ""}
+                    onSave={onSavePage}
+                    onDelete={onDeletePage}
+                    onSelectPage={onSelectPage}
+                    onMovePage={onMovePage}
+                  />
+                </section>
+              </div>
+            ) : null}
+
+
             {activeSection === "tags" ? (
               <div className={styles.controlSectionStack}>
                 <section className={styles.controlSectionCard}>
@@ -644,7 +681,7 @@ export function HomeSettingsDialog({
               </div>
             ) : null}
 
-            {activeSection === "wallpaper" ? (
+{activeSection === "wallpaper" ? (
               <div className={styles.controlSectionStack}>
                 <section className={styles.controlSectionCard}>
                   <h3 className={styles.controlSectionTitle}>壁纸设置</h3>
@@ -778,12 +815,6 @@ export function HomeSettingsDialog({
               <div className={styles.controlSectionStack}>
                 <section className={styles.controlSectionCard}>
                   <h3 className={styles.controlSectionTitle}>数据变动记录</h3>
-                  <ActionRow
-                    label="页面管理"
-                    description={`当前已有 ${pageCount} 个页面，可继续新增和调整排序。`}
-                    actionLabel="打开"
-                    onClick={onOpenPageManager}
-                  />
                   <ToggleRow
                     label="显示垃圾桶"
                     description="编辑模式下显示底部移除区域。"

@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-04-24T00:00:00Z",
+  "agents": {
+    "main": { "name": "主控", "role": "协调/后端核心", "status": "active" },
+    "backend": { "name": "后端 Agent", "role": "NestJS/Prisma", "status": "active" },
+    "frontend": { "name": "前端 Agent", "role": "React/UI", "status": "active" },
+    "devops": { "name": "运维 Agent", "role": "Environment", "status": "active" }
+  },
+  "tasks": {
+    "backlog": [
+      {
+        "id": "T-007",
+        "title": "个人中心：页面管理布局重构",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "右侧展示页面列表，右上角新建按钮，点击弹窗表单（页面名称/图标/风格），创建成功后列表刷新。参考现有桌面页面管理器风格，不要太死板。"
+      }
+    ],
+    "in_progress": [],
+    "test": [],
+    "done": [
+      {
+        "id": "T-003",
+        "title": "Prisma & API: 标签类别分组及 Launchpad 聚合接口",
+        "assignee": "backend",
+        "priority": "high",
+        "description": "已创建 Launchpad 聚合 API 和 Category CRUD 接口。"
+      },
+      {
+        "id": "T-004",
+        "title": "迁移页面管理至个人中心/设置",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "个人中心已集成页面管理入口。"
+      },
+      {
+        "id": "T-005",
+        "title": "实现 Launchpad 仿 Apple 桌面标签页",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "LaunchpadPanel 组件已创建，后续会移入底部栏入口。"
+      },
+      {
+        "id": "T-006",
+        "title": "UI: 底部栏图标重构（线性、生疏松垮风格）",
+        "assignee": "frontend",
+        "priority": "medium",
+        "description": "已替换底部栏图标为线性风格。三个固定按钮：头像/首页/Launchpad，图标有重量感和松垮感。"
+      },
+      {
+        "id": "T-008",
+        "title": "首页图标：黑底毛玻璃风格 + 主题切换",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "tileAction 添加底部 42% 毛玻璃遮罩，日/夜模式透明度和边框颜色反转，backdrop-filter blur(8px) 实现圆角质感。"
+      },
+      {
+        "id": "T-009",
+        "title": "Launchpad：移出 Settings，改为底部栏入口",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "已从 Settings 面板移除启动台菜单项，改为底部栏图标。点击打开 Launchpad 全屏页，展示全局所有标签按类别分类。"
+      },
+      {
+        "id": "T-010",
+        "title": "公网 Kanban 看板（8888端口）",
+        "assignee": "devops",
+        "priority": "high",
+        "description": "新建独立页面暴露在 8888 端口，实时展示 kanban.json 内容（in_progress/done/backlog），谁在干什么。实时刷新。"
+      }
+    ]
+  },
+  "notifications": []
+}

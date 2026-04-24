@@ -1,0 +1,90 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-04-24T00:00:00Z",
+  "agents": {
+    "main": {
+      "name": "主控",
+      "role": "协调/后端核心",
+      "status": "active"
+    },
+    "backend": {
+      "name": "后端 Agent",
+      "role": "NestJS/Prisma",
+      "status": "active"
+    },
+    "frontend": {
+      "name": "前端 Agent",
+      "role": "React/UI",
+      "status": "active"
+    },
+    "devops": {
+      "name": "运维 Agent",
+      "role": "Environment",
+      "status": "active"
+    }
+  },
+  "tasks": {
+    "backlog": [],
+    "in_progress": [],
+    "test": [],
+    "done": [
+      {
+        "id": "T-003",
+        "title": "Prisma & API: 标签类别分组及 Launchpad 聚合接口",
+        "assignee": "backend",
+        "priority": "high",
+        "description": "已创建 Launchpad 聚合 API 和 Category CRUD 接口。"
+      },
+      {
+        "id": "T-004",
+        "title": "迁移页面管理至个人中心/设置",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "个人中心已集成页面管理入口。"
+      },
+      {
+        "id": "T-005",
+        "title": "实现 Launchpad 仿 Apple 桌面标签页",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "LaunchpadPanel 组件已创建。"
+      },
+      {
+        "id": "T-006",
+        "title": "UI: 底部栏图标重构（线性、生疏松垮风格）",
+        "assignee": "frontend",
+        "priority": "medium",
+        "description": "已替换底部栏图标为线性风格，三个固定按钮：头像/首页/Launchpad。"
+      },
+      {
+        "id": "T-007",
+        "title": "个人中心：页面管理布局重构",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "已重构为弹窗模式，点击新建按钮弹出表单。"
+      },
+      {
+        "id": "T-008",
+        "title": "首页图标：黑底毛玻璃风格 + 主题切换",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "tileAction 添加底部毛玻璃遮罩，日/夜模式反转。"
+      },
+      {
+        "id": "T-009",
+        "title": "Launchpad：移出 Settings，改为底部栏入口",
+        "assignee": "frontend",
+        "priority": "high",
+        "description": "已从 Settings 移除启动台菜单，改为底部栏图标。"
+      },
+      {
+        "id": "T-010",
+        "title": "公网 Kanban 看板（8888端口）",
+        "assignee": "devops",
+        "priority": "high",
+        "description": "新建独立页面暴露在 8888 端口，实时展示 kanban.json。"
+      }
+    ]
+  },
+  "notifications": []
+}
