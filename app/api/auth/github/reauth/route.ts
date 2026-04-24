@@ -5,13 +5,13 @@ import { readSession } from "@/server/auth/middleware";
 // We redirect to /api/auth/github/start with mode=reauth so the callback remints the session
 // with a fresh `reauthAt` timestamp, unlocking endpoints guarded by requireReauth().
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
+  const baseUrl = process.env.APP_BASE_URL ?? "http://127.0.0.1:3000";
   const session = await readSession();
   if (!session) {
-    return NextResponse.redirect(new URL("/api/auth/github/start", url).toString());
+    return NextResponse.redirect(new URL("/api/auth/github/start", baseUrl).toString());
   }
-  const returnTo = url.searchParams.get("returnTo") ?? "/";
-  const next = new URL("/api/auth/github/start", url);
+  const returnTo = req.nextUrl.searchParams.get("returnTo") ?? "/";
+  const next = new URL("/api/auth/github/start", baseUrl);
   next.searchParams.set("mode", "reauth");
   next.searchParams.set("returnTo", returnTo);
   return NextResponse.redirect(next.toString());

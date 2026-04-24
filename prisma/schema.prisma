@@ -50,6 +50,7 @@ model User {
   userEngines UserSearchEngine[]
   todos       PluginTodo[]
   todoFolders PluginTodoFolder[]
+  categories  Category[]
 
   @@index([email])
   @@map("bendy_user")
@@ -87,6 +88,26 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("bendy_audit_log")
+}
+
+// ---------- Categories ----------
+
+model Category {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  icon      String?
+  color     String?
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links   Link[]
+  bookmarks Bookmark[]
+
+  @@index([userId])
+  @@map("bendy_category")
 }
 
 // ---------- Home Content ----------
@@ -134,6 +155,7 @@ model Link {
   userId      String
   pageId      String?
   folderId    String?
+  categoryId  String?
   name        String
   url         String
   icon        String?
@@ -146,13 +168,15 @@ model Link {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  page   Page?       @relation(fields: [pageId], references: [id], onDelete: SetNull)
-  folder LinkFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page     Page?       @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  folder   LinkFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  category Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([pageId])
   @@index([folderId])
+  @@index([categoryId])
   @@map("bendy_link")
 }
 
@@ -164,6 +188,7 @@ model Link {
 model Bookmark {
   id                   String   @id @default(cuid())
   userId               String
+  categoryId           String?
   extBookmarkId        String?
   url                  String
   title                String
@@ -200,8 +225,11 @@ model Bookmark {
   updatedAt            DateTime @updatedAt
   deletedAt            DateTime?
 
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   @@index([userId])
   @@index([url])
+  @@index([categoryId])
   @@index([isRecommended, recommendSort])
   @@index([isPublic, createdAt])
   @@index([status])
