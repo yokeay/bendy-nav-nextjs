@@ -20,6 +20,7 @@ export const IconAbout = wrap("c:,12,12,10|M12 8h.01|M11 12h1v5h1");
 export const IconImport = wrap("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4|M7 10l5 5 5-5|M12 15V3");
 export const IconExport = wrap("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4|M17 8l-5-5-5 5|M12 3v12");
 export const IconReset = wrap("M3 12a9 9 0 0 1 15-6.7L21 8|M21 3v5h-5|M21 12a9 9 0 0 1-15 6.7L3 16|M3 21v-5h5");
+export const IconBrowserImport = wrap("M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z|M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z|M8 14h8|M10 12v4");
 
 export const SettingsSvgIcon: Record<string, (p: SvgProps) => ReactElement> = {
   profile: IconProfile,

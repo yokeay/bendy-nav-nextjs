@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { HomeConfig, HomeSiteInfo, HomeUser } from "@/server/home/types";
 import {
   IconAbout,
+  IconBrowserImport,
   IconData,
   IconExport,
   IconGeneral,
@@ -40,6 +41,7 @@ type HomeSettingsDialogProps = {
   onOpenProfile: () => void;
   onOpenBackground: () => void;
   onImportBackup: () => void;
+  onBrowserImport: () => void;
   onExportBackup: () => void;
   onResetHome: () => void;
   onSearchHistoryChange: (enabled: boolean) => void;
@@ -229,6 +231,7 @@ export function HomeSettingsDialog({
   onOpenProfile,
   onOpenBackground,
   onImportBackup,
+  onBrowserImport,
   onExportBackup,
   onResetHome,
   onSearchHistoryChange,
@@ -380,6 +383,13 @@ export function HomeSettingsDialog({
                     actionLabel="导入"
                     icon={IconImport}
                     onClick={onImportBackup}
+                  />
+                  <ActionRow
+                    label="从浏览器书签导入"
+                    description="从浏览器导出的 HTML 书签文件中读取标签。"
+                    actionLabel="选择文件"
+                    icon={IconBrowserImport}
+                    onClick={onBrowserImport}
                   />
                   <ActionRow
                     label="导出书签备份"

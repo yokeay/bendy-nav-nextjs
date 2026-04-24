@@ -6,6 +6,13 @@ const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const GITHUB_USER_URL = "https://api.github.com/user";
 const GITHUB_EMAILS_URL = "https://api.github.com/user/emails";
 
+export class GitHubNetworkError extends Error {
+  constructor(cause: unknown) {
+    super("无法连接 GitHub 服务，请检查网络后重试。", { cause });
+    this.name = "GitHubNetworkError";
+  }
+}
+
 export interface GitHubConfig {
   clientId: string;
   clientSecret: string;
@@ -54,16 +61,22 @@ export function buildAuthorizeUrl(config: GitHubConfig, state: string, scope = "
 }
 
 export async function exchangeCodeForToken(config: GitHubConfig, code: string): Promise<string> {
-  const res = await fetch(GITHUB_TOKEN_URL, {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-      code,
-      redirect_uri: config.callbackUrl
-    })
-  });
+  let res: Response;
+  try {
+    res = await fetch(GITHUB_TOKEN_URL, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        code,
+        redirect_uri: config.callbackUrl
+      }),
+      signal: AbortSignal.timeout(10_000)
+    });
+  } catch (err) {
+    throw new GitHubNetworkError(err);
+  }
   if (!res.ok) {
     throw new Error(`GitHub token exchange failed: HTTP ${res.status}`);
   }
@@ -75,13 +88,19 @@ export async function exchangeCodeForToken(config: GitHubConfig, code: string): 
 }
 
 async function githubGet<T>(url: string, accessToken: string): Promise<T> {
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28"
-    }
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      },
+      signal: AbortSignal.timeout(10_000)
+    });
+  } catch (err) {
+    throw new GitHubNetworkError(err);
+  }
   if (!res.ok) {
     throw new Error(`GitHub API ${url} failed: HTTP ${res.status}`);
   }

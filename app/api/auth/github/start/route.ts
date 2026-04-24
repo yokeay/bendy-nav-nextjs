@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildAuthorizeUrl, readGitHubConfig } from "@/server/auth/github";
-import { getCache, cacheKey } from "@/server/infrastructure/cache";
 import { rateLimit } from "@/server/auth/rate-limit";
 import { getClientIp } from "@/server/auth/middleware";
 import { fail } from "@/server/shared/response";
@@ -33,7 +32,6 @@ export async function GET(req: NextRequest) {
   const returnTo = url.searchParams.get("returnTo") ?? "/";
 
   const state = randomBytes(24).toString("hex");
-  await getCache().set(cacheKey("oauth:state", state), { mode }, OAUTH_STATE_TTL_SECONDS);
 
   const authorizeUrl = buildAuthorizeUrl(config, state);
 

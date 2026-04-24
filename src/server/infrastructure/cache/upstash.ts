@@ -9,28 +9,48 @@ export class UpstashCacheDriver implements CacheDriver {
   }
 
   async get<T = unknown>(key: string): Promise<T | null> {
-    const value = await this.client.get<T>(key);
-    return value ?? null;
+    try {
+      const value = await this.client.get<T>(key);
+      return value ?? null;
+    } catch {
+      return null;
+    }
   }
 
   async set<T = unknown>(key: string, value: T, ttlSeconds = 300): Promise<void> {
-    await this.client.set(key, value as unknown as string | number | object, { ex: ttlSeconds });
+    try {
+      await this.client.set(key, value as unknown as string | number | object, { ex: ttlSeconds });
+    } catch {
+      // network failure — operation silently dropped
+    }
   }
 
   async delete(key: string): Promise<void> {
-    await this.client.del(key);
+    try {
+      await this.client.del(key);
+    } catch {
+      // network failure — operation silently dropped
+    }
   }
 
   async incr(key: string, ttlSeconds = 60): Promise<number> {
-    const next = await this.client.incr(key);
-    if (next === 1) {
-      await this.client.expire(key, ttlSeconds);
+    try {
+      const next = await this.client.incr(key);
+      if (next === 1) {
+        await this.client.expire(key, ttlSeconds);
+      }
+      return next;
+    } catch {
+      return 1; // safe default — treated as first request, allowed through
     }
-    return next;
   }
 
   async ping(): Promise<boolean> {
-    const reply = await this.client.ping();
-    return reply === "PONG";
+    try {
+      const reply = await this.client.ping();
+      return reply === "PONG";
+    } catch {
+      return false;
+    }
   }
 }
